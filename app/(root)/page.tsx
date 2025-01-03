@@ -1,7 +1,9 @@
 import { auth } from "@/auth";
 import SearchForm from "../../components/SearchForm";
-import StartupCard from "../../components/StartupCard";
+import StartupCard, { StartupTypeCard } from "../../components/StartupCard";
 import { Star } from "lucide-react";
+import { client } from "@/sanity/lib/client";
+import { STARTUPS_QUERY } from "@/sanity/lib/queries";
 
 export default async function Home({searchParams}:{
   searchParams: Promise<{ query?:string }>
@@ -9,19 +11,9 @@ export default async function Home({searchParams}:{
 
   const  query  = await (await searchParams).query;
 
-  const posts = [{
-    _createdAt: new Date(),
-    views: 10,
-    author: {
-      _id: 1,
-      name: 'Diddy',
-    },
-    _id: 1,
-    description: 'description',
-    image: 'https://images.unsplash.com/photo-1721332149346-00e39ce5c24f?q=80&w=1936&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    category: 'category',
-    title: 'title',
-  }]
+  const posts =await client.fetch(STARTUPS_QUERY);
+
+  console.log(JSON.stringify(posts, null, 2));
 
   return (
     <>
