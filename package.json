@@ -13,9 +13,9 @@
   },
   "packageManager": "npm@10.5.2",
   "overrides": {
-    "react": "$react",
-    "react-dom": "$react-dom",
-    "next": "$next"
+    "react": "19.0.0-rc-2d16326d-20240930",
+    "react-dom": "19.0.0-rc-2d16326d-20240930",
+    "next": "^15.4.0-canary.85"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.1",
