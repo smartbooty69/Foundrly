@@ -1,0 +1,21 @@
+{
+    "name": "Foundrly",
+    "short_name": "Foundrly",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#4E71FF",
+    "theme_color": "#4E71FF",
+    "description": "Foundrly is a platform to discover startups, connect with founders, track funding updates, and explore job opportunities.",
+    "icons": [
+      {
+        "src": "/favicon.ico",
+        "sizes": "64x64 32x32 24x24 16x16",
+        "type": "image/x-icon"
+      },
+      {
+        "src": "/favicon.ico",
+        "sizes": "180x180",
+        "type": "image/png"
+      }
+    ]
+  }

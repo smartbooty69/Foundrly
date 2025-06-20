@@ -26,7 +26,7 @@ const Navbar = async () => {
                         <form action={async () => { "use server"; await signOut()}} >
                             <button type="submit">
                                 <span className="max-sm:hidden">Logout</span>
-                                <LogOut className='size-6 sm:hidden text-red-500' />
+                                <LogOut className='size-6 mt-1.5 sm:hidden text-red-500' />
                             </button>
                         </form>
 

@@ -52,7 +52,93 @@ const workSans = localFont({
 
 export const metadata: Metadata = {
   title: "Foundrly",
-  description: "Foundrly is a platform to discover startups, connect with founders, track funding updates, and explore job opportunities. Empowering entrepreneurs, investors, and enthusiasts with insights and tools to thrive in the startup ecosystem.",
+  description:
+    "Foundrly is a platform to discover startups, connect with founders, track funding updates, and explore job opportunities. Empowering entrepreneurs, investors, and enthusiasts with insights and tools to thrive in the startup ecosystem.",
+  generator: "Next.js",
+  applicationName: "Foundrly",
+  referrer: "origin-when-cross-origin",
+  keywords: [
+    "startups",
+    "founders",
+    "funding",
+    "jobs",
+    "entrepreneurship",
+    "investors",
+    "platform",
+    "ecosystem",
+  ],
+  authors: [
+    { name: "Clancy Mendonca", url: "https://github.com/smartbooty69" },
+  ],
+  creator: "Clancy Mendonca",
+  publisher: "Foundrly",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  themeColor: "#5409DA",
+  colorScheme: "light",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    nocache: false,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  openGraph: {
+    title: "Foundrly",
+    description:
+      "Discover startups, connect with founders, track funding updates, and explore job opportunities.",
+    url: "https://foundrly.vercel.app/",
+    siteName: "Foundrly",
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Foundrly Open Graph Image",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Foundrly",
+    description:
+      "Discover startups, connect with founders, track funding updates, and explore job opportunities.",
+    site: "@foundrly",
+    creator: "@clancymendonca",
+    images: ["/logo.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+    other: [
+      { rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#5409DA" },
+    ],
+  },
+  manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://foundrly.vercel.app/",
+    languages: {
+      "en": "/en",
+      // Add more languages as needed
+    },
+  },
 };
 
 export default function RootLayout({
