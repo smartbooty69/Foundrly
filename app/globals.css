@@ -47,7 +47,7 @@
         @apply font-normal text-sm text-white-100/80;
     }
 
-    .pink_container {
+    .blue_container {
         @apply w-full bg-primary min-h-[530px] pattern flex justify-center items-center flex-col py-10 px-6;
     }
 
@@ -174,7 +174,7 @@
     }
 
     .startup-form_error {
-        @apply text-red-500 mt-2 ml-5;
+        @apply text-blue-500 mt-2 ml-5;
     }
 
     .startup-form_editor {
@@ -191,11 +191,11 @@
     }
 
     .view-text {
-        @apply font-medium text-[16px] bg-primary-100 px-4 py-2 rounded-lg capitalize;
+        @apply font-medium text-[16px] bg-[#BBFBFF] px-4 py-2 rounded-lg capitalize;
     }
 
     .category-tag {
-        @apply font-medium text-[16px] bg-primary-100 px-4 py-2 rounded-full;
+        @apply font-medium text-[16px] bg-[#BBFBFF] px-4 py-2 rounded-full;
     }
 
     .pattern {
