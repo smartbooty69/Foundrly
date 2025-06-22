@@ -27,10 +27,13 @@ This project is designed to scale, both in architecture and vision. It combines 
 
   - 🔐 **GitHub Authentication** via NextAuth
   - 👤 **Dynamic User Profiles** with startup listings
-  - ⚡ **Real-Time Updates** using Sanity’s live content API
+  - ⚡ **Real-Time Updates** using Sanity's live content API
   - 🔎 **Advanced Search** across title, username, and category
   - 📊 **Sentry Integration** for performance and error tracking
   - ✍️ **Startup Submission Forms** with validation and image support
+  - **Startup Pitch Creation**: Create detailed startup pitches with markdown support
+  - **Image Upload**: Upload startup images with drag-and-drop functionality
+  - **Responsive Design**: Works seamlessly across all devices
 
 ## Tech Stack
 
@@ -39,50 +42,99 @@ This project is designed to scale, both in architecture and vision. It combines 
   - **Sanity** — Headless CMS for managing and querying content
   - **NextAuth** — Authentication with GitHub provider
   - **Sentry** — Application performance and error monitoring
+  - **Framework**: Next.js 15
+  - **Language**: TypeScript
+  - **Styling**: Tailwind CSS
+  - **CMS**: Sanity
+  - **Authentication**: NextAuth.js
+  - **File Storage**: Vercel Blob (production) / Local storage (development)
+  - **UI Components**: Radix UI
+  - **Icons**: Lucide React
 
 ## Getting Started
 
-1.  **Clone the repo:**
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- Sanity account (for CMS)
+
+### Installation
+
+1. Clone the repository:
 
     ```bash
     git clone https://github.com/yourusername/foundrly.git
     cd foundrly
     ```
 
-2.  **Install dependencies:**
+2. Install dependencies:
 
     ```bash
     npm install
     ```
 
-3.  **Configure environment:**
+3. Set up environment variables:
 
-    Create `.env.local` and fill in the following:
+    ```bash
+    cp .env.example .env.local
+    ```
+
+4. Configure your environment variables in `.env.local`:
 
     ```env
     NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
-    NEXT_PUBLIC_SANITY_DATASET=your_dataset
-    NEXT_PUBLIC_SANITY_API_VERSION=2023-10-01
-    SANITY_WRITE_TOKEN=your_write_token
+    NEXT_PUBLIC_SANITY_DATASET=production
+    SANITY_API_TOKEN=your_api_token
     NEXTAUTH_SECRET=your_nextauth_secret
     NEXTAUTH_URL=http://localhost:3000
-    GITHUB_ID=your_github_oauth_id
-    GITHUB_SECRET=your_github_oauth_secret
+    BLOB_READ_WRITE_TOKEN=your_blob_token
     ```
 
-4.  **Run the app:**
+### Development
+
+Run the development server:
 
     ```bash
     npm run dev
     ```
 
-    Visit `http://localhost:3000` to use the platform locally.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+### Image Upload Setup
+
+#### Local Development
+Image uploads work out of the box in local development. Files are stored in the `public/uploads/` directory.
+
+#### Production (Vercel)
+For production deployment on Vercel:
+
+1. **Enable Vercel Blob Storage**:
+   - Go to your Vercel project dashboard
+   - Navigate to Storage → Blob
+   - Create a new Blob store
+   - Copy the `BLOB_READ_WRITE_TOKEN` to your environment variables
+
+2. **Set Environment Variables**:
+   - Add `BLOB_READ_WRITE_TOKEN` to your Vercel project environment variables
+   - Redeploy your application
+
+The application automatically detects the environment and uses:
+- **Local storage** for development
+- **Vercel Blob storage** for production
+
+### Building for Production
+
+```bash
+npm run build
+npm start
+```
 
 ## Usage
 
   - Browse a live feed of startup pitches.
   - Log in using GitHub to manage your own startup submissions.
-  - View any user’s profile and see what startups they’ve shared.
+  - View any user's profile and see what startups they've shared.
   - Use the search bar to filter ideas based on relevance and category.
 
 ## Authentication
@@ -138,6 +190,22 @@ To deploy on Vercel:
     ```
 2.  Connect the GitHub repo to Vercel.
 3.  Add all required environment variables in the Vercel dashboard.
+
+## Project Structure
+
+```
+foundrly/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes
+│   ├── (root)/            # Main pages
+│   └── studio/            # Sanity studio
+├── components/            # React components
+│   └── ui/               # UI components
+├── lib/                  # Utility functions
+├── hooks/                # Custom React hooks
+├── sanity/               # Sanity configuration
+└── public/               # Static assets
+```
 
 ## Contributing
 

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
-import { existsSync } from "fs";
+import { uploadToStorage } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,31 +30,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads");
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
+    // Upload to storage (handles both local and production)
+    const result = await uploadToStorage(file);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || "Upload failed" },
+        { status: 500 }
+      );
     }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split(".").pop();
-    const filename = `${timestamp}-${randomString}.${extension}`;
-    const filepath = join(uploadsDir, filename);
-
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
-
-    // Return the public URL
-    const publicUrl = `/uploads/${filename}`;
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      filename: filename,
+      url: result.url,
+      filename: result.filename,
     });
   } catch (error) {
     console.error("Upload error:", error);
