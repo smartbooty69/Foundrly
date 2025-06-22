@@ -11,9 +11,10 @@ interface DeleteStartupButtonProps {
   startupId: string;
   startupTitle: string;
   userId: string;
+  iconOnly?: boolean;
 }
 
-const DeleteStartupButton = ({ startupId, startupTitle, userId }: DeleteStartupButtonProps) => {
+const DeleteStartupButton = ({ startupId, startupTitle, userId, iconOnly = false }: DeleteStartupButtonProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -59,10 +60,11 @@ const DeleteStartupButton = ({ startupId, startupTitle, userId }: DeleteStartupB
     <Button
       onClick={handleDelete}
       disabled={isDeleting}
-      className="delete-btn"
+      className={iconOnly ? "delete-btn p-2 h-9 w-9" : "delete-btn"}
+      aria-label="Delete"
     >
-      <Trash2 className="h-4 w-4" />
-      {isDeleting ? "Deleting..." : "Delete"}
+      <Trash2 className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
+      {!iconOnly && (isDeleting ? "Deleting..." : "Delete")}
     </Button>
   );
 };

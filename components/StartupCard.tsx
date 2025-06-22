@@ -64,7 +64,7 @@ const StartupCard = ({ post, isOwner = false }: StartupCardProps) => {
 
       <div className="flex-between gap-3 mt-5">
         <Link href={`/?query=${category?.toLowerCase()}`}>
-          <p className="text-16-medium">{category}</p>
+          <p className="text-16-medium truncate max-w-xs whitespace-nowrap">{category}</p>
         </Link>
         <div className="action-buttons">
           <Button className="startup-card_btn" asChild>
@@ -72,23 +72,19 @@ const StartupCard = ({ post, isOwner = false }: StartupCardProps) => {
           </Button>
           
           {isOwner && (
-            <>
-              <Button 
-                className="edit-btn"
-                asChild
-              >
-                <Link href={`/startup/${_id}/edit`}>
-                  <Edit className="h-4 w-4" />
-                  Edit
+            <div className="flex gap-2">
+              <Button className="edit-btn p-2 h-9 w-9" asChild>
+                <Link href={`/startup/${_id}/edit`} aria-label="Edit">
+                  <Edit className="h-5 w-5" />
                 </Link>
               </Button>
-              
               <DeleteStartupButton 
                 startupId={_id} 
                 startupTitle={title || ""} 
                 userId={author?._id || ""}
+                iconOnly
               />
-            </>
+            </div>
           )}
         </div>
       </div>
