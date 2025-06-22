@@ -16,6 +16,15 @@ export const formSchema = z.object({
       } catch {
         return false;
       }
-    }),
+    })
+    .optional()
+    .or(z.literal("")),
   pitch: z.string().min(10),
+  imageFile: z.any().optional(), // For uploaded files
+}).refine((data) => {
+  // Either link or imageFile must be provided
+  return data.link || data.imageFile;
+}, {
+  message: "Either an image URL or uploaded image is required",
+  path: ["link"],
 }); 

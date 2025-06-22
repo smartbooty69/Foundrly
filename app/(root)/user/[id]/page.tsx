@@ -46,7 +46,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           </p>
           <ul className="card_grid-sm">
             <Suspense fallback={<StartupCardSkeleton />}>
-              <UserStartups id={id} />
+              <UserStartups id={id} sessionId={session?.id} />
             </Suspense>
           </ul>
         </div>

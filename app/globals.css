@@ -214,6 +214,19 @@
     .tag-tri {
         @apply before:content-[''] before:absolute before:top-2 before:left-2 before:border-t-[10px] before:border-t-black before:border-r-[10px] before:border-r-transparent after:content-[''] after:absolute after:bottom-2 after:right-2 after:border-b-[10px] after:border-b-black after:border-l-[10px] after:border-l-transparent;
     }
+
+    /* action buttons */
+    .action-buttons {
+        @apply flex gap-2 items-center;
+    }
+
+    .edit-btn {
+        @apply border-[2px] border-blue-500 font-medium text-[14px] text-white bg-blue-500 px-3 py-2 rounded-full !important;
+    }
+
+    .delete-btn {
+        @apply border-[2px] border-red-500 font-medium text-[14px] text-white bg-red-500 px-3 py-2 rounded-full !important;
+    }
 }
 
 .w-md-editor-toolbar { 

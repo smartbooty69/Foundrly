@@ -1,14 +1,20 @@
 import { cn, formatDate } from "@/lib/utils";
-import { EyeIcon } from "lucide-react";
+import { EyeIcon, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Author, Startup } from "@/sanity/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import DeleteStartupButton from "./DeleteStartupButton";
 
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
 
-const StartupCard = ({ post }: { post: StartupTypeCard }) => {
+interface StartupCardProps {
+  post: StartupTypeCard;
+  isOwner?: boolean;
+}
+
+const StartupCard = ({ post, isOwner = false }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -60,9 +66,31 @@ const StartupCard = ({ post }: { post: StartupTypeCard }) => {
         <Link href={`/?query=${category?.toLowerCase()}`}>
           <p className="text-16-medium">{category}</p>
         </Link>
-        <Button className="startup-card_btn" asChild>
-          <Link href={`/startup/${_id}`}>Details</Link>
-        </Button>
+        <div className="action-buttons">
+          <Button className="startup-card_btn" asChild>
+            <Link href={`/startup/${_id}`}>Details</Link>
+          </Button>
+          
+          {isOwner && (
+            <>
+              <Button 
+                className="edit-btn"
+                asChild
+              >
+                <Link href={`/startup/${_id}/edit`}>
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Link>
+              </Button>
+              
+              <DeleteStartupButton 
+                startupId={_id} 
+                startupTitle={title || ""} 
+                userId={author?._id || ""}
+              />
+            </>
+          )}
+        </div>
       </div>
     </li>
   );

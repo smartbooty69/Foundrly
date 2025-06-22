@@ -11,12 +11,17 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { FileInput } from "./ui/file-input";
 import { formSchema } from "@/lib/validation";
-import { createPitch } from "@/lib/actions";
+import { updatePitch } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
+import { StartupTypeCard } from "./StartupCard";
 
-const StartupForm = () => {
+interface StartupEditFormProps {
+  startup: StartupTypeCard;
+}
+
+const StartupEditForm = ({ startup }: StartupEditFormProps) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [pitch, setPitch] = useState("");
+  const [pitch, setPitch] = useState(startup.pitch || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -83,15 +88,15 @@ const StartupForm = () => {
       finalFormData.append("link", finalImageUrl);
       finalFormData.append("pitch", pitch);
 
-      const result = await createPitch(prevState, finalFormData, pitch);
+      const result = await updatePitch(prevState, finalFormData, pitch, startup._id);
 
       if (result.status == "SUCCESS") {
         toast({
           title: "Success",
-          description: "Your startup pitch has been created successfully",
+          description: "Your startup pitch has been updated successfully",
         });
 
-        router.push(`/startup/${result._id}`);
+        router.push(`/startup/${startup._id}`);
       }
 
       return result;
@@ -141,6 +146,7 @@ const StartupForm = () => {
           className="startup-form_input"
           required
           placeholder="Startup Title"
+          defaultValue={startup.title}
         />
 
         {errors.title && <p className="startup-form_error">{errors.title}</p>}
@@ -156,6 +162,7 @@ const StartupForm = () => {
           className="startup-form_textarea"
           required
           placeholder="Startup Description"
+          defaultValue={startup.description}
         />
 
         {errors.description && (
@@ -173,6 +180,7 @@ const StartupForm = () => {
           className="startup-form_input"
           required
           placeholder="Startup Category (Tech, Health, Education...)"
+          defaultValue={startup.category}
         />
 
         {errors.category && (
@@ -214,6 +222,7 @@ const StartupForm = () => {
             name="link"
             className="startup-form_input"
             placeholder="Startup Image URL"
+            defaultValue={startup.image}
           />
         ) : (
           <FileInput
@@ -226,7 +235,7 @@ const StartupForm = () => {
         {errors.link && <p className="startup-form_error">{errors.link}</p>}
       </div>
 
-      <div data-color-mode="light">
+      <div>
         <label htmlFor="pitch" className="startup-form_label">
           Pitch
         </label>
@@ -255,11 +264,11 @@ const StartupForm = () => {
         className="startup-form_btn text-white"
         disabled={isPending || isUploading}
       >
-        {isPending ? "Submitting..." : isUploading ? "Uploading..." : "Submit Your Pitch"}
+        {isPending ? "Updating..." : isUploading ? "Uploading..." : "Update Your Pitch"}
         <Send className="size-6 ml-2" />
       </Button>
     </form>
   );
 };
 
-export default StartupForm;
+export default StartupEditForm; 
