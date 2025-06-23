@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import View from "@/components/View";
 import StartupCard, { StartupTypeCard } from "@/components/StartupCard";
 import StartupDetailActions from "@/components/StartupDetailActions";
+import StartupDetailLikes from "@/components/StartupDetailLikes";
 
 const md = markdownit();
 
@@ -45,6 +46,11 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
         <h1 className="heading">{post.title}</h1>
         <p className="sub-heading !max-w-5xl">{post.description}</p>
+        <StartupDetailLikes
+          startupId={post._id}
+          isLoggedIn={!!session}
+          userId={session?.id}
+        />
       </section>
 
       <section className="section_container">

@@ -161,6 +161,10 @@ export type Startup = {
   category?: string;
   image?: string;
   pitch?: string;
+  likes?: number;
+  dislikes?: number;
+  likedBy?: Array<string>;
+  dislikedBy?: Array<string>;
 };
 
 export type Slug = {

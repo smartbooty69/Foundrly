@@ -33,7 +33,7 @@ export default async function Home({searchParams}:{
       <ul className="mt-7 card_grid">
         {posts?.length > 0 ? (
         posts.map((post: StartupTypeCard, index: number) => (
-          <StartupCard key={post?._id} post={post}/>
+          <StartupCard key={post?._id} post={post} isLoggedIn={!!session} userId={session?.id} />
         ))
       ):(
           <p className="no-results">

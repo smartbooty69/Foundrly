@@ -11,6 +11,6 @@ export const writeClient = createClient({
   token,
 })
 
-if (!writeClient.config().token) {
-  throw new Error("Missing write token");
+if (!token || !writeClient.config().token) {
+  throw new Error("Missing SANITY_API_WRITE_TOKEN. The app will not run correctly and likes/dislikes will not be saved. Please add it to your .env.local file.");
 }

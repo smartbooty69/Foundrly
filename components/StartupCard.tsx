@@ -1,20 +1,25 @@
+'use client';
+
 import { cn, formatDate } from "@/lib/utils";
-import { EyeIcon, Edit, Trash2 } from "lucide-react";
+import { EyeIcon, Edit, Trash2, ThumbsUp, ThumbsDown } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Author, Startup } from "@/sanity/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeleteStartupButton from "./DeleteStartupButton";
+import React from "react";
 
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
 
 interface StartupCardProps {
   post: StartupTypeCard;
   isOwner?: boolean;
+  isLoggedIn?: boolean;
+  userId?: string;
 }
 
-const StartupCard = ({ post, isOwner = false }: StartupCardProps) => {
+const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -26,13 +31,123 @@ const StartupCard = ({ post, isOwner = false }: StartupCardProps) => {
     description,
   } = post;
 
+  const [likes, setLikes] = React.useState(0);
+  const [dislikes, setDislikes] = React.useState(0);
+  const [liked, setLiked] = React.useState(false);
+  const [disliked, setDisliked] = React.useState(false);
+  const [likedBy, setLikedBy] = React.useState<string[]>([]);
+  const [dislikedBy, setDislikedBy] = React.useState<string[]>([]);
+  const [likeLoading, setLikeLoading] = React.useState(false);
+  const [dislikeLoading, setDislikeLoading] = React.useState(false);
+  const [initialLoading, setInitialLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    Promise.all([
+      fetch(`/api/likes?id=${_id}`).then(res => res.json()),
+      fetch(`/api/dislikes?id=${_id}`).then(res => res.json())
+    ]).then(([likeData, dislikeData]) => {
+      setLikes(likeData.likes ?? 0);
+      setLikedBy(likeData.likedBy ?? []);
+      setLiked(userId ? (likeData.likedBy ?? []).includes(userId) : false);
+      setDislikes(dislikeData.dislikes ?? 0);
+      setDislikedBy(dislikeData.dislikedBy ?? []);
+      setDisliked(userId ? (dislikeData.dislikedBy ?? []).includes(userId) : false);
+      setInitialLoading(false);
+    });
+  }, [_id, userId]);
+
+  const handleLike = async () => {
+    if (!userId || likeLoading) return;
+    setLikeLoading(true);
+    const res = await fetch(`/api/likes?id=${_id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json();
+    setLikes(data.likes ?? likes);
+    setDislikes(data.dislikes ?? dislikes);
+    setLikedBy(data.likedBy ?? likedBy);
+    setDislikedBy(data.dislikedBy ?? dislikedBy);
+    setLiked(data.likedBy?.includes(userId) ?? false);
+    setDisliked(data.dislikedBy?.includes(userId) ?? false);
+    setLikeLoading(false);
+  };
+
+  const handleDislike = async () => {
+    if (!userId || dislikeLoading) return;
+    setDislikeLoading(true);
+    const res = await fetch(`/api/dislikes?id=${_id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    const data = await res.json();
+    setLikes(data.likes ?? likes);
+    setDislikes(data.dislikes ?? dislikes);
+    setLikedBy(data.likedBy ?? likedBy);
+    setDislikedBy(data.dislikedBy ?? dislikedBy);
+    setLiked(data.likedBy?.includes(userId) ?? false);
+    setDisliked(data.dislikedBy?.includes(userId) ?? false);
+    setDislikeLoading(false);
+  };
+
   return (
-    <li className="startup-card group">
+    <li className="startup-card group hover:bg-blue-50 transition-colors duration-200">
       <div className="flex-between">
         <p className="startup_card_date">{formatDate(_createdAt)}</p>
-        <div className="flex gap-1.5">
-          <EyeIcon className="size-6 text-primary" />
-          <span className="text-16-medium">{views}</span>
+        <div className="flex items-center gap-3">
+          {initialLoading ? (
+            <svg className="animate-spin h-6 w-6 text-gray-400" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+          ) : (
+            <>
+              <button
+                aria-label="Like"
+                onClick={handleLike}
+                disabled={!isLoggedIn || likeLoading}
+                title={!isLoggedIn ? 'Log in to like' : ''}
+                className={`flex items-center p-1 rounded-full transition-colors duration-200
+                  ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                type="button"
+              >
+                {likeLoading ? (
+                  <svg className="animate-spin h-4 w-4 text-green-600" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <ThumbsUp className="size-5 text-green-600" />
+                )}
+                <span className="ml-1 text-xs">{likes}</span>
+              </button>
+              <button
+                aria-label="Dislike"
+                onClick={handleDislike}
+                disabled={!isLoggedIn || dislikeLoading}
+                title={!isLoggedIn ? 'Log in to dislike' : ''}
+                className={`flex items-center p-1 rounded-full transition-colors duration-200
+                  ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+                type="button"
+              >
+                {dislikeLoading ? (
+                  <svg className="animate-spin h-4 w-4 text-red-600" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <ThumbsDown className="size-5 text-red-600" />
+                )}
+                <span className="ml-1 text-xs">{dislikes}</span>
+              </button>
+            </>
+          )}
+          <div className="flex gap-1.5 ml-2">
+            <EyeIcon className="size-6 text-primary" />
+            <span className="text-16-medium">{views}</span>
+          </div>
         </div>
       </div>
 

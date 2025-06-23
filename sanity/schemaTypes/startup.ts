@@ -45,5 +45,27 @@ export const startup = defineType({
             name: "pitch",
             type: "markdown",
         }),
+        defineField({
+            name: "likes",
+            type: "number",
+            initialValue: 0,
+        }),
+        defineField({
+            name: "dislikes",
+            type: "number",
+            initialValue: 0,
+        }),
+        defineField({
+            name: "likedBy",
+            type: "array",
+            of: [{ type: "string" }],
+            initialValue: [],
+        }),
+        defineField({
+            name: "dislikedBy",
+            type: "array",
+            of: [{ type: "string" }],
+            initialValue: [],
+        }),
     ],
 });
