@@ -67,5 +67,11 @@ export const startup = defineType({
             of: [{ type: "string" }],
             initialValue: [],
         }),
+        defineField({
+            name: "comments",
+            type: "array",
+            of: [{ type: "reference", to: [{ type: "comment" }] }],
+            initialValue: [],
+        }),
     ],
 });

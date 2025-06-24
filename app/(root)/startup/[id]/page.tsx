@@ -16,6 +16,9 @@ import View from "@/components/View";
 import StartupCard, { StartupTypeCard } from "@/components/StartupCard";
 import StartupDetailActions from "@/components/StartupDetailActions";
 import StartupDetailLikes from "@/components/StartupDetailLikes";
+import CommentList from "@/components/CommentList";
+import CommentForm from "@/components/CommentForm";
+import CommentsSection from "@/components/CommentsSection";
 
 const md = markdownit();
 
@@ -116,6 +119,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </ul>
           </div>
         )}
+
+        <CommentsSection startupId={id} isLoggedIn={!!session} userId={session?.id} />
 
         <Suspense fallback={<Skeleton className="view_skeleton" />}>
           <View id={id} />
