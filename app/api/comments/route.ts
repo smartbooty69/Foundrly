@@ -14,24 +14,43 @@ export async function GET(req: Request) {
   }
 
   try {
-    const comments = await client
+    // Fetch all comments for the startup (flat list)
+    const allComments = await client
       .withConfig({ useCdn: false })
       .fetch(
-        `*[_type == "comment" && startup._ref == $startupId && !defined(parent)]|order(createdAt desc){
-          _id, text, createdAt, author->{_id, name, username, image}, likes, dislikes, likedBy, dislikedBy, deleted,
-          replies[]->{
-            _id, text, createdAt, author->{_id, name, username, image}, likes, dislikes, likedBy, dislikedBy, deleted,
-            replies[]->{
-              _id, text, createdAt, author->{_id, name, username, image}, likes, dislikes, likedBy, dislikedBy, deleted,
-              replies[]->{
-                _id, text, createdAt, author->{_id, name, username, image}, likes, dislikes, likedBy, dislikedBy, deleted
-              }
-            }
-          }
+        `*[_type == "comment" && startup._ref == $startupId]{
+          _id, text, createdAt, author->{_id, name, username, image}, likes, dislikes, likedBy, dislikedBy, deleted, parent, replies
         }`,
         { startupId }
       );
-    return NextResponse.json({ comments });
+
+    // Build a map of comments by _id
+    const commentMap = new Map();
+    allComments.forEach((c: any) => {
+      commentMap.set(c._id, { ...c, replies: [] });
+    });
+
+    // Build the tree
+    const rootComments: any[] = [];
+    allComments.forEach((c: any) => {
+      if (c.parent && c.parent._ref) {
+        const parent = commentMap.get(c.parent._ref);
+        if (parent) {
+          parent.replies.push(commentMap.get(c._id));
+        }
+      } else {
+        rootComments.push(commentMap.get(c._id));
+      }
+    });
+
+    // Optionally, sort replies by createdAt ascending (oldest first)
+    function sortReplies(comments: any[]) {
+      comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      comments.forEach(c => sortReplies(c.replies));
+    }
+    sortReplies(rootComments);
+
+    return NextResponse.json({ comments: rootComments });
   } catch (error) {
     console.error('Error fetching comments:', error);
     return NextResponse.json({ comments: [] });

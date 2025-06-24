@@ -9,9 +9,28 @@ import dynamic from "next/dynamic";
 import markdownit from "markdown-it";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import clsx from "clsx";
+import { createPortal } from "react-dom";
+import { signIn } from "next-auth/react";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 const EmojiPickerClient = dynamic(() => import("./EmojiPickerClient"), { ssr: false });
+
+// Dynamically set MAX_DEPTH based on viewport
+function useMaxDepth() {
+  const [maxDepth, setMaxDepth] = useState(3);
+  useEffect(() => {
+    function updateDepth() {
+      if (window.innerWidth < 640) setMaxDepth(3); // mobile
+      else if (window.innerWidth < 1024) setMaxDepth(4); // tablet
+      else setMaxDepth(8); // desktop
+    }
+    updateDepth();
+    window.addEventListener('resize', updateDepth);
+    return () => window.removeEventListener('resize', updateDepth);
+  }, []);
+  return maxDepth;
+}
 
 // Render a single comment (with replies) - moved outside to prevent re-renders
 function CommentCard({ 
@@ -30,7 +49,9 @@ function CommentCard({
   handleReply, 
   actionLoading, 
   likeLoading, 
-  dislikeLoading 
+  dislikeLoading,
+  setViewingDeepReplies,
+  MAX_DEPTH
 }: { 
   c: any, 
   depth?: number,
@@ -47,7 +68,9 @@ function CommentCard({
   handleReply: (parentId: string, replyText: string) => void,
   actionLoading: string | null,
   likeLoading: string | null,
-  dislikeLoading: string | null
+  dislikeLoading: string | null,
+  setViewingDeepReplies: (v: {comment: any, depth: number} | null) => void,
+  MAX_DEPTH: number
 }) {
   const liked = userId && c.likedBy?.includes(userId);
   const disliked = userId && c.dislikedBy?.includes(userId);
@@ -61,159 +84,244 @@ function CommentCard({
   
   // Create unique ref for this reply textarea
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
-  
-  return (
-    <div className={`mb-6 ${depth > 0 ? "ml-6 border-l-2 border-gray-200 pl-4" : ""}`}> 
-      <div className="flex space-x-3">
-        <Link href={`/user/${c.author?._id}`}>
-          <Avatar className="w-9 h-9">
-            {c.author?.image ? (
-              <AvatarImage src={c.author.image} alt={c.author.name || c.author.username || "?"} />
-            ) : (
-              <AvatarFallback>{c.author?.name?.[0] || c.author?.username?.[0] || "?"}</AvatarFallback>
-            )}
-          </Avatar>
-        </Link>
-        <div className="flex-1">
-          <p className="font-semibold">{c.author?.name || "User"} <span className="text-sm text-gray-500 ml-2">{new Date(c.createdAt).toLocaleString()}</span></p>
-          {isDeleted ? (
-            <p className="mt-1 text-gray-500 italic">[deleted]</p>
-          ) : (
-            <p className="mt-1 text-gray-800" dangerouslySetInnerHTML={{ __html: markdownit().render(c.text) }} />
+
+  const [showReplyToast, setShowReplyToast] = useState(false);
+
+  // Handle click outside for toast
+  const toastRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showReplyToast) return;
+    function handleClick(e: MouseEvent) {
+      if (toastRef.current && !toastRef.current.contains(e.target as Node)) {
+        setShowReplyToast(false);
+        setReplyingTo(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showReplyToast, setReplyingTo]);
+
+  // Main comment card
+  const card = (
+    <div className="flex items-start mb-1 mt-1 md:mb-2 md:mt-2">
+      <div className="ml-1 flex-1">
+        <div
+          className={clsx(
+            "mx-1 md:mx-2 pl-2 md:pl-4 border-l-2 border-blue-100 rounded-lg shadow-sm py-2 md:py-4 text-xs md:text-base px-1 md:px-4",
+            (() => {
+              if (depth === 0) return "ml-0";
+              // Decrease indent per layer, but never less than 8px per layer
+              const perLayer = Math.max(24 - depth * 2, 6);
+              const ml = perLayer * depth;
+              return `ml-[${ml}px]`;
+            })(),
+            depth % 2 === 0 ? "bg-white" : "bg-gray-50"
           )}
-          {!isDeleted && (
-            <div className="flex items-center space-x-4 mt-2">
-              <button
-                className={`flex items-center p-1 rounded-full transition-colors duration-200 ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
-                disabled={!isLoggedIn || likeLoading === c._id}
-                onClick={() => onLike(c._id)}
-                title={!isLoggedIn ? 'Log in to like' : ''}
-                type="button"
-              >
-                {likeLoading === c._id ? (
-                  <svg className="animate-spin h-4 w-4 text-green-600" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
+        >
+          <div className="flex items-start space-x-2 md:space-x-3">
+            {/* Avatar inside card */}
+            <Link href={`/user/${c.author?._id}`}>
+              <Avatar className="w-6 h-6 md:w-8 md:h-8">
+                {c.author?.image ? (
+                  <AvatarImage src={c.author.image} alt={c.author.name || c.author.username || "?"} />
                 ) : (
-                  <ThumbsUp className="size-5 text-green-600" />
+                  <AvatarFallback>{c.author?.name?.[0] || c.author?.username?.[0] || "?"}</AvatarFallback>
                 )}
-                <span className="ml-1 text-xs">{c.likes || 0}</span>
-              </button>
-              <button
-                className={`flex items-center p-1 rounded-full transition-colors duration-200 ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
-                disabled={!isLoggedIn || dislikeLoading === c._id}
-                onClick={() => onDislike(c._id)}
-                title={!isLoggedIn ? 'Log in to dislike' : ''}
-                type="button"
-              >
-                {dislikeLoading === c._id ? (
-                  <svg className="animate-spin h-4 w-4 text-red-600" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : (
-                  <ThumbsDown className="size-5 text-red-600" />
-                )}
-                <span className="ml-1 text-xs">{c.dislikes || 0}</span>
-              </button>
-              <button 
-                className={`flex items-center space-x-1 text-gray-500 ${!isLoggedIn ? 'opacity-75 cursor-not-allowed' : 'hover:text-gray-700'}`}
-                disabled={!isLoggedIn}
-                onClick={() => { if (isLoggedIn) { setReplyingTo(c._id); setReplyText(""); } }}
-                title={!isLoggedIn ? 'Log in to reply' : 'Reply'}
-              > 
-                <MessageSquare size={16} /> 
-                <span>Reply</span>
-              </button>
-              {userId === c.author?._id && (
-                <button
-                  className={`flex items-center p-1 rounded-full transition-colors duration-200 text-gray-500 hover:bg-red-50 hover:text-red-600 ${actionLoading === c._id + "-delete" ? 'opacity-75 cursor-not-allowed' : ''}`}
-                  disabled={actionLoading === c._id + "-delete"}
-                  onClick={() => onDelete(c._id)}
-                  title="Delete comment"
-                  type="button"
-                >
-                  {actionLoading === c._id + "-delete" ? (
-                    <svg className="animate-spin h-4 w-4 text-red-600" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                  ) : (
-                    <Trash2 className="size-5 text-red-600" />
-                  )}
-                </button>
+              </Avatar>
+            </Link>
+            <div className="flex-1">
+              <p className="font-semibold text-xs md:text-sm">{c.author?.name || "User"} <span className="text-[10px] md:text-xs text-gray-500 ml-1">{formatShortRelativeTime(c.createdAt)}</span></p>
+              {isDeleted ? (
+                <p className="mt-0.5 text-gray-500 italic text-[10px] md:text-xs">[deleted]</p>
+              ) : (
+                <p className="mt-0.5 text-gray-800 text-xs md:text-sm" dangerouslySetInnerHTML={{ __html: markdownit().render(c.text) }} />
               )}
-            </div>
-          )}
-          {replyingTo === c._id && isLoggedIn && (
-            <div className="mt-3">
-              <textarea
-                ref={replyTextareaRef}
-                value={replyText}
-                onChange={e => setReplyText(e.target.value)}
-                placeholder="Add reply..."
-                maxLength={1000}
-                className="w-full min-h-[60px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <div className="flex justify-end mt-2 space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => setReplyingTo(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200" 
-                  onClick={() => { handleReply(c._id, replyText); }} 
-                  disabled={actionLoading === c._id + "-reply" || !replyText.trim()}
-                >
-                  {actionLoading === c._id + "-reply" ? (
-                    <div className="flex items-center space-x-2">
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              {!isDeleted && (
+                <div className="flex items-center space-x-1 md:space-x-3 mt-1 md:mt-2">
+                  <button
+                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    disabled={!isLoggedIn || likeLoading === c._id}
+                    onClick={() => onLike(c._id)}
+                    title={!isLoggedIn ? 'Log in to like' : ''}
+                    type="button"
+                  >
+                    {likeLoading === c._id ? (
+                      <svg className="animate-spin h-2 w-2 md:h-3 md:w-3 text-green-600" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
-                      <span>Posting...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <MessageSquare size={16} />
+                    ) : (
+                      <ThumbsUp className="size-3 md:size-4 text-green-600" />
+                    )}
+                    <span className="ml-0.5 text-[10px]">{c.likes || 0}</span>
+                  </button>
+                  <button
+                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    disabled={!isLoggedIn || dislikeLoading === c._id}
+                    onClick={() => onDislike(c._id)}
+                    title={!isLoggedIn ? 'Log in to dislike' : ''}
+                    type="button"
+                  >
+                    {dislikeLoading === c._id ? (
+                      <svg className="animate-spin h-2 w-2 md:h-3 md:w-3 text-red-600" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                    ) : (
+                      <ThumbsDown className="size-3 md:size-4 text-red-600" />
+                    )}
+                    <span className="ml-0.5 text-[10px]">{c.dislikes || 0}</span>
+                  </button>
+                  {/* Only show reply button if not deleted */}
+                  {!isDeleted && (
+                    <button
+                      className={`flex items-center space-x-0.5 md:space-x-1 text-gray-500 text-[10px] md:text-xs ${!isLoggedIn ? 'opacity-75 cursor-not-allowed' : 'hover:text-gray-700'}`}
+                      disabled={!isLoggedIn}
+                      onClick={() => { if (isLoggedIn) { setReplyingTo(c._id); setReplyText(""); setShowReplyToast(true); } }}
+                      title={!isLoggedIn ? 'Log in to reply' : 'Reply'}
+                    >
+                      <MessageSquare size={12} className="md:size-4" />
                       <span>Reply</span>
-                    </div>
+                    </button>
                   )}
-                </Button>
-              </div>
+                  {userId === c.author?._id && (
+                    <button
+                      className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-gray-500 hover:bg-red-50 hover:text-red-600 text-[10px] md:text-xs ${actionLoading === c._id + "-delete" ? 'opacity-75 cursor-not-allowed' : ''}`}
+                      disabled={actionLoading === c._id + "-delete"}
+                      onClick={() => onDelete(c._id)}
+                      title="Delete comment"
+                      type="button"
+                    >
+                      {actionLoading === c._id + "-delete" ? (
+                        <svg className="animate-spin h-2 w-2 md:h-3 md:w-3 text-red-600" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <Trash2 className="size-3 md:size-4 text-red-600" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Always render all replies, regardless of depth */}
+              {c.replies && c.replies.length > 0 && (
+                <>
+                  {depth + 1 < MAX_DEPTH ? (
+                    c.replies.map((r: any) => (
+                      <CommentCard 
+                        key={r._id} 
+                        c={r} 
+                        depth={depth + 1}
+                        userId={userId}
+                        isLoggedIn={isLoggedIn}
+                        onLike={onLike}
+                        onDislike={onDislike}
+                        onReply={onReply}
+                        onDelete={onDelete}
+                        replyingTo={replyingTo}
+                        setReplyingTo={setReplyingTo}
+                        replyText={replyText}
+                        setReplyText={setReplyText}
+                        handleReply={handleReply}
+                        actionLoading={actionLoading}
+                        likeLoading={likeLoading}
+                        dislikeLoading={dislikeLoading}
+                        setViewingDeepReplies={setViewingDeepReplies}
+                        MAX_DEPTH={MAX_DEPTH}
+                      />
+                    ))
+                  ) : (
+                    <button
+                      className="ml-4 md:ml-8 mt-1 md:mt-2 text-blue-600 text-[10px] md:text-sm underline px-1 py-0.5"
+                      onClick={() => setViewingDeepReplies({ comment: c, depth: depth + 1 })}
+                    >
+                      View more replies ({c.replies.length})
+                    </button>
+                  )}
+                </>
+              )}
             </div>
-          )}
-          {c.replies && c.replies.length > 0 && c.replies.map((r: any) => (
-            <CommentCard 
-              key={r._id} 
-              c={r} 
-              depth={depth + 1}
-              userId={userId}
-              isLoggedIn={isLoggedIn}
-              onLike={onLike}
-              onDislike={onDislike}
-              onReply={onReply}
-              onDelete={onDelete}
-              replyingTo={replyingTo}
-              setReplyingTo={setReplyingTo}
-              replyText={replyText}
-              setReplyText={setReplyText}
-              handleReply={handleReply}
-              actionLoading={actionLoading}
-              likeLoading={likeLoading}
-              dislikeLoading={dislikeLoading}
-            />
-          ))}
+          </div>
         </div>
       </div>
     </div>
   );
+
+  // Toast reply textarea (portal)
+  const toast = (replyingTo === c._id && isLoggedIn && showReplyToast && typeof window !== 'undefined') ?
+    createPortal(
+      <>
+        <div className="fixed inset-0 bg-black/20 z-40" />
+        <div ref={toastRef} className="fixed top-1/2 left-1/2 z-50 w-full max-w-xs md:max-w-md -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl p-4 border border-blue-200 flex flex-col">
+          <div className="font-semibold mb-2">Replying to <span className="text-blue-600">{c.author?.name || c.author?.username || 'User'}</span></div>
+          <textarea
+            ref={replyTextareaRef}
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            placeholder="Add reply..."
+            maxLength={1000}
+            className="w-full min-h-[60px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <div className="flex justify-end mt-2 space-x-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setReplyingTo(null); setShowReplyToast(false); }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200"
+              onClick={() => { handleReply(c._id, replyText); setShowReplyToast(false); }}
+              disabled={actionLoading === c._id + "-reply" || !replyText.trim()}
+            >
+              {actionLoading === c._id + "-reply" ? (
+                <div className="flex items-center space-x-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  <span>Posting...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <MessageSquare size={16} />
+                  <span>Reply</span>
+                </div>
+              )}
+            </Button>
+          </div>
+        </div>
+      </>,
+      document.body
+    ) : null;
+
+  return <>{card}{toast}</>;
+}
+
+// Utility: Short relative time (e.g., 2d, 20h, 5m)
+function formatShortRelativeTime(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diff = Math.max(0, now.getTime() - date.getTime());
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(days / 365);
+
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  if (days < 7) return `${days}d`;
+  if (days < 30) return `${weeks}w`;
+  if (days < 365) return `${months}mo`;
+  return `${years}y`;
 }
 
 // Props: startupId, userId, isLoggedIn
@@ -247,6 +355,11 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
   const [dislikeLoading, setDislikeLoading] = useState<string | null>(null);
 
   const { toast } = useToast();
+
+  const [viewingDeepReplies, setViewingDeepReplies] = useState<{comment: any, depth: number} | null>(null);
+
+  // Dynamically set MAX_DEPTH based on viewport
+  const MAX_DEPTH = useMaxDepth();
 
   // Fetch comments (PUBLIC - no auth required)
   const fetchComments = useCallback(async () => {
@@ -521,11 +634,9 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
               <LogIn className="h-5 w-5 text-gray-500" />
               <span className="text-gray-700">Log in to comment</span>
             </div>
-            <Link href="/auth/signin">
-              <Button className="bg-blue-500 text-white hover:bg-blue-600">
-                Log In
-              </Button>
-            </Link>
+            <Button className="bg-blue-500 text-white hover:bg-blue-600" onClick={() => signIn()}>
+              Log In
+            </Button>
           </div>
         )}
       </div>
@@ -572,10 +683,49 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
               actionLoading={actionLoading}
               likeLoading={likeLoading}
               dislikeLoading={dislikeLoading}
+              setViewingDeepReplies={setViewingDeepReplies}
+              MAX_DEPTH={MAX_DEPTH}
             />
           ))
         )}
       </div>
+      {/* Modal for deep replies */}
+      {viewingDeepReplies && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+          <div className="bg-white w-full max-w-xs md:max-w-lg max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl p-4 relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setViewingDeepReplies(null)}
+            >
+              Close
+            </button>
+            <h3 className="font-semibold mb-2">Replies</h3>
+            {viewingDeepReplies.comment.replies.map((r: any) => (
+              <CommentCard
+                key={r._id}
+                c={r}
+                depth={0}
+                userId={userId}
+                isLoggedIn={isLoggedIn}
+                onLike={handleLike}
+                onDislike={handleDislike}
+                onReply={() => {}}
+                onDelete={handleDelete}
+                replyingTo={replyingTo}
+                setReplyingTo={setReplyingTo}
+                replyText={replyText}
+                setReplyText={setReplyText}
+                handleReply={handleReply}
+                actionLoading={actionLoading}
+                likeLoading={likeLoading}
+                dislikeLoading={dislikeLoading}
+                setViewingDeepReplies={setViewingDeepReplies}
+                MAX_DEPTH={MAX_DEPTH}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
