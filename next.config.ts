@@ -21,9 +21,7 @@ const nextConfig: NextConfig = {
     ppr: 'incremental',
   },
   devIndicators: {
-    buildActivity: true,
-    appIsrStatus:true,
-    buildActivityPosition: 'bottom-right'
+    position: 'bottom-right'
   },
 };
 
