@@ -9,6 +9,7 @@ import { Author, Startup } from "@/sanity/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeleteStartupButton from "./DeleteStartupButton";
 import React from "react";
+import CountUp from 'react-countup';
 
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
 
@@ -40,6 +41,8 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
   const [likeLoading, setLikeLoading] = React.useState(false);
   const [dislikeLoading, setDislikeLoading] = React.useState(false);
   const [initialLoading, setInitialLoading] = React.useState(true);
+  const [totalViews, setTotalViews] = React.useState<number>(views ?? 0);
+  const hasIncremented = React.useRef(false);
 
   React.useEffect(() => {
     Promise.all([
@@ -55,6 +58,46 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
       setInitialLoading(false);
     });
   }, [_id, userId]);
+
+  // Initial fetch of views
+  React.useEffect(() => {
+    const fetchViews = async () => {
+      try {
+        const res = await fetch(`/api/views?id=${_id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setTotalViews(data.views);
+      } catch {}
+    };
+    fetchViews();
+  }, [_id]);
+
+  // Increment views only once per session
+  React.useEffect(() => {
+    const incrementViews = async () => {
+      if (hasIncremented.current) return;
+      if (typeof window !== 'undefined') {
+        const key = `viewed_${_id}`;
+        if (sessionStorage.getItem(key)) {
+          hasIncremented.current = true;
+          return;
+        }
+      }
+      try {
+        const res = await fetch(`/api/views?id=${_id}`, { method: 'POST' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+          setTotalViews(data.views);
+          hasIncremented.current = true;
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem(`viewed_${_id}`, 'true');
+          }
+        }
+      } catch {}
+    };
+    incrementViews();
+  }, [_id]);
 
   const handleLike = async () => {
     if (!userId || likeLoading) return;
@@ -146,7 +189,7 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
           )}
           <div className="flex gap-1.5 ml-2">
             <EyeIcon className="size-6 text-primary" />
-            <span className="text-16-medium">{views}</span>
+            <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
           </div>
         </div>
       </div>
