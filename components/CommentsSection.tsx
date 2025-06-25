@@ -233,10 +233,10 @@ function CommentCard({
                     ))
                   ) : (
                     <button
-                      className="ml-4 md:ml-8 mt-1 md:mt-2 text-blue-600 text-[10px] md:text-sm underline px-1 py-0.5"
+                      className="ml-4 md:ml-8 mt-1 md:mt-2 text-blue-600 text-[10px] md:text-sm px-1 py-0.5"
                       onClick={() => setViewingDeepReplies({ comment: c, depth: depth + 1 })}
                     >
-                      View more replies ({c.replies.length})
+                      {c.replies.length} more repl{c.replies.length === 1 ? 'y' : 'ies'}
                     </button>
                   )}
                 </>
@@ -322,6 +322,20 @@ function formatShortRelativeTime(dateString: string): string {
   if (days < 30) return `${weeks}w`;
   if (days < 365) return `${months}mo`;
   return `${years}y`;
+}
+
+// Utility: Find a comment by ID in nested comments structure
+function findCommentById(comments: any[], id: string): any | null {
+  for (const comment of comments) {
+    if (comment._id === id) {
+      return comment;
+    }
+    if (comment.replies && comment.replies.length > 0) {
+      const found = findCommentById(comment.replies, id);
+      if (found) return found;
+    }
+  }
+  return null;
 }
 
 // Props: startupId, userId, isLoggedIn
@@ -692,37 +706,48 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
       {/* Modal for deep replies */}
       {viewingDeepReplies && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-          <div className="bg-white w-full max-w-xs md:max-w-lg max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl p-4 relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-              onClick={() => setViewingDeepReplies(null)}
-            >
-              Close
-            </button>
-            <h3 className="font-semibold mb-2">Replies</h3>
-            {viewingDeepReplies.comment.replies.map((r: any) => (
-              <CommentCard
-                key={r._id}
-                c={r}
-                depth={0}
-                userId={userId}
-                isLoggedIn={isLoggedIn}
-                onLike={handleLike}
-                onDislike={handleDislike}
-                onReply={() => {}}
-                onDelete={handleDelete}
-                replyingTo={replyingTo}
-                setReplyingTo={setReplyingTo}
-                replyText={replyText}
-                setReplyText={setReplyText}
-                handleReply={handleReply}
-                actionLoading={actionLoading}
-                likeLoading={likeLoading}
-                dislikeLoading={dislikeLoading}
-                setViewingDeepReplies={setViewingDeepReplies}
-                MAX_DEPTH={MAX_DEPTH}
-              />
-            ))}
+          <div className="bg-white w-full max-w-xs md:max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl relative">
+            {/* Sticky header for title and close button */}
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between border-b border-gray-200 px-4 md:px-6 pt-4 md:pt-6 pb-2 md:pb-4" style={{minHeight: '3rem'}}>
+              <h3 className="font-semibold text-lg md:text-xl">Replies</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 p-2"
+                onClick={() => setViewingDeepReplies(null)}
+              >
+                Close
+              </button>
+            </div>
+            {/* Modal content below header */}
+            <div className="px-4 md:px-6 pt-2 pb-4 md:pb-6">
+            {(() => {
+              const currentComment = findCommentById(comments, viewingDeepReplies.comment._id);
+              if (!currentComment || !currentComment.replies) return null;
+              
+              return currentComment.replies.map((r: any) => (
+                <CommentCard
+                  key={r._id}
+                  c={r}
+                  depth={0}
+                  userId={userId}
+                  isLoggedIn={isLoggedIn}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  onReply={() => {}}
+                  onDelete={handleDelete}
+                  replyingTo={replyingTo}
+                  setReplyingTo={setReplyingTo}
+                  replyText={replyText}
+                  setReplyText={setReplyText}
+                  handleReply={handleReply}
+                  actionLoading={actionLoading}
+                  likeLoading={likeLoading}
+                  dislikeLoading={dislikeLoading}
+                  setViewingDeepReplies={setViewingDeepReplies}
+                  MAX_DEPTH={MAX_DEPTH}
+                />
+              ));
+            })()}
+            </div>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@ import  localFont  from "next/font/local";
 import "./globals.css";
 import 'easymde/dist/easymde.min.css';
 import { Toaster } from "@/components/ui/toaster";
+import Providers from "@/components/Providers";
 
 const workSans = localFont({
   src: [ 
@@ -151,7 +152,9 @@ export default function RootLayout({
       <body
         className={workSans.variable}
       >
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster />
       </body>
     </html>
