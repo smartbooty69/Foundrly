@@ -45,7 +45,9 @@ export const AUTHOR_BY_GITHUB_ID_QUERY = defineQuery(`
     username,
     email,
     image,
-    bio
+    bio,
+    followers[]->{ _id, name, username, image },
+    following[]->{ _id, name, username, image }
 }
 `);
 
@@ -57,7 +59,17 @@ export const AUTHOR_BY_ID_QUERY = defineQuery(`
     username,
     email,
     image,
-    bio
+    bio,
+    followers[]->{ _id, name, username, image },
+    following[]->{ _id, name, username, image }
+}
+`);
+
+export const AUTHOR_FOLLOWERS_FOLLOWING_QUERY = defineQuery(`
+*[_type == "author" && _id == $id][0]{
+    _id,
+    followers,
+    following
 }
 `);
 

@@ -6,13 +6,13 @@ import UserStartups from "@/components/UserStartups";
 import { Suspense } from "react";
 import { StartupCardSkeleton } from "@/components/StartupCard";
 import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
+import ProfileFollowSection from "@/components/ProfileFollowSection";
 
 export const experimental_ppr = true;
 
-const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const id = (await params).id;
+const Page = async ({ params }: { params: { id: string } }) => {
+  const id = params.id;
   const session = await auth();
-
   const user = await client.fetch(AUTHOR_BY_ID_QUERY, { id });
   if (!user) return notFound();
 
@@ -38,6 +38,14 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
             @{user?.username}
           </p>
           <p className="mt-1 text-center text-14-normal">{user?.bio}</p>
+
+          {/* Followers/Following and Follow/Unfollow Section */}
+          <ProfileFollowSection
+            initialFollowers={user.followers || []}
+            initialFollowing={user.following || []}
+            profileId={id}
+            currentUserId={session?.user?.id}
+          />
         </div>
 
         <div className="flex-1 flex flex-col gap-5 lg:-mt-5">
