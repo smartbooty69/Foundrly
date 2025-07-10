@@ -61,27 +61,21 @@ export default function FollowersFollowingToast({
   return (
     <>
       <div className="text-center font-bold mt-2 text-[16px]">
-        {isLoading ? (
-          <span className="text-white">Loading...</span>
-        ) : (
-          <>
-            <span
-              className={`${safeFollowers.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
-              onClick={() => showList('followers')}
-            >
-              {safeFollowers.length} followers
-            </span>
-            {' '}
-            &middot;
-            {' '}
-            <span
-              className={`${safeFollowing.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
-              onClick={() => showList('following')}
-            >
-              {safeFollowing.length} following
-            </span>
-          </>
-        )}
+        <span
+          className={`${safeFollowers.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
+          onClick={() => showList('followers')}
+        >
+          {safeFollowers.length} followers
+        </span>
+        {' '}
+        &middot;
+        {' '}
+        <span
+          className={`${safeFollowing.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
+          onClick={() => showList('following')}
+        >
+          {safeFollowing.length} following
+        </span>
       </div>
 
       {/* Modal */}

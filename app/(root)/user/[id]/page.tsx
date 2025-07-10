@@ -6,7 +6,9 @@ import UserStartups from "@/components/UserStartups";
 import { Suspense } from "react";
 import { StartupCardSkeleton } from "@/components/StartupCard";
 import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
-import ProfileFollowSection from "@/components/ProfileFollowSection";
+import ProfileFollowWrapper from "@/components/ProfileFollowWrapper";
+import { Button } from "@/components/ui/button";
+import MessageButton from "@/components/MessageButton";
 
 export const experimental_ppr = true;
 
@@ -39,13 +41,14 @@ const Page = async ({ params }: { params: { id: string } }) => {
           </p>
           <p className="mt-1 text-center text-14-normal">{user?.bio}</p>
 
-          {/* Followers/Following and Follow/Unfollow Section */}
-          <ProfileFollowSection
-            initialFollowers={user.followers || []}
-            initialFollowing={user.following || []}
-            profileId={id}
-            currentUserId={session?.user?.id}
-          />
+          <div className="mt-1">
+            <ProfileFollowWrapper
+              initialFollowers={user.followers || []}
+              initialFollowing={user.following || []}
+              profileId={id}
+              currentUserId={session?.user?.id}
+            />
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col gap-5 lg:-mt-5">
