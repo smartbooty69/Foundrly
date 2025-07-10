@@ -5,7 +5,6 @@ import { AUTHOR_BY_GITHUB_ID_QUERY } from "./sanity/lib/queries";
 import { writeClient } from "./sanity/lib/write-client";
  
 
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [GitHub],
   callbacks: {
@@ -31,6 +30,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           followers: [],
           following: [],
         });
+      }
+
+      // Upsert user in Stream Chat
+      try {
+        await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/chat/upsert-user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, name, image }),
+        });
+      } catch (e) {
+        // Log but don't block sign in
+        console.error("Stream Chat upsert-user error", e);
       }
 
       return true;

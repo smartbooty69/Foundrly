@@ -112,3 +112,38 @@ export const PLAYLIST_BY_SLUG_QUERY =
     pitch
   }
 }`);
+
+export const SUGGESTED_USERS_QUERY = defineQuery(`
+*[_type == "author" && _id != $currentUserId && !($currentUserFollowing[] match _id)] | order(_createdAt desc)[0...15]{
+    _id,
+    id,
+    name,
+    username,
+    email,
+    image,
+    bio,
+    followers[]->{ _id, name, username, image },
+    following[]->{ _id, name, username, image }
+}
+`);
+
+export const CURRENT_USER_FOLLOWERS_QUERY = defineQuery(`
+*[_type == "author" && _id == $currentUserId][0]{
+    followers[]->{ _id, name, username, image, bio },
+    following[]->{ _id, name, username, image, bio }
+}
+`);
+
+export const ALL_USERS_QUERY = defineQuery(`
+*[_type == "author"] | order(_createdAt desc)[0...50]{
+    _id,
+    id,
+    name,
+    username,
+    email,
+    image,
+    bio,
+    followers[]->{ _id, name, username, image },
+    following[]->{ _id, name, username, image }
+}
+`);
