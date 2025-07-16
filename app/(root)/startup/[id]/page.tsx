@@ -19,6 +19,7 @@ import StartupDetailLikes from "@/components/StartupDetailLikes";
 import CommentList from "@/components/CommentList";
 import CommentForm from "@/components/CommentForm";
 import CommentsSection from "@/components/CommentsSection";
+import Script from 'next/script';
 
 const md = markdownit();
 
@@ -38,7 +39,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   if (!post) return notFound();
 
   const editorPosts = playlistResult?.select || [];
-  const isOwner = session?.id === post.author?._id;
+  const isOwner = session?.user?.id === post.author?._id;
 
   const parsedContent = md.render(post?.pitch || "");
 
@@ -52,8 +53,17 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
         <StartupDetailLikes
           startupId={post._id}
           isLoggedIn={!!session}
-          userId={session?.id}
+          userId={session?.user?.id}
         />
+        <a
+          href="https://www.buymeacoffee.com/yourusername"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-4 rounded mt-4 flex items-center gap-2">
+            <span>☕</span> Buy Me a Coffee
+          </button>
+        </a>
       </section>
 
       <section className="section_container">
@@ -120,12 +130,25 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           </div>
         )}
 
-        <CommentsSection startupId={id} isLoggedIn={!!session} userId={session?.id} />
+        <CommentsSection startupId={id} isLoggedIn={!!session} userId={session?.user?.id} />
 
         <Suspense fallback={<Skeleton className="view_skeleton" />}>
           <View id={id} />
         </Suspense>
       </section>
+      <Script
+        data-name="BMC-Widget"
+        data-cfasync="false"
+        src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
+        data-id="yourusername"
+        data-description="Support me on Buy me a coffee!"
+        data-message="Thank you for visiting. You can now buy me a coffee!"
+        data-color="#FFDD00"
+        data-position="Right"
+        data-x_margin="18"
+        data-y_margin="18"
+        strategy="afterInteractive"
+      />
     </>
   );
 };

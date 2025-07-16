@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         _type: 'comment',
         text,
         createdAt: new Date().toISOString(),
-        author: { _type: 'reference', _ref: session.id },
+        author: { _type: 'reference', _ref: session.user.id },
         startup: { _type: 'reference', _ref: startupId },
         parent: { _type: 'reference', _ref: parentId },
       });
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
         _type: 'comment',
         text,
         createdAt: new Date().toISOString(),
-        author: { _type: 'reference', _ref: session.id },
+        author: { _type: 'reference', _ref: session.user.id },
         startup: { _type: 'reference', _ref: startupId },
       });
       await writeClient
@@ -169,7 +169,7 @@ export async function PATCH(req: Request) {
     }
     // Only allow author to edit
     const comment = await client.fetch(`*[_type == "comment" && _id == $id][0]{author->{_id}}`, { id: commentId });
-    if (!comment || comment.author?._id !== session.id) {
+    if (!comment || comment.author?._id !== session.user.id) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
     await writeClient.patch(commentId).set({ text }).commit();
@@ -193,7 +193,7 @@ export async function DELETE(req: Request) {
     }
     // Only allow author to delete
     const comment = await client.fetch(`*[_type == "comment" && _id == $id][0]{author->{_id}, startup, parent}`, { id: commentId });
-    if (!comment || comment.author?._id !== session.id) {
+    if (!comment || comment.author?._id !== session.user.id) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
     

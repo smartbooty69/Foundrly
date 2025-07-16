@@ -15,7 +15,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   if (!startup) return notFound();
 
   // Check if the current user is the author of the startup
-  if (startup.author?._id !== session.id) {
+  if (startup.author?._id !== session.user.id) {
     redirect("/");
   }
 

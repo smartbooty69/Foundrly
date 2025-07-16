@@ -1,0 +1,1330 @@
+# Foundrly System Architecture
+
+## Complete System Overview (All Components Together)
+
+```mermaid
+graph TB
+    subgraph "User Interface Layer"
+        UI[Next.js Frontend]
+        React[React Components]
+        Tailwind[Tailwind CSS]
+        RadixUI[Radix UI]
+    end
+
+    subgraph "Authentication Layer"
+        NextAuth[NextAuth.js]
+        GitHub[GitHub OAuth]
+        Session[Session Management]
+    end
+
+    subgraph "Content Management Layer"
+        SanityCMS[Sanity CMS]
+        SanityStudio[Sanity Studio]
+        GROQ[GROQ Queries]
+    end
+
+    subgraph "Real-time Communication"
+        StreamChat[Stream Chat API]
+        WebSocket[WebSocket Connections]
+        LiveQuery[Sanity Live Query]
+    end
+
+    subgraph "File Storage Layer"
+        VercelBlob[Vercel Blob Storage]
+        ImageOpt[Image Optimization]
+        FileUpload[File Upload API]
+    end
+
+    subgraph "Monitoring & Analytics"
+        Sentry[Sentry Error Tracking]
+        Performance[Performance Monitoring]
+        Analytics[Custom Analytics]
+    end
+
+    subgraph "Data Storage"
+        SanityDB[(Sanity Database)]
+        BlobStorage[(Vercel Blob)]
+        StreamDB[(Stream Chat DB)]
+        SessionDB[(Session Storage)]
+    end
+
+    subgraph "External Services"
+        Vercel[Vercel Platform]
+        GitHubAPI[GitHub API]
+        EmailService[Email Service - Planned]
+        PaymentGateway[Stripe/PayPal - Planned]
+    end
+
+    %% User Interface Connections
+    UI --> React
+    React --> Tailwind
+    Tailwind --> RadixUI
+
+    %% Authentication Flow
+    UI --> NextAuth
+    NextAuth --> GitHub
+    NextAuth --> Session
+    Session --> SessionDB
+
+    %% Content Management Flow
+    UI --> SanityCMS
+    SanityCMS --> SanityStudio
+    SanityCMS --> GROQ
+    GROQ --> SanityDB
+
+    %% Real-time Communication Flow
+    UI --> StreamChat
+    StreamChat --> WebSocket
+    StreamChat --> StreamDB
+    SanityCMS --> LiveQuery
+
+    %% File Storage Flow
+    UI --> FileUpload
+    FileUpload --> VercelBlob
+    VercelBlob --> BlobStorage
+    VercelBlob --> ImageOpt
+
+    %% Monitoring Flow
+    UI --> Sentry
+    Sentry --> Performance
+    Performance --> Analytics
+
+    %% External Service Connections
+    UI --> Vercel
+    NextAuth --> GitHubAPI
+    UI --> EmailService
+    UI --> PaymentGateway
+
+    %% Data Flow Connections
+    SanityDB --> LiveQuery
+    LiveQuery --> UI
+    StreamDB --> WebSocket
+    WebSocket --> UI
+    BlobStorage --> ImageOpt
+    ImageOpt --> UI
+```
+
+## Complete User Journey with All Systems
+
+```mermaid
+flowchart TD
+    Start([User visits Foundrly]) --> Load[Load Application]
+    
+    Load --> Auth{User Authenticated?}
+    Auth -->|No| Guest[Guest Experience]
+    Auth -->|Yes| LoggedIn[Logged In Experience]
+    
+    %% Guest Experience
+    Guest --> Browse[Browse Startups]
+    Browse --> Search[Search Content]
+    Search --> View[View Startup Details]
+    View --> ReadComments[Read Comments]
+    ReadComments --> LoginPrompt[Login to Interact]
+    
+    %% Logged In Experience
+    LoggedIn --> Dashboard[User Dashboard]
+    Dashboard --> Actions{User Actions}
+    
+    %% Content Creation
+    Actions -->|Create Startup| CreateFlow[Startup Creation Flow]
+    CreateFlow --> StartupForm[Fill Startup Form]
+    StartupForm --> ImageUpload[Upload Image]
+    ImageUpload --> Validation[Validate Input]
+    Validation --> SaveStartup[Save to Sanity]
+    SaveStartup --> RealTimeUpdate[Real-time Update]
+    
+    %% Content Interaction
+    Actions -->|Like/Dislike| VoteFlow[Voting Flow]
+    VoteFlow --> UpdateVotes[Update Vote Arrays]
+    UpdateVotes --> RealTimeUpdate
+    
+    Actions -->|Comment| CommentFlow[Comment Flow]
+    CommentFlow --> WriteComment[Write Comment]
+    WriteComment --> SubmitComment[Submit to API]
+    SubmitComment --> SaveComment[Save to Sanity]
+    SaveComment --> RealTimeUpdate
+    
+    Actions -->|Follow| FollowFlow[Follow Flow]
+    FollowFlow --> UpdateFollow[Update Follow Arrays]
+    UpdateFollow --> RealTimeUpdate
+    
+    Actions -->|Message| MessageFlow[Messaging Flow]
+    MessageFlow --> StreamChat[Connect to Stream Chat]
+    StreamChat --> SendMessage[Send Message]
+    SendMessage --> RealTimeUpdate
+    
+    %% Real-time Updates
+    RealTimeUpdate --> SanityLive[Sanity Live Query]
+    SanityLive --> UIUpdate[Update UI]
+    UIUpdate --> Continue[Continue Browsing]
+    
+    %% Error Handling
+    Validation -->|Error| ShowError[Show Error]
+    ShowError --> SentryReport[Report to Sentry]
+    SentryReport --> Retry[Retry Action]
+    Retry --> Validation
+    
+    %% Monitoring
+    RealTimeUpdate --> Performance[Performance Monitoring]
+    Performance --> Analytics[Analytics Tracking]
+    
+    %% External Integrations
+    LoginPrompt --> GitHub[GitHub OAuth]
+    GitHub --> Auth
+    Continue --> Load
+```
+
+## Complete Data Flow Architecture
+
+```mermaid
+graph LR
+    subgraph "Frontend Layer"
+        UI[Next.js UI]
+        Components[React Components]
+        State[State Management]
+    end
+
+    subgraph "API Layer"
+        AuthAPI[Authentication API]
+        ContentAPI[Content API]
+        ChatAPI[Messaging API]
+        UploadAPI[File Upload API]
+        SearchAPI[Search API]
+    end
+
+    subgraph "Service Layer"
+        NextAuth[NextAuth Service]
+        SanityService[Sanity Service]
+        StreamService[Stream Chat Service]
+        BlobService[Vercel Blob Service]
+        SentryService[Sentry Service]
+    end
+
+    subgraph "Data Layer"
+        SanityDB[(Sanity Database)]
+        BlobStorage[(Vercel Blob)]
+        StreamDB[(Stream Chat DB)]
+        SessionStore[(Session Storage)]
+    end
+
+    subgraph "External APIs"
+        GitHubAPI[GitHub API]
+        VercelAPI[Vercel API]
+        StreamAPI[Stream Chat API]
+        SentryAPI[Sentry API]
+    end
+
+    %% Frontend to API
+    UI --> AuthAPI
+    UI --> ContentAPI
+    UI --> ChatAPI
+    UI --> UploadAPI
+    UI --> SearchAPI
+
+    %% API to Services
+    AuthAPI --> NextAuth
+    ContentAPI --> SanityService
+    ChatAPI --> StreamService
+    UploadAPI --> BlobService
+    SearchAPI --> SanityService
+
+    %% Services to Data
+    NextAuth --> SessionStore
+    SanityService --> SanityDB
+    StreamService --> StreamDB
+    BlobService --> BlobStorage
+
+    %% Services to External APIs
+    NextAuth --> GitHubAPI
+    SanityService --> VercelAPI
+    StreamService --> StreamAPI
+    SentryService --> SentryAPI
+
+    %% Real-time Connections
+    SanityDB --> SanityService
+    StreamDB --> StreamService
+    SessionStore --> NextAuth
+
+    %% Error Monitoring
+    UI --> SentryService
+    AuthAPI --> SentryService
+    ContentAPI --> SentryService
+    ChatAPI --> SentryService
+    UploadAPI --> SentryService
+    SearchAPI --> SentryService
+```
+
+## System Overview
+
+```mermaid
+graph TB
+    subgraph "External Systems"
+        GitHub[GitHub OAuth]
+        VercelBlob[Vercel Blob Storage]
+        Sentry[Sentry Monitoring]
+        StreamChat[Stream Chat API]
+        Stripe[Stripe/PayPal - Planned]
+        EmailService[Email Service - Planned]
+        Analytics[Analytics Platform - Planned]
+    end
+
+    subgraph "Foundrly Application"
+        NextJS[Next.js App]
+        SanityCMS[Sanity CMS]
+        NextAuth[NextAuth.js]
+    end
+
+    subgraph "Data Stores"
+        SanityDB[(Sanity Database)]
+        BlobStorage[(Vercel Blob)]
+        StreamDB[(Stream Chat DB)]
+        AnalyticsDB[(Analytics DB - Planned)]
+        EmailDB[(Email Service DB - Planned)]
+        PaymentDB[(Payment DB - Planned)]
+    end
+
+    subgraph "Core Processes"
+        Auth[1. User Authentication]
+        Content[2. Content Management]
+        Messaging[3. Messaging System]
+        Upload[4. File Upload]
+        Comments[5. Comments System]
+        Follow[6. Follow System]
+        Search[7. Search System]
+        Analytics[8. Analytics - Planned]
+        Mentions[9. Mention System - Planned]
+        Bookmarks[10. Bookmarks - Planned]
+        Donations[11. Donations - Planned]
+        Moderation[12. Moderation - Planned]
+    end
+
+    %% External connections
+    GitHub --> NextAuth
+    VercelBlob --> Upload
+    Sentry --> NextJS
+    StreamChat --> Messaging
+    Stripe --> Donations
+    EmailService --> Mentions
+    Analytics --> Analytics
+
+    %% Internal connections
+    NextAuth --> Auth
+    SanityCMS --> Content
+    NextJS --> Comments
+    NextJS --> Follow
+    NextJS --> Search
+    NextJS --> Bookmarks
+    NextJS --> Moderation
+
+    %% Data store connections
+    Auth --> SanityDB
+    Content --> SanityDB
+    Comments --> SanityDB
+    Follow --> SanityDB
+    Search --> SanityDB
+    Bookmarks --> SanityDB
+    Mentions --> SanityDB
+    Moderation --> SanityDB
+    Upload --> BlobStorage
+    Messaging --> StreamDB
+    Analytics --> AnalyticsDB
+    Mentions --> EmailDB
+    Donations --> PaymentDB
+```
+
+## User Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant N as NextAuth.js
+    participant G as GitHub
+    participant S as Sanity CMS
+    participant SC as Stream Chat
+
+    U->>N: Click Login
+    N->>G: OAuth Request
+    G->>N: Authorization Code
+    N->>G: Exchange Code for Token
+    G->>N: User Profile Data
+    N->>S: Check if user exists
+    alt User doesn't exist
+        S->>S: Create new user record
+    end
+    N->>SC: Upsert user in Stream Chat
+    N->>U: Return session token
+    U->>U: Logged in successfully
+```
+
+## Complete User Journey Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User visits Foundrly]) --> Home{On Homepage?}
+    Home -->|Yes| Browse[Browse Startups]
+    Home -->|No| Auth{Authenticated?}
+    
+    Auth -->|No| Login[Login with GitHub]
+    Login --> AuthCheck{Login Success?}
+    AuthCheck -->|No| Error[Show Error]
+    AuthCheck -->|Yes| Profile[Create/Update Profile]
+    
+    Auth -->|Yes| Dashboard[User Dashboard]
+    Profile --> Dashboard
+    
+    Browse --> Search[Search Startups]
+    Search --> Filter[Filter by Category]
+    Filter --> ViewStartup[View Startup Details]
+    
+    ViewStartup --> Actions{User Actions}
+    Actions -->|Like/Dislike| Vote[Update Vote Count]
+    Actions -->|Comment| CommentFlow[Comment System]
+    Actions -->|Share| Share[Share Startup]
+    Actions -->|Follow Author| Follow[Follow User]
+    
+    Dashboard --> CreateStartup[Create New Startup]
+    CreateStartup --> StartupForm[Fill Startup Form]
+    StartupForm --> Validation{Form Valid?}
+    Validation -->|No| ShowErrors[Show Validation Errors]
+    ShowErrors --> StartupForm
+    Validation -->|Yes| UploadImage[Upload Image]
+    UploadImage --> SaveStartup[Save to Sanity]
+    SaveStartup --> Success[Startup Created]
+    
+    CommentFlow --> AuthCheck2{User Authenticated?}
+    AuthCheck2 -->|No| LoginPrompt[Show Login Prompt]
+    AuthCheck2 -->|Yes| WriteComment[Write Comment]
+    WriteComment --> SubmitComment[Submit Comment]
+    SubmitComment --> UpdateUI[Update UI]
+    
+    Vote --> UpdateVotes[Update Vote Arrays]
+    Follow --> UpdateFollow[Update Follow Arrays]
+    Share --> SocialShare[Share on Social Media]
+    
+    UpdateUI --> RealTime[Real-time Updates]
+    UpdateVotes --> RealTime
+    UpdateFollow --> RealTime
+    SocialShare --> RealTime
+    
+    RealTime --> Continue[Continue Browsing]
+    Continue --> Home
+    
+    Error --> Home
+    Success --> Home
+    LoginPrompt --> Login
+```
+
+## Content Management Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend Form
+    participant V as Validation
+    participant S as Sanity CMS
+    participant UI as UI Components
+
+    U->>F: Fill startup form
+    F->>V: Validate input
+    V->>F: Validation result
+    alt Valid input
+        F->>S: Create startup document
+        S->>S: Store in database
+        S->>UI: Real-time update
+        UI->>U: Show success message
+    else Invalid input
+        F->>U: Show error messages
+    end
+```
+
+## Startup Creation Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User clicks Create Startup]) --> Auth{User Authenticated?}
+    Auth -->|No| Login[Redirect to Login]
+    Auth -->|Yes| Form[Show Startup Form]
+    
+    Form --> Input[User Inputs Data]
+    Input --> Title[Enter Title]
+    Title --> Description[Enter Description]
+    Description --> Category[Select Category]
+    Category --> Image[Upload Image]
+    
+    Image --> ImageType{Image Type?}
+    ImageType -->|URL| URLInput[Enter Image URL]
+    ImageType -->|Upload| FileUpload[Upload File]
+    
+    URLInput --> ValidateURL[Validate URL]
+    FileUpload --> ValidateFile[Validate File]
+    
+    ValidateURL --> ImageValid{Image Valid?}
+    ValidateFile --> ImageValid
+    
+    ImageValid -->|No| ImageError[Show Image Error]
+    ImageValid -->|Yes| Pitch[Write Pitch Content]
+    
+    ImageError --> Image
+    Pitch --> Markdown[Markdown Editor]
+    Markdown --> Preview[Preview Content]
+    Preview --> Submit[Submit Form]
+    
+    Submit --> Validation[Form Validation]
+    Validation --> Valid{All Fields Valid?}
+    
+    Valid -->|No| ShowErrors[Display Errors]
+    ShowErrors --> Form
+    
+    Valid -->|Yes| Save[Save to Sanity]
+    Save --> Success[Startup Created]
+    Success --> Redirect[Redirect to Startup Page]
+    
+    Login --> Auth
+```
+
+## Comment System Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User views startup]) --> Comments[View Comments]
+    Comments --> AuthCheck{User Authenticated?}
+    
+    AuthCheck -->|No| GuestView[Guest can view comments]
+    AuthCheck -->|Yes| LoggedInView[Logged in user view]
+    
+    GuestView --> ReadOnly[Read-only comment display]
+    LoggedInView --> Interactive[Interactive comment interface]
+    
+    Interactive --> Actions{User Actions}
+    Actions -->|Like| LikeComment[Like Comment]
+    Actions -->|Dislike| DislikeComment[Dislike Comment]
+    Actions -->|Reply| ReplyFlow[Reply to Comment]
+    Actions -->|Delete| DeleteFlow[Delete Comment]
+    Actions -->|Edit| EditFlow[Edit Comment]
+    
+    LikeComment --> UpdateLike[Update like count]
+    DislikeComment --> UpdateDislike[Update dislike count]
+    
+    ReplyFlow --> WriteReply[Write reply text]
+    WriteReply --> SubmitReply[Submit reply]
+    SubmitReply --> SaveReply[Save to database]
+    
+    DeleteFlow --> ConfirmDelete{Confirm delete?}
+    ConfirmDelete -->|No| Cancel[Cancel delete]
+    ConfirmDelete -->|Yes| SoftDelete[Soft delete comment]
+    
+    EditFlow --> EditText[Edit comment text]
+    EditText --> SaveEdit[Save changes]
+    
+    UpdateLike --> RealTime[Real-time update]
+    UpdateDislike --> RealTime
+    SaveReply --> RealTime
+    SoftDelete --> RealTime
+    SaveEdit --> RealTime
+    
+    RealTime --> UpdateUI[Update UI]
+    UpdateUI --> Continue[Continue browsing]
+    
+    Cancel --> Continue
+    ReadOnly --> Continue
+```
+
+## Comments System Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant C as Comments API
+    participant A as Auth Check
+    participant S as Sanity CMS
+    participant UI as UI Components
+
+    U->>C: Submit comment
+    C->>A: Check authentication
+    alt Authenticated
+        A->>S: Create comment document
+        S->>S: Build comment tree
+        S->>UI: Real-time update
+        UI->>U: Show new comment
+    else Not authenticated
+        C->>U: Show login prompt
+    end
+```
+
+## File Upload Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as File Input
+    participant V as Validation
+    participant B as Vercel Blob
+    participant S as Sanity CMS
+
+    U->>F: Select file
+    F->>V: Validate file type/size
+    V->>F: Validation result
+    alt Valid file
+        F->>B: Upload to blob storage
+        B->>F: Return public URL
+        F->>S: Store URL in database
+        F->>U: Show uploaded image
+    else Invalid file
+        F->>U: Show error message
+    end
+```
+
+## File Upload Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User selects file]) --> FileType{File Type?}
+    FileType -->|Image| ImageValidation[Validate Image]
+    FileType -->|Other| Reject[Reject File]
+    
+    ImageValidation --> SizeCheck{File Size < 5MB?}
+    SizeCheck -->|No| SizeError[Show Size Error]
+    SizeCheck -->|Yes| FormatCheck{Valid Format?}
+    
+    FormatCheck -->|No| FormatError[Show Format Error]
+    FormatCheck -->|Yes| Upload[Upload to Vercel Blob]
+    
+    Upload --> UploadSuccess{Upload Success?}
+    UploadSuccess -->|No| UploadError[Show Upload Error]
+    UploadSuccess -->|Yes| GetURL[Get Public URL]
+    
+    GetURL --> SaveURL[Save URL to Database]
+    SaveURL --> Preview[Show Image Preview]
+    Preview --> Success[Upload Complete]
+    
+    SizeError --> Start
+    FormatError --> Start
+    UploadError --> Start
+    Reject --> Start
+```
+
+## Search and Discovery Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User enters search]) --> SearchType{Search Type?}
+    SearchType -->|Startup| StartupSearch[Search Startups]
+    SearchType -->|User| UserSearch[Search Users]
+    SearchType -->|Category| CategorySearch[Filter by Category]
+    
+    StartupSearch --> Query[Build GROQ Query]
+    UserSearch --> Query
+    CategorySearch --> Query
+    
+    Query --> Execute[Execute Query]
+    Execute --> Results{Results Found?}
+    
+    Results -->|Yes| Display[Display Results]
+    Results -->|No| NoResults[Show No Results]
+    
+    Display --> Sort[Sort Results]
+    Sort --> Paginate[Paginate Results]
+    Paginate --> UI[Update UI]
+    
+    NoResults --> Suggestions[Show Suggestions]
+    Suggestions --> UI
+    
+    UI --> UserAction{User Action?}
+    UserAction -->|View Startup| ViewStartup[View Startup Details]
+    UserAction -->|Follow User| FollowUser[Follow User]
+    UserAction -->|Refine Search| Refine[Refine Search]
+    UserAction -->|Clear Search| Clear[Clear Search]
+    
+    ViewStartup --> Continue[Continue Browsing]
+    FollowUser --> Continue
+    Refine --> Start
+    Clear --> Home[Return to Home]
+```
+
+## Messaging System Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant SC as Stream Chat
+    participant T as Token Service
+    participant M as Message API
+    participant UI as UI Components
+
+    U->>T: Request chat token
+    T->>SC: Generate user token
+    SC->>T: Return token
+    T->>U: Provide token
+    U->>SC: Connect to chat
+    U->>M: Send message
+    M->>SC: Process message
+    SC->>UI: Real-time update
+    UI->>U: Show message
+```
+
+## Messaging System Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User opens Messages]) --> Auth{User Authenticated?}
+    Auth -->|No| Login[Redirect to Login]
+    Auth -->|Yes| LoadMessages[Load User Messages]
+    
+    LoadMessages --> MessageList[Display Message List]
+    MessageList --> UserAction{User Action?}
+    
+    UserAction -->|New Message| NewMessage[Start New Message]
+    UserAction -->|Open Chat| OpenChat[Open Existing Chat]
+    UserAction -->|Search Users| SearchUsers[Search for Users]
+    
+    NewMessage --> SelectUser[Select User to Message]
+    SelectUser --> CreateChannel[Create Chat Channel]
+    CreateChannel --> ChatInterface[Open Chat Interface]
+    
+    OpenChat --> ChatInterface
+    SearchUsers --> UserResults[Display User Results]
+    UserResults --> SelectUser
+    
+    ChatInterface --> ChatActions{Chat Actions}
+    ChatActions -->|Send Message| SendMessage[Send Message]
+    ChatActions -->|Send File| SendFile[Send File]
+    ChatActions -->|React| React[Add Reaction]
+    ChatActions -->|Typing| Typing[Show Typing Indicator]
+    
+    SendMessage --> ValidateMessage{Message Valid?}
+    ValidateMessage -->|No| MessageError[Show Error]
+    ValidateMessage -->|Yes| SendToStream[Send to Stream Chat]
+    
+    SendFile --> ValidateFile{File Valid?}
+    ValidateFile -->|No| FileError[Show File Error]
+    ValidateFile -->|Yes| UploadFile[Upload File]
+    UploadFile --> SendToStream
+    
+    SendToStream --> StreamSuccess{Stream Success?}
+    StreamSuccess -->|No| StreamError[Show Stream Error]
+    StreamSuccess -->|Yes| UpdateUI[Update UI]
+    
+    React --> UpdateReaction[Update Reaction]
+    Typing --> ShowTyping[Show Typing Indicator]
+    
+    UpdateUI --> RealTime[Real-time Updates]
+    UpdateReaction --> RealTime
+    ShowTyping --> RealTime
+    
+    RealTime --> Continue[Continue Chatting]
+    
+    MessageError --> ChatInterface
+    FileError --> ChatInterface
+    StreamError --> ChatInterface
+    Login --> Auth
+```
+
+## Follow System Flow Chart
+
+```mermaid
+flowchart TD
+    Start([User clicks Follow]) --> Auth{User Authenticated?}
+    Auth -->|No| Login[Redirect to Login]
+    Auth -->|Yes| CheckFollow{Already Following?}
+    
+    CheckFollow -->|Yes| Unfollow[Show Unfollow Option]
+    CheckFollow -->|No| Follow[Show Follow Option]
+    
+    Follow --> ConfirmFollow{Confirm Follow?}
+    ConfirmFollow -->|No| Cancel[Cancel Action]
+    ConfirmFollow -->|Yes| UpdateFollow[Update Follow Arrays]
+    
+    Unfollow --> ConfirmUnfollow{Confirm Unfollow?}
+    ConfirmUnfollow -->|No| Cancel
+    ConfirmUnfollow -->|Yes| UpdateUnfollow[Update Follow Arrays]
+    
+    UpdateFollow --> FollowSuccess[Follow Success]
+    UpdateUnfollow --> UnfollowSuccess[Unfollow Success]
+    
+    FollowSuccess --> UpdateUI[Update UI]
+    UnfollowSuccess --> UpdateUI
+    Cancel --> UpdateUI
+    
+    UpdateUI --> RealTime[Real-time Updates]
+    RealTime --> Continue[Continue Browsing]
+    
+    Login --> Auth
+```
+
+## Search System Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Search API
+    participant Q as GROQ Query
+    participant DB as Sanity Database
+    participant UI as UI Components
+
+    U->>S: Enter search query
+    S->>Q: Build GROQ query
+    Q->>DB: Execute search
+    DB->>Q: Return results
+    Q->>S: Process results
+    S->>UI: Update UI
+    UI->>U: Show filtered results
+```
+
+## Error Handling Flow Chart
+
+```mermaid
+flowchart TD
+    Start([Error Occurs]) --> ErrorType{Error Type?}
+    
+    ErrorType -->|Network| NetworkError[Network Error]
+    ErrorType -->|Authentication| AuthError[Authentication Error]
+    ErrorType -->|Validation| ValidationError[Validation Error]
+    ErrorType -->|Server| ServerError[Server Error]
+    ErrorType -->|File Upload| UploadError[File Upload Error]
+    
+    NetworkError --> Retry[Retry Request]
+    AuthError --> RedirectLogin[Redirect to Login]
+    ValidationError --> ShowValidation[Show Validation Errors]
+    ServerError --> ShowServerError[Show Server Error]
+    UploadError --> ShowUploadError[Show Upload Error]
+    
+    Retry --> RetrySuccess{Retry Success?}
+    RetrySuccess -->|Yes| Continue[Continue Operation]
+    RetrySuccess -->|No| ShowNetworkError[Show Network Error]
+    
+    RedirectLogin --> LoginSuccess{Login Success?}
+    LoginSuccess -->|Yes| Continue
+    LoginSuccess -->|No| ShowAuthError[Show Auth Error]
+    
+    ShowValidation --> UserFix[User Fixes Input]
+    UserFix --> Revalidate[Revalidate Form]
+    Revalidate --> Valid{Valid Now?}
+    Valid -->|Yes| Continue
+    Valid -->|No| ShowValidation
+    
+    ShowServerError --> ReportError[Report to Sentry]
+    ShowUploadError --> ReportError
+    ShowNetworkError --> ReportError
+    ShowAuthError --> ReportError
+    
+    ReportError --> UserNotification[Notify User]
+    UserNotification --> Recovery[Recovery Options]
+    
+    Recovery --> Retry
+    Recovery --> Home[Return to Home]
+    Recovery --> Support[Contact Support]
+```
+
+## Deployment Flow Chart
+
+```mermaid
+flowchart TD
+    Start([Code Push]) --> Trigger[Trigger Deployment]
+    Trigger --> Build[Build Application]
+    
+    Build --> BuildSuccess{Build Success?}
+    BuildSuccess -->|No| BuildError[Build Error]
+    BuildSuccess -->|Yes| Test[Run Tests]
+    
+    Test --> TestSuccess{Test Success?}
+    TestSuccess -->|No| TestError[Test Error]
+    TestSuccess -->|Yes| Deploy[Deploy to Vercel]
+    
+    Deploy --> DeploySuccess{Deploy Success?}
+    DeploySuccess -->|No| DeployError[Deploy Error]
+    DeploySuccess -->|Yes| HealthCheck[Health Check]
+    
+    HealthCheck --> HealthSuccess{Health Success?}
+    HealthSuccess -->|No| Rollback[Rollback Deployment]
+    HealthSuccess -->|Yes| Live[Go Live]
+    
+    BuildError --> Fix[Fix Build Issues]
+    TestError --> Fix
+    DeployError --> Fix
+    Rollback --> Fix
+    
+    Fix --> Trigger
+    Live --> Monitor[Monitor Application]
+    
+    Monitor --> Issues{Issues Found?}
+    Issues -->|Yes| Alert[Send Alerts]
+    Issues -->|No| Continue[Continue Monitoring]
+    
+    Alert --> Investigate[Investigate Issues]
+    Investigate --> Fix
+```
+
+## Planned Features Flow
+
+```mermaid
+graph LR
+    subgraph "Planned Features"
+        M[Mention System]
+        B[Bookmarks]
+        D[Donations]
+        Mod[Moderation]
+        A[Analytics]
+        E[Email Notifications]
+    end
+
+    subgraph "Data Stores"
+        Sanity[(Sanity CMS)]
+        Payment[(Payment Gateway)]
+        Email[(Email Service)]
+        AnalyticsDB[(Analytics DB)]
+    end
+
+    M --> Sanity
+    B --> Sanity
+    D --> Payment
+    Mod --> Sanity
+    A --> AnalyticsDB
+    E --> Email
+```
+
+## Complete Database Schema (Based on Actual Sanity Schema)
+
+```mermaid
+erDiagram
+    AUTHOR {
+        string _id PK
+        number id "GitHub ID"
+        string name "Full name"
+        string username "GitHub username"
+        string email "Email address"
+        string image "Profile image URL"
+        text bio "User biography"
+        array followers "Array of author references"
+        array following "Array of author references"
+    }
+
+    STARTUP {
+        string _id PK
+        string title "Startup title"
+        object slug "URL slug object"
+        reference author FK "Reference to AUTHOR"
+        number views "View count"
+        text description "Short description"
+        string category "Startup category"
+        string image "Image URL"
+        markdown pitch "Rich text pitch content"
+        number likes "Like count"
+        number dislikes "Dislike count"
+        array likedBy "Array of user IDs"
+        array dislikedBy "Array of user IDs"
+        array comments "Array of comment references"
+    }
+
+    COMMENT {
+        string _id PK
+        reference author FK "Reference to AUTHOR"
+        string text "Comment text (1-1000 chars)"
+        datetime createdAt "Creation timestamp"
+        reference startup FK "Reference to STARTUP"
+        array replies "Array of comment references"
+        number likes "Like count"
+        number dislikes "Dislike count"
+        array likedBy "Array of user IDs"
+        array dislikedBy "Array of user IDs"
+        reference parent FK "Reference to COMMENT (for replies)"
+        boolean deleted "Soft delete flag"
+    }
+
+    PLAYLIST {
+        string _id PK
+        string title "Playlist title"
+        object slug "URL slug object"
+        array select "Array of startup references"
+    }
+
+    %% Planned Entities (Future Implementation)
+    BOOKMARK {
+        string _id PK
+        reference user FK "Reference to AUTHOR"
+        reference startup FK "Reference to STARTUP"
+        datetime createdAt "Creation timestamp"
+    }
+
+    MENTION {
+        string _id PK
+        reference fromUser FK "User who mentions"
+        reference toUser FK "User being mentioned"
+        reference startup FK "Related startup (optional)"
+        reference comment FK "Related comment (optional)"
+        datetime createdAt "Creation timestamp"
+        boolean read "Read status"
+    }
+
+    DONATION {
+        string _id PK
+        reference fromUser FK "User making donation"
+        reference toUser FK "User receiving donation"
+        number amount "Donation amount"
+        string currency "Currency code"
+        string paymentMethod "Payment method used"
+        datetime createdAt "Creation timestamp"
+        string status "Payment status"
+    }
+
+    REPORT {
+        string _id PK
+        reference reporter FK "User reporting"
+        reference reportedUser FK "User being reported"
+        reference startup FK "Related startup (optional)"
+        reference comment FK "Related comment (optional)"
+        string reason "Report reason"
+        string description "Report description"
+        datetime createdAt "Creation timestamp"
+        string status "Report status"
+    }
+
+    %% Current Relationships (Implemented)
+    AUTHOR ||--o{ STARTUP : "creates"
+    AUTHOR ||--o{ COMMENT : "writes"
+    STARTUP ||--o{ COMMENT : "has"
+    COMMENT ||--o{ COMMENT : "replies to"
+    PLAYLIST ||--o{ STARTUP : "contains"
+    AUTHOR ||--o{ AUTHOR : "follows" "Self-referencing through followers/following arrays"
+
+    %% Planned Relationships (Future Implementation)
+    AUTHOR ||--o{ BOOKMARK : "bookmarks"
+    STARTUP ||--o{ BOOKMARK : "bookmarked by"
+    AUTHOR ||--o{ MENTION : "mentions"
+    AUTHOR ||--o{ MENTION : "mentioned by"
+    AUTHOR ||--o{ DONATION : "donates"
+    AUTHOR ||--o{ DONATION : "receives"
+    AUTHOR ||--o{ REPORT : "reports"
+    AUTHOR ||--o{ REPORT : "reported"
+    STARTUP ||--o{ MENTION : "mentioned in"
+    COMMENT ||--o{ MENTION : "mentioned in"
+```
+
+## Schema Documentation
+
+### Current Entities (Implemented)
+
+#### AUTHOR Entity
+- **Purpose**: User profiles and authentication
+- **Key Fields**:
+  - `id`: GitHub OAuth ID (unique identifier)
+  - `followers/following`: Self-referencing arrays for social connections
+  - `bio`: User biography text
+- **Relationships**: Creates startups, writes comments, follows other authors
+
+#### STARTUP Entity
+- **Purpose**: Startup pitches and content
+- **Key Fields**:
+  - `slug`: URL-friendly identifier generated from title
+  - `pitch`: Rich markdown content for detailed startup description
+  - `likedBy/dislikedBy`: Arrays tracking user interactions
+- **Relationships**: Belongs to author, has comments, can be bookmarked
+
+#### COMMENT Entity
+- **Purpose**: Threaded discussion system
+- **Key Fields**:
+  - `text`: Limited to 1000 characters with validation
+  - `parent`: Self-referencing for threaded replies
+  - `deleted`: Soft delete flag to preserve thread structure
+- **Relationships**: Written by author, belongs to startup, can have replies
+
+#### PLAYLIST Entity
+- **Purpose**: Curated collections of startups
+- **Key Fields**:
+  - `select`: Array of startup references
+  - `slug`: URL-friendly identifier
+- **Relationships**: Contains multiple startups
+
+### Planned Entities (Future Implementation)
+
+#### BOOKMARK Entity
+- **Purpose**: User's saved/favorite startups
+- **Key Fields**:
+  - `user`: Reference to author who bookmarked
+  - `startup`: Reference to bookmarked startup
+- **Relationships**: Links users to their favorite startups
+
+#### MENTION Entity
+- **Purpose**: @username mentions in comments/startups
+- **Key Fields**:
+  - `fromUser/toUser`: Who mentioned whom
+  - `startup/comment`: Optional context for mention
+  - `read`: Notification status
+- **Relationships**: Tracks user mentions across content
+
+#### DONATION Entity
+- **Purpose**: Financial support between users
+- **Key Fields**:
+  - `amount`: Donation amount
+  - `currency`: Payment currency
+  - `status`: Payment processing status
+- **Relationships**: Links donors to recipients
+
+#### REPORT Entity
+- **Purpose**: Content moderation and reporting
+- **Key Fields**:
+  - `reason`: Category of report
+  - `description`: Detailed report description
+  - `status`: Moderation status
+- **Relationships**: Links reporters to reported content/users
+
+### Data Types Used
+
+- **string**: Text fields with validation
+- **number**: Numeric values (IDs, counts, amounts)
+- **text**: Long-form text content
+- **datetime**: Timestamp fields
+- **boolean**: True/false flags
+- **url**: Image and link URLs
+- **markdown**: Rich text content
+- **slug**: URL-friendly identifiers
+- **reference**: Foreign key relationships
+- **array**: Collections of references or values
+- **object**: Complex structured data (slug objects)
+
+### Validation Rules
+
+- **Required Fields**: Author, text, createdAt in comments
+- **Length Limits**: Comment text (1-1000 characters)
+- **Image Requirements**: Startup images are required
+- **Category Validation**: Startup categories (1-20 characters)
+- **Soft Deletes**: Comments use soft deletion
+- **Self-References**: Author followers/following arrays
+
+## API Endpoints
+
+```mermaid
+graph TB
+    subgraph "Authentication"
+        A1[POST /api/auth/signin]
+        A2[POST /api/auth/signout]
+        A3[GET /api/auth/session]
+    end
+
+    subgraph "Content Management"
+        C1[POST /api/startup/create]
+        C2[GET /api/startup/[id]]
+        C3[PUT /api/startup/[id]]
+        C4[DELETE /api/startup/[id]]
+    end
+
+    subgraph "Comments"
+        CM1[GET /api/comments]
+        CM2[POST /api/comments]
+        CM3[PATCH /api/comments]
+        CM4[DELETE /api/comments]
+        CM5[POST /api/comments/like]
+        CM6[POST /api/comments/dislike]
+    end
+
+    subgraph "User Management"
+        U1[GET /api/users/search]
+        U2[GET /api/users/suggested]
+        U3[POST /api/follow]
+        U4[GET /api/user/[id]]
+    end
+
+    subgraph "File Upload"
+        F1[POST /api/upload]
+        F2[GET /api/upload/[id]]
+    end
+
+    subgraph "Messaging"
+        M1[POST /api/chat/token]
+        M2[POST /api/chat/upsert-user]
+        M3[POST /api/chat/create-channel]
+    end
+
+    subgraph "Planned APIs"
+        P1[POST /api/bookmarks]
+        P2[POST /api/mentions]
+        P3[POST /api/donations]
+        P4[POST /api/reports]
+        P5[GET /api/analytics]
+    end
+```
+
+## Deployment Architecture
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        NextJS[Next.js App]
+        React[React Components]
+        Tailwind[Tailwind CSS]
+    end
+
+    subgraph "Backend Services"
+        Sanity[Sanity CMS]
+        NextAuth[NextAuth.js]
+        StreamChat[Stream Chat]
+        Sentry[Sentry]
+    end
+
+    subgraph "External Services"
+        GitHub[GitHub OAuth]
+        Vercel[Vercel Platform]
+        Blob[Vercel Blob]
+    end
+
+    subgraph "Data Storage"
+        SanityDB[(Sanity Database)]
+        BlobStorage[(Vercel Blob)]
+        StreamDB[(Stream Chat DB)]
+    end
+
+    NextJS --> Sanity
+    NextJS --> NextAuth
+    NextJS --> StreamChat
+    NextJS --> Sentry
+    NextAuth --> GitHub
+    Sanity --> SanityDB
+    NextJS --> Blob
+    Blob --> BlobStorage
+    StreamChat --> StreamDB
+    NextJS --> Vercel
+```
+
+## Security Model
+
+```mermaid
+graph TB
+    subgraph "Authentication"
+        GitHub[GitHub OAuth]
+        NextAuth[NextAuth.js]
+        Session[Session Management]
+    end
+
+    subgraph "Authorization"
+        UserAuth[User Authentication]
+        RoleCheck[Role Checking]
+        Permission[Permission Validation]
+    end
+
+    subgraph "Data Protection"
+        InputVal[Input Validation]
+        XSS[XSS Protection]
+        CSRF[CSRF Protection]
+        RateLimit[Rate Limiting]
+    end
+
+    subgraph "Monitoring"
+        Sentry[Sentry Error Tracking]
+        Logging[Application Logging]
+        Audit[Audit Trail]
+    end
+
+    GitHub --> NextAuth
+    NextAuth --> Session
+    Session --> UserAuth
+    UserAuth --> RoleCheck
+    RoleCheck --> Permission
+    Permission --> InputVal
+    InputVal --> XSS
+    XSS --> CSRF
+    CSRF --> RateLimit
+    RateLimit --> Sentry
+    Sentry --> Logging
+    Logging --> Audit
+```
+
+## Performance Optimization
+
+```mermaid
+graph TB
+    subgraph "Frontend Optimization"
+        SSR[Server-Side Rendering]
+        ISR[Incremental Static Regeneration]
+        ImageOpt[Image Optimization]
+        CodeSplit[Code Splitting]
+    end
+
+    subgraph "Backend Optimization"
+        Caching[Database Caching]
+        CDN[CDN Distribution]
+        Compression[Response Compression]
+        QueryOpt[Query Optimization]
+    end
+
+    subgraph "Real-time Features"
+        LiveQuery[Sanity Live Query]
+        WebSocket[WebSocket Connections]
+        Polling[Smart Polling]
+    end
+
+    subgraph "Monitoring"
+        Sentry[Sentry Performance]
+        Analytics[Custom Analytics]
+        Uptime[Uptime Monitoring]
+    end
+
+    SSR --> ImageOpt
+    ImageOpt --> CodeSplit
+    CodeSplit --> Caching
+    Caching --> CDN
+    CDN --> Compression
+    Compression --> QueryOpt
+    QueryOpt --> LiveQuery
+    LiveQuery --> WebSocket
+    WebSocket --> Polling
+    Polling --> Sentry
+    Sentry --> Analytics
+    Analytics --> Uptime
+```
+
+## Feature Status Legend
+
+- ✅ **Implemented** - Fully functional and deployed
+- 🔄 **Partially Implemented** - Infrastructure exists, needs completion
+- 📋 **Planned** - In roadmap, not yet implemented
+- 🚧 **In Development** - Currently being worked on
+
+## Technology Stack
+
+```mermaid
+graph TB
+    subgraph "Frontend"
+        NextJS[Next.js 15]
+        React[React 18]
+        TypeScript[TypeScript]
+        Tailwind[Tailwind CSS]
+        RadixUI[Radix UI]
+    end
+
+    subgraph "Backend"
+        Sanity[Sanity CMS]
+        NextAuth[NextAuth.js]
+        StreamChat[Stream Chat]
+        Sentry[Sentry]
+    end
+
+    subgraph "Infrastructure"
+        Vercel[Vercel Platform]
+        GitHub[GitHub OAuth]
+        Blob[Vercel Blob]
+    end
+
+    subgraph "Development"
+        ESLint[ESLint]
+        Prettier[Prettier]
+        Husky[Husky]
+        Jest[Jest - Planned]
+    end
+
+    NextJS --> React
+    React --> TypeScript
+    TypeScript --> Tailwind
+    Tailwind --> RadixUI
+    RadixUI --> Sanity
+    Sanity --> NextAuth
+    NextAuth --> StreamChat
+    StreamChat --> Sentry
+    Sentry --> Vercel
+    Vercel --> GitHub
+    GitHub --> Blob
+    Blob --> ESLint
+    ESLint --> Prettier
+    Prettier --> Husky
+    Husky --> Jest
+```
+
+This comprehensive Eraser.io diagram shows the complete Foundrly system architecture, including all implemented features and planned roadmap items. The diagram uses Mermaid syntax which is compatible with Eraser.io and provides a clear visualization of the system's data flows, processes, and relationships. 
