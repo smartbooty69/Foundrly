@@ -48,8 +48,8 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
       <section className="blue_container !min-h-[230px]">
         <p className="tag">{formatDate(post?._createdAt)}</p>
 
-        <h1 className="heading">{post.title}</h1>
-        <p className="sub-heading !max-w-5xl">{post.description}</p>
+        <h1 className="heading">{post.title || "Untitled"}</h1>
+        <p className="sub-heading !max-w-5xl">{post.description || "No description provided."}</p>
         <StartupDetailLikes
           startupId={post._id}
           isLoggedIn={!!session}
@@ -67,39 +67,58 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
       </section>
 
       <section className="section_container">
-        <img
-          src={post.image}
-          alt="thumbnail"
-          className="w-full h-auto rounded-xl"
-        />
+        {/* Startup main image */}
+        {post.image && post.image.trim() !== "" ? (
+          <img
+            src={post.image}
+            alt="thumbnail"
+            className="w-full h-auto rounded-xl"
+          />
+        ) : (
+          <img
+            src="/default-image.png"
+            alt="thumbnail"
+            className="w-full h-auto rounded-xl"
+          />
+        )}
 
         <div className="space-y-5 mt-10 max-w-4xl mx-auto">
           <div className="flex-between gap-5">
             <Link
-              href={`/user/${post.author?._id}`}
+              href={`/user/${post.author?._id || ""}`}
               className="flex gap-2 items-center mb-3"
             >
-              <Image
-                src={post.author.image}
-                alt="avatar"
-                width={64}
-                height={64}
-                className="rounded-full drop-shadow-lg"
-              />
-
+              {/* Author avatar image */}
+              {post.author?.image && post.author.image.trim() !== "" ? (
+                <Image
+                  src={post.author.image}
+                  alt="avatar"
+                  width={64}
+                  height={64}
+                  className="rounded-full drop-shadow-lg"
+                />
+              ) : (
+                <Image
+                  src="/default-avatar.png"
+                  alt="avatar"
+                  width={64}
+                  height={64}
+                  className="rounded-full drop-shadow-lg"
+                />
+              )}
               <div>
-                <p className="text-20-medium">{post.author.name}</p>
+                <p className="text-20-medium">{post.author?.name || "Unknown"}</p>
                 <p className="text-16-medium !text-black-300">
-                  @{post.author.username}
+                  @{post.author?.username || "unknown"}
                 </p>
               </div>
             </Link>
 
-            <p className="category-tag">{post.category}</p>
+            <p className="category-tag">{post.category || "Uncategorized"}</p>
           </div>
 
           <h3 className="text-30-bold">Pitch Details</h3>
-          {parsedContent ? (
+          {parsedContent && post.pitch ? (
             <article
               className="prose max-w-4xl font-work-sans break-all"
               dangerouslySetInnerHTML={{ __html: parsedContent }}
@@ -110,7 +129,7 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
           <StartupDetailActions
             startupId={post._id}
-            startupTitle={post.title || ""}
+            startupTitle={post.title || "Untitled"}
             userId={post.author?._id || ""}
             isOwner={isOwner}
           />
