@@ -4,7 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, ThumbsUp, ThumbsDown, Smile, Paperclip, AtSign, Send, Trash2, LogIn } from "lucide-react";
+import { MessageSquare, ThumbsUp, ThumbsDown, Smile, Paperclip, AtSign, Send, Trash2, LogIn, Flag, Ban } from "lucide-react";
+import { ReportModal } from "./ReportModal";
+import { useBanStatus } from "@/hooks/use-ban-status";
+import { BanMessage } from "./BanMessage";
 import dynamic from "next/dynamic";
 import markdownit from "markdown-it";
 import Link from "next/link";
@@ -38,6 +41,7 @@ function CommentCard({
   depth = 0, 
   userId, 
   isLoggedIn, 
+  isBanned = false,
   onLike, 
   onDislike, 
   onReply, 
@@ -57,6 +61,7 @@ function CommentCard({
   depth?: number,
   userId?: string,
   isLoggedIn: boolean,
+  isBanned?: boolean,
   onLike: (id: string) => void,
   onDislike: (id: string) => void,
   onReply: (id: string) => void,
@@ -86,6 +91,7 @@ function CommentCard({
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [showReplyToast, setShowReplyToast] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Handle click outside for toast
   const toastRef = useRef<HTMLDivElement>(null);
@@ -139,10 +145,10 @@ function CommentCard({
               {!isDeleted && (
                 <div className="flex items-center space-x-1 md:space-x-3 mt-1 md:mt-2">
                   <button
-                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
-                    disabled={!isLoggedIn || likeLoading === c._id}
+                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading === c._id || isBanned ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    disabled={!isLoggedIn || likeLoading === c._id || isBanned}
                     onClick={() => onLike(c._id)}
-                    title={!isLoggedIn ? 'Log in to like' : ''}
+                    title={!isLoggedIn ? 'Log in to like' : isBanned ? 'Account suspended' : ''}
                     type="button"
                   >
                     {likeLoading === c._id ? (
@@ -156,10 +162,10 @@ function CommentCard({
                     <span className="ml-0.5 text-[10px]">{c.likes || 0}</span>
                   </button>
                   <button
-                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading === c._id ? 'opacity-75 cursor-not-allowed' : ''}`}
-                    disabled={!isLoggedIn || dislikeLoading === c._id}
+                    className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-[10px] md:text-xs ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading === c._id || isBanned ? 'opacity-75 cursor-not-allowed' : ''}`}
+                    disabled={!isLoggedIn || dislikeLoading === c._id || isBanned}
                     onClick={() => onDislike(c._id)}
-                    title={!isLoggedIn ? 'Log in to dislike' : ''}
+                    title={!isLoggedIn ? 'Log in to dislike' : isBanned ? 'Account suspended' : ''}
                     type="button"
                   >
                     {dislikeLoading === c._id ? (
@@ -175,15 +181,24 @@ function CommentCard({
                   {/* Only show reply button if not deleted */}
                   {!isDeleted && (
                     <button
-                      className={`flex items-center space-x-0.5 md:space-x-1 text-gray-500 text-[10px] md:text-xs ${!isLoggedIn ? 'opacity-75 cursor-not-allowed' : 'hover:text-gray-700'}`}
-                      disabled={!isLoggedIn}
-                      onClick={() => { if (isLoggedIn) { setReplyingTo(c._id); setReplyText(""); setShowReplyToast(true); } }}
-                      title={!isLoggedIn ? 'Log in to reply' : 'Reply'}
+                      className={`flex items-center space-x-0.5 md:space-x-1 text-gray-500 text-[10px] md:text-xs ${!isLoggedIn || isBanned ? 'opacity-75 cursor-not-allowed' : 'hover:text-gray-700'}`}
+                      disabled={!isLoggedIn || isBanned}
+                      onClick={() => { if (isLoggedIn && !isBanned) { setReplyingTo(c._id); setReplyText(""); setShowReplyToast(true); } }}
+                      title={!isLoggedIn ? 'Log in to reply' : isBanned ? 'Account suspended' : 'Reply'}
                     >
                       <MessageSquare size={12} className="md:size-4" />
                       <span>Reply</span>
                     </button>
                   )}
+                  {/* Report button */}
+                  <button
+                    className={`flex items-center space-x-0.5 md:space-x-1 text-gray-500 text-[10px] md:text-xs hover:text-orange-600 hover:bg-orange-50`}
+                    onClick={() => setShowReportModal(true)}
+                    title="Report comment"
+                  >
+                    <Flag size={12} className="md:size-4" />
+                    <span>Report</span>
+                  </button>
                   {userId === c.author?._id && (
                     <button
                       className={`flex items-center p-0.5 md:p-1 rounded-full transition-colors duration-200 text-gray-500 hover:bg-red-50 hover:text-red-600 text-[10px] md:text-xs ${actionLoading === c._id + "-delete" ? 'opacity-75 cursor-not-allowed' : ''}`}
@@ -215,6 +230,7 @@ function CommentCard({
                         depth={depth + 1}
                         userId={userId}
                         isLoggedIn={isLoggedIn}
+                        isBanned={isBanned}
                         onLike={onLike}
                         onDislike={onDislike}
                         onReply={onReply}
@@ -299,7 +315,19 @@ function CommentCard({
       document.body
     ) : null;
 
-  return <>{card}{toast}</>;
+  return (
+    <>
+      {card}
+      {toast}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reportedType="comment"
+        reportedRef={c._id}
+        reportedTitle={c.text?.substring(0, 50) + (c.text?.length > 50 ? '...' : '')}
+      />
+    </>
+  );
 }
 
 // Utility: Short relative time (e.g., 2d, 20h, 5m)
@@ -338,8 +366,18 @@ function findCommentById(comments: any[], id: string): any | null {
   return null;
 }
 
-// Props: startupId, userId, isLoggedIn
-export default function CommentsSection({ startupId, userId, isLoggedIn }: { startupId: string, userId?: string, isLoggedIn: boolean }) {
+// Props: startupId, userId, isLoggedIn, userData
+export default function CommentsSection({ 
+  startupId, 
+  userId, 
+  isLoggedIn, 
+  userData 
+}: { 
+  startupId: string, 
+  userId?: string, 
+  isLoggedIn: boolean,
+  userData?: { _id: string, bannedUntil: string | null, isBanned: boolean } | null
+}) {
   const [comment, setComment] = useState("");
   const [comments, setComments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -374,6 +412,12 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
 
   // Dynamically set MAX_DEPTH based on viewport
   const MAX_DEPTH = useMaxDepth();
+
+  // Check ban status
+  const banStatus = useBanStatus({
+    bannedUntil: userData?.bannedUntil || null,
+    isBanned: userData?.isBanned || false,
+  });
 
   // Fetch comments (PUBLIC - no auth required)
   const fetchComments = useCallback(async () => {
@@ -604,43 +648,62 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
 
   return (
     <div className="max-w-6xl mx-auto p-4">
+      {/* Ban Message */}
+      {banStatus.isBanned && (
+        <BanMessage 
+          description={banStatus.description} 
+          isPermanent={banStatus.isPermanent} 
+        />
+      )}
+      
       {/* Comment Input Section */}
       <div className="bg-white shadow rounded-xl p-4">
         {isLoggedIn ? (
           <>
-            <textarea
-              ref={commentTextareaRef}
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              onSelect={e => setCommentCursor(e.currentTarget.selectionStart)}
-              onClick={e => setCommentCursor(e.currentTarget.selectionStart)}
-              placeholder="Add comment..."
-              maxLength={1000}
-              className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-2"
-            />
-            <div className="flex items-center justify-end mt-2">
-              <Button 
-                className="bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200" 
-                onClick={handleSubmit} 
-                disabled={!comment.trim() || actionLoading === "submit"}
-                size="sm"
-              >
-                {actionLoading === "submit" ? (
-                  <div className="flex items-center space-x-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                    <span>Posting...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Send size={16} />
-                    <span>Post Comment</span>
-                  </div>
-                )}
-              </Button>
-            </div>
+            {banStatus.isBanned ? (
+              <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center space-x-3">
+                  <Ban className="h-5 w-5 text-red-600" />
+                  <span className="text-red-700">Account suspended - cannot post comments</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  ref={commentTextareaRef}
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  onSelect={e => setCommentCursor(e.currentTarget.selectionStart)}
+                  onClick={e => setCommentCursor(e.currentTarget.selectionStart)}
+                  placeholder="Add comment..."
+                  maxLength={1000}
+                  className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                />
+                <div className="flex items-center justify-end mt-2">
+                  <Button 
+                    className="bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200" 
+                    onClick={handleSubmit} 
+                    disabled={!comment.trim() || actionLoading === "submit"}
+                    size="sm"
+                  >
+                    {actionLoading === "submit" ? (
+                      <div className="flex items-center space-x-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                        <span>Posting...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Send size={16} />
+                        <span>Post Comment</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -685,6 +748,7 @@ export default function CommentsSection({ startupId, userId, isLoggedIn }: { sta
               c={c}
               userId={userId}
               isLoggedIn={isLoggedIn}
+              isBanned={banStatus.isBanned}
               onLike={handleLike}
               onDislike={handleDislike}
               onReply={() => {}}

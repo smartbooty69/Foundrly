@@ -106,9 +106,14 @@ const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onGoBack, onSelectC
             });
 
             if (!upsertResponse.ok) {
-                const upsertError = await upsertResponse.text();
+                const upsertError = await upsertResponse.json();
                 console.error('Upsert user error:', upsertError);
-                throw new Error(`Failed to create user in Stream Chat: ${upsertError}`);
+                
+                if (upsertResponse.status === 403) {
+                    throw new Error(upsertError.error || 'Account is suspended. You cannot send messages.');
+                }
+                
+                throw new Error(`Failed to create user in Stream Chat: ${upsertError.error || upsertError}`);
             }
 
             console.log('User upserted successfully');
@@ -132,6 +137,11 @@ const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onGoBack, onSelectC
             if (!chatResponse.ok) {
                 const chatError = await chatResponse.json();
                 console.error('Create channel error:', chatError);
+                
+                if (chatResponse.status === 403) {
+                    throw new Error(chatError.error || 'Account is suspended. You cannot send messages.');
+                }
+                
                 throw new Error(`Failed to create chat channel: ${chatError.details || chatError.error || 'Unknown error'}`);
             }
 

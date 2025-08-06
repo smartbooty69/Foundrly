@@ -29,11 +29,12 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const id = (await params).id;
   const session = await auth();
 
-  const [post, playlistResult] = await Promise.all([
+  const [post, playlistResult, userData] = await Promise.all([
     client.fetch(STARTUP_BY_ID_QUERY, { id }),
     client.fetch(PLAYLIST_BY_SLUG_QUERY, {
       slug: "editor-picks-new",
     }),
+    session?.user?.id ? client.fetch(`*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned }`, { userId: session.user.id }) : null,
   ]);
 
   if (!post) return notFound();
@@ -149,7 +150,12 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           </div>
         )}
 
-        <CommentsSection startupId={id} isLoggedIn={!!session} userId={session?.user?.id} />
+        <CommentsSection 
+          startupId={id} 
+          isLoggedIn={!!session} 
+          userId={session?.user?.id}
+          userData={userData}
+        />
 
         <Suspense fallback={<Skeleton className="view_skeleton" />}>
           <View id={id} />

@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
+import { canUserPerformAction } from '@/lib/ban-checks';
 
 export async function POST(req: Request) {
   const session = await auth();
   if (!session) {
     return NextResponse.json({ success: false, message: 'Unauthorized - Please log in to like comments' }, { status: 401 });
+  }
+
+  // Check if user is banned
+  const banCheck = await canUserPerformAction(session.user.id);
+  if (!banCheck.canPerform) {
+    return NextResponse.json({ success: false, message: banCheck.message }, { status: 403 });
   }
 
   try {

@@ -13,6 +13,162 @@
  */
 
 // Source: schema.json
+export type ModerationActivity = {
+  _id: string;
+  _type: "moderationActivity";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  type?: "message_deleted" | "user_banned" | "warning_sent" | "report_created" | "comment_deleted" | "startup_banned";
+  timestamp?: string;
+  userId?: string;
+  userName?: string;
+  reason?: string;
+  severity?: "low" | "medium" | "high" | "critical";
+  itemId?: string;
+  itemType?: string;
+};
+
+export type ModerationSettings = {
+  _id: string;
+  _type: "moderationSettings";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  enabled?: boolean;
+  severity?: "low" | "medium" | "high" | "critical";
+  actions?: {
+    profanity?: "warn" | "delete" | "ban" | "report";
+    hateSpeech?: "warn" | "delete" | "ban" | "report";
+    threats?: "warn" | "delete" | "ban" | "report";
+    spam?: "warn" | "delete" | "ban" | "report";
+    personalInfo?: "warn" | "delete" | "ban" | "report";
+  };
+  thresholds?: {
+    messageLength?: number;
+    repetitionCount?: number;
+    capsRatio?: number;
+    confidence?: number;
+  };
+  autoBan?: {
+    enabled?: boolean;
+    duration?: "1h" | "24h" | "7d" | "365d" | "perm";
+    strikeThreshold?: number;
+  };
+  lastUpdated?: string;
+};
+
+export type Playlist = {
+  _id: string;
+  _type: "playlist";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: string;
+  slug?: Slug;
+  select?: Array<{
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    _key: string;
+    [internalGroqTypeReferenceTo]?: "startup";
+  }>;
+};
+
+export type Author = {
+  _id: string;
+  _type: "author";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  id?: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  image?: string;
+  bio?: string;
+  followers?: Array<{
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    _key: string;
+    [internalGroqTypeReferenceTo]?: "author";
+  }>;
+  following?: Array<{
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    _key: string;
+    [internalGroqTypeReferenceTo]?: "author";
+  }>;
+  bannedUntil?: string;
+  isBanned?: boolean;
+  banHistory?: Array<{
+    timestamp?: string;
+    duration?: "1h" | "24h" | "7d" | "365d" | "perm";
+    reason?: string;
+    reportId?: {
+      _ref: string;
+      _type: "reference";
+      _weak?: boolean;
+      [internalGroqTypeReferenceTo]?: "report";
+    };
+    strikeNumber?: number;
+    _key: string;
+  }>;
+  strikeCount?: number;
+  strikeSystem?: {
+    isBanned?: boolean;
+    bannedUntil?: string;
+    strikeCount?: number;
+    banHistory?: Array<{
+      timestamp?: string;
+      duration?: string;
+      reason?: string;
+      reportId?: string;
+      strikeNumber?: number;
+      _key: string;
+    }>;
+  };
+};
+
+export type Report = {
+  _id: string;
+  _type: "report";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  reportedType?: "startup" | "comment" | "user";
+  reportedRef?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "startup";
+  } | {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "comment";
+  } | {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "author";
+  };
+  reason?: string;
+  reportedBy?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "author";
+  };
+  timestamp?: string;
+  status?: "pending" | "reviewed" | "action-taken";
+  banDuration?: "1h" | "24h" | "7d" | "365d" | "perm";
+  adminNotes?: string;
+  deleteComment?: boolean;
+};
+
 export type Comment = {
   _id: string;
   _type: "comment";
@@ -51,23 +207,8 @@ export type Comment = {
     [internalGroqTypeReferenceTo]?: "comment";
   };
   deleted?: boolean;
-};
-
-export type Playlist = {
-  _id: string;
-  _type: "playlist";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  title?: string;
-  slug?: Slug;
-  select?: Array<{
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    _key: string;
-    [internalGroqTypeReferenceTo]?: "startup";
-  }>;
+  bannedUntil?: string;
+  isBanned?: boolean;
 };
 
 export type Startup = {
@@ -100,34 +241,8 @@ export type Startup = {
     _key: string;
     [internalGroqTypeReferenceTo]?: "comment";
   }>;
-};
-
-export type Author = {
-  _id: string;
-  _type: "author";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  id?: number;
-  name?: string;
-  username?: string;
-  email?: string;
-  image?: string;
-  bio?: string;
-  followers?: Array<{
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    _key: string;
-    [internalGroqTypeReferenceTo]?: "author";
-  }>;
-  following?: Array<{
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    _key: string;
-    [internalGroqTypeReferenceTo]?: "author";
-  }>;
+  bannedUntil?: string;
+  isBanned?: boolean;
 };
 
 export type Markdown = string;
@@ -250,5 +365,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = Comment | Playlist | Startup | Author | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;

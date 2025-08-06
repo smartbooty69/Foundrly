@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StreamChat } from 'stream-chat';
+import { client } from '@/sanity/lib/client';
+import { isCurrentlyBanned } from '@/sanity/lib/moderation';
 
 const apiKey = process.env.STREAM_API_KEY!;
 const apiSecret = process.env.STREAM_API_SECRET!;
@@ -14,6 +16,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         error: 'Invalid request: userId and memberIds array with at least 2 members required' 
       }, { status: 400 });
+    }
+
+    // Check if the user is banned
+    const user = await client.fetch(
+      `*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned }`,
+      { userId }
+    );
+
+    if (user?.isBanned) {
+      const isCurrentlyBannedUser = isCurrentlyBanned(user.bannedUntil, user.isBanned);
+      if (isCurrentlyBannedUser) {
+        return NextResponse.json({
+          error: 'Account is suspended. You cannot send messages.',
+          details: 'Your account has been suspended due to a violation of our community guidelines.'
+        }, { status: 403 });
+      }
     }
 
     // Initialize Stream Chat server client with increased timeout

@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { Message, Suggested } from './types';
 import SuggestedUsers from './SuggestedUsers';
 import NewMessageScreen from './NewMessageScreen';
+import { ChatBanMessage } from './chat/BanMessage';
 
 // --- Icon Components (placeholders) ---
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
@@ -48,6 +49,8 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
     const { data: session } = useSession();
     const [messages, setMessages] = useState<Message[]>([]);
     const [showNewMessage, setShowNewMessage] = useState(false);
+    const [isBanned, setIsBanned] = useState(false);
+    const [banDescription, setBanDescription] = useState("");
     const userId = session?.user?.id;
 
     useEffect(() => {
@@ -61,6 +64,18 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
                 body: JSON.stringify({ userId }),
                 headers: { "Content-Type": "application/json" },
             });
+            
+            if (!res.ok) {
+                const error = await res.json();
+                if (res.status === 403) {
+                    console.error('Account suspended:', error.error);
+                    setIsBanned(true);
+                    setBanDescription(error.error || 'Account is suspended. You cannot send messages.');
+                    return;
+                }
+                throw new Error(error.error || 'Failed to get chat token');
+            }
+            
             const { token } = await res.json();
 
             chatClient = StreamChat.getInstance(apiKey);
@@ -140,10 +155,24 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
             </div>
 
             <div className="flex-1 py-2 overflow-y-auto">
-                <div className="flex items-center px-4 py-2 gap-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={handleNewMessageClick}>
-                    <button className="bg-[#e60023] border-none rounded-full w-14 h-14 flex items-center justify-center cursor-pointer"><EditIcon /></button>
-                    <span className="text-lg font-bold">New message</span>
-                </div>
+                {isBanned && (
+                    <ChatBanMessage 
+                        description={banDescription}
+                        isPermanent={banDescription.includes('permanent')}
+                    />
+                )}
+                
+                {isBanned ? (
+                    <div className="flex items-center px-4 py-2 gap-4 opacity-50 cursor-not-allowed">
+                        <button className="bg-gray-400 border-none rounded-full w-14 h-14 flex items-center justify-center cursor-not-allowed" disabled><EditIcon /></button>
+                        <span className="text-lg font-bold text-gray-500">New message (disabled)</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center px-4 py-2 gap-4 cursor-pointer hover:bg-gray-50 transition-colors" onClick={handleNewMessageClick}>
+                        <button className="bg-[#e60023] border-none rounded-full w-14 h-14 flex items-center justify-center cursor-pointer"><EditIcon /></button>
+                        <span className="text-lg font-bold">New message</span>
+                    </div>
+                )}
 
                 <div className="py-2">
                     <h2 className="text-base font-normal text-gray-600 px-4 mb-1">Messages</h2>

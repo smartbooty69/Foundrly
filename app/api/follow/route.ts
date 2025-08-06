@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { writeClient } from '@/sanity/lib/write-client';
+import { canUserPerformAction } from '@/lib/ban-checks';
 
 export async function POST(req: Request) {
   try {
@@ -40,6 +41,15 @@ export async function POST(req: Request) {
         success: false, 
         message: 'Invalid action. Must be "follow", "unfollow", or "remove_follower"' 
       }, { status: 400 });
+    }
+
+    // Check if user is banned
+    const banCheck = await canUserPerformAction(currentUserId);
+    if (!banCheck.canPerform) {
+      return NextResponse.json({ 
+        success: false, 
+        message: banCheck.message 
+      }, { status: 403 });
     }
 
     // Validate token

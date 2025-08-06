@@ -1,8 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { BanCheckWrapper } from "@/components/BanCheckWrapper";
 
-export default function CommentForm({ startupId, onCommentAdded }: { startupId: string; onCommentAdded: () => void }) {
+function CommentFormContent({ 
+  startupId, 
+  onCommentAdded, 
+  isBanned, 
+  banMessage 
+}: { 
+  startupId: string; 
+  onCommentAdded: () => void;
+  isBanned: boolean;
+  banMessage: string;
+}) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +43,23 @@ export default function CommentForm({ startupId, onCommentAdded }: { startupId: 
     }
   };
 
+  // Show ban message if user is banned
+  if (isBanned) {
+    return (
+      <div className="space-y-3 mt-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div>
+              <h3 className="text-sm font-semibold text-red-800">Account Suspended</h3>
+              <p className="text-red-700 text-sm mt-1">{banMessage}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3 mt-6">
       <textarea
@@ -54,5 +83,20 @@ export default function CommentForm({ startupId, onCommentAdded }: { startupId: 
         {success && <span className="text-green-600 text-sm">Comment posted!</span>}
       </div>
     </form>
+  );
+}
+
+export default function CommentForm({ startupId, onCommentAdded }: { startupId: string; onCommentAdded: () => void }) {
+  return (
+    <BanCheckWrapper>
+      {({ isBanned, banMessage }) => (
+        <CommentFormContent 
+          startupId={startupId} 
+          onCommentAdded={onCommentAdded}
+          isBanned={isBanned}
+          banMessage={banMessage}
+        />
+      )}
+    </BanCheckWrapper>
   );
 } 

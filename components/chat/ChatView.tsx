@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StreamChat } from "stream-chat";
 import { useSession } from "next-auth/react";
+import { ChatBanMessage } from "./BanMessage";
+import { moderateContent } from "@/lib/stream-chat-moderation";
 
 const BackArrowIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -61,6 +63,8 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
   const [input, setInput] = useState("");
   const [channel, setChannel] = useState<any>(null);
   const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
+  const [banDescription, setBanDescription] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,6 +79,18 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
         body: JSON.stringify({ userId }),
         headers: { "Content-Type": "application/json" },
       });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        if (res.status === 403) {
+          console.error('Account suspended:', error.error);
+          setIsBanned(true);
+          setBanDescription(error.error || 'Account is suspended. You cannot send messages.');
+          return;
+        }
+        throw new Error(error.error || 'Failed to get chat token');
+      }
+      
       const { token } = await res.json();
       chatClient = StreamChat.getInstance(apiKey);
       await chatClient.connectUser({ id: userId }, token);
@@ -115,6 +131,16 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !channel) return;
+    
+    // Check content before sending
+    const moderationResult = moderateContent(input);
+    
+    if (moderationResult.isFlagged) {
+      // Show warning to user
+      alert(`⚠️ Warning: ${moderationResult.reason}\n\nYour message contains content that may violate our community guidelines. Please review and edit your message.`);
+      return;
+    }
+    
     await channel.sendMessage({ text: input });
     setInput("");
   };
@@ -152,6 +178,12 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
 
       {/* Chat Body */}
       <main ref={chatBodyRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1 bg-white">
+        {isBanned && (
+          <ChatBanMessage 
+            description={banDescription}
+            isPermanent={banDescription.includes('permanent')}
+          />
+        )}
         {messages.map((msg: any, idx: number) => {
           const isOutgoing = msg?.user?.id === userId;
           const reactions = msg.latest_reactions || [];
@@ -307,15 +339,24 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
 
       {/* Footer */}
       <form onSubmit={handleSend} className="flex items-center px-4 py-3 gap-2 border-t border-gray-200 bg-white flex-shrink-0">
-
-        <input
-          className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-base border-none outline-none"
-          placeholder="Type a message..."
-          value={input}
-          onChange={e => setInput(e.target.value)}
-        />
-        <button type="submit" className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center" disabled={!input.trim()}><SendIcon /></button>
+        {isBanned ? (
+          <div className="flex-1 text-center text-gray-500 text-sm">
+            Message input disabled - Account suspended
+          </div>
+        ) : (
+          <>
+            <input
+              className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-base border-none outline-none"
+              placeholder="Type a message..."
+              value={input}
+              onChange={e => setInput(e.target.value)}
+            />
+            <button type="submit" className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center" disabled={!input.trim()}><SendIcon /></button>
+          </>
+        )}
       </form>
+
+
     </div>
   );
 };

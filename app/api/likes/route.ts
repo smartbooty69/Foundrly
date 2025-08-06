@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
+import { auth } from '@/auth';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -20,18 +21,33 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
-  let userId;
-  try {
-    const body = await req.json();
-    userId = body.userId;
-  } catch {
-    return NextResponse.json({ success: false, message: 'No userId provided' }, { status: 400 });
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
-  if (!id || !userId) {
-    return NextResponse.json({ success: false, message: 'No ID or userId provided' }, { status: 400 });
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+  const userId = session.user.id;
+
+  if (!id) {
+    return NextResponse.json({ success: false, message: 'No ID provided' }, { status: 400 });
+  }
+
+  // Check if user is banned
+  const user = await client.fetch(
+    `*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned }`,
+    { userId }
+  );
+
+  if (user?.isBanned) {
+    const isCurrentlyBanned = user.bannedUntil ? new Date() < new Date(user.bannedUntil) : true;
+    if (isCurrentlyBanned) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Account is suspended. You cannot like/dislike content.' 
+      }, { status: 403 });
+    }
   }
 
   try {

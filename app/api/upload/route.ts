@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToStorage } from "@/lib/storage";
+import { auth } from "@/auth";
+import { canUserPerformAction } from "@/lib/ban-checks";
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is banned
+    const banCheck = await canUserPerformAction(session.user.id);
+    if (!banCheck.canPerform) {
+      return NextResponse.json(
+        { error: banCheck.message },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 

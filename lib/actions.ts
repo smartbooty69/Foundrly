@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { parseServerActionResponse } from "@/lib/utils";
 import slugify from "slugify";
 import { writeClient } from "@/sanity/lib/write-client";
+import { canUserPerformAction } from "@/lib/ban-checks";
 
 export const createPitch = async (
   state: any,
@@ -17,6 +18,15 @@ export const createPitch = async (
       error: "Not signed in",
       status: "ERROR",
     });
+
+  // Check if user is banned
+  const banCheck = await canUserPerformAction(session.user.id);
+  if (!banCheck.canPerform) {
+    return parseServerActionResponse({
+      error: banCheck.message,
+      status: "ERROR",
+    });
+  }
 
   const { title, description, category, link } = Object.fromEntries(
     Array.from(form).filter(([key]) => key !== "pitch"),
@@ -71,6 +81,15 @@ export const updatePitch = async (
       error: "Not signed in",
       status: "ERROR",
     });
+
+  // Check if user is banned
+  const banCheck = await canUserPerformAction(session.user.id);
+  if (!banCheck.canPerform) {
+    return parseServerActionResponse({
+      error: banCheck.message,
+      status: "ERROR",
+    });
+  }
 
   const { title, description, category, link } = Object.fromEntries(
     Array.from(form).filter(([key]) => key !== "pitch"),

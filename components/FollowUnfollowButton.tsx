@@ -2,14 +2,17 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { BanCheckWrapper } from "@/components/BanCheckWrapper";
 
-export default function FollowUnfollowButton(props: {
+function FollowUnfollowButtonContent(props: {
   profileId: string;
   currentUserId?: string;
   followers?: any[];
   onFollowChange?: () => void;
+  isBanned: boolean;
+  banMessage: string;
 }) {
-  const { profileId, currentUserId, followers = [], onFollowChange } = props;
+  const { profileId, currentUserId, followers = [], onFollowChange, isBanned, banMessage } = props;
   const isFollowing = Array.isArray(followers) && followers.some((f: any) => f._ref === currentUserId);
   const [following, setFollowing] = useState(isFollowing);
   
@@ -23,6 +26,15 @@ export default function FollowUnfollowButton(props: {
   const { toast } = useToast();
 
   const handleFollowToggle = async () => {
+    if (isBanned) {
+      toast({ 
+        title: 'Account Suspended', 
+        description: banMessage, 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     if (!profileId || !currentUserId) {
       toast({ 
         title: 'Error', 
@@ -90,6 +102,11 @@ export default function FollowUnfollowButton(props: {
     return null;
   }
 
+  // Don't render the button if user is banned
+  if (isBanned) {
+    return null;
+  }
+
   return (
     <div className="flex justify-center mt-4">
       <Button
@@ -107,5 +124,24 @@ export default function FollowUnfollowButton(props: {
         {loading ? (following ? 'Following...' : 'Unfollowing...') : (following ? "Unfollow" : "Follow")}
       </Button>
     </div>
+  );
+}
+
+export default function FollowUnfollowButton(props: {
+  profileId: string;
+  currentUserId?: string;
+  followers?: any[];
+  onFollowChange?: () => void;
+}) {
+  return (
+    <BanCheckWrapper>
+      {({ isBanned, banMessage }) => (
+        <FollowUnfollowButtonContent 
+          {...props}
+          isBanned={isBanned}
+          banMessage={banMessage}
+        />
+      )}
+    </BanCheckWrapper>
   );
 } 

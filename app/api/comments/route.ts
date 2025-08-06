@@ -64,6 +64,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: 'Unauthorized - Please log in to comment' }, { status: 401 });
   }
 
+  // Check if user is banned
+  const user = await client.fetch(
+    `*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned }`,
+    { userId: session.user.id }
+  );
+
+  if (user?.isBanned) {
+    const isCurrentlyBanned = user.bannedUntil ? new Date() < new Date(user.bannedUntil) : true;
+    if (isCurrentlyBanned) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Account is suspended. You cannot post comments.' 
+      }, { status: 403 });
+    }
+  }
+
   try {
     const { text, startupId, parentId, action, commentId, userId } = await req.json();
     if (action === 'reply') {

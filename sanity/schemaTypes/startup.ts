@@ -73,5 +73,16 @@ export const startup = defineType({
             of: [{ type: "reference", to: [{ type: "comment" }] }],
             initialValue: [],
         }),
+        defineField({
+            name: "bannedUntil",
+            type: "datetime",
+            description: "Timestamp until which this startup is banned (null if not banned)",
+        }),
+        defineField({
+            name: "isBanned",
+            type: "boolean",
+            initialValue: false,
+            description: "Whether this startup is currently banned",
+        }),
     ],
 });

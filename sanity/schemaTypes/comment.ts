@@ -1,5 +1,6 @@
 import { defineField, defineType } from "sanity";
 import { UserIcon } from "lucide-react";
+import { BanManagementInput } from "../components/BanManagementInput";
 
 export const comment = defineType({
   name: "comment",
@@ -67,6 +68,17 @@ export const comment = defineType({
       type: "boolean",
       initialValue: false,
       description: "Whether this comment has been soft deleted",
+    }),
+    defineField({
+      name: "bannedUntil",
+      type: "datetime",
+      description: "Timestamp until which this comment is banned (null if not banned)",
+    }),
+    defineField({
+      name: "isBanned",
+      type: "boolean",
+      initialValue: false,
+      description: "Whether this comment is currently banned",
     }),
   ],
 }); 

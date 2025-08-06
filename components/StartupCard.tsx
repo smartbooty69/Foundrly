@@ -190,6 +190,7 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
               </button>
             </>
           )}
+
           <div className="flex gap-1.5 ml-2">
             <EyeIcon className="size-6 text-primary" />
             <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
@@ -255,6 +256,8 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
           )}
         </div>
       </div>
+      
+
     </li>
   );
 };

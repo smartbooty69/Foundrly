@@ -3,7 +3,7 @@
 import React, { useState, useActionState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import { Button } from "@/components/ui/button";
-import { Send, Upload, Link as LinkIcon } from "lucide-react";
+import { Send, Upload, Link as LinkIcon, AlertTriangle } from "lucide-react";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -13,8 +13,13 @@ import { FileInput } from "./ui/file-input";
 import { formSchema } from "@/lib/validation";
 import { createPitch } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
+import { BanCheckWrapper } from "@/components/BanCheckWrapper";
 
-const StartupForm = () => {
+const StartupFormContent = ({ isBanned, banMessage, banLoading }: { 
+  isBanned: boolean; 
+  banMessage: string; 
+  banLoading: boolean; 
+}) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pitch, setPitch] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -97,37 +102,40 @@ const StartupForm = () => {
       return result;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const fieldErorrs = error.flatten().fieldErrors;
-
-        setErrors(fieldErorrs as unknown as Record<string, string>);
-
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path) {
+            newErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      } else {
         toast({
           title: "Error",
-          description: "Please check your inputs and try again",
+          description: "Failed to create startup pitch",
           variant: "destructive",
         });
-
-        return { ...prevState, error: "Validation failed", status: "ERROR" };
       }
-
-      toast({
-        title: "Error",
-        description: "An unexpected error has occurred",
-        variant: "destructive",
-      });
-
-      return {
-        ...prevState,
-        error: "An unexpected error has occurred",
-        status: "ERROR",
-      };
+      return { status: "ERROR", message: "Validation failed" };
     }
   };
 
-  const [state, formAction, isPending] = useActionState(handleFormSubmit, {
-    error: "",
-    status: "INITIAL",
-  });
+  const [isPending, formAction] = useActionState(handleFormSubmit, null);
+
+  // Show ban message if user is banned
+  if (isBanned) {
+    return (
+      <div className="startup-form">
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <div>
+            <h3 className="font-semibold text-red-800">Account Restricted</h3>
+            <p className="text-red-600 text-sm">{banMessage}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form action={formAction} className="startup-form">
@@ -141,6 +149,7 @@ const StartupForm = () => {
           className="startup-form_input"
           required
           placeholder="Startup Title"
+          disabled={banLoading}
         />
 
         {errors.title && <p className="startup-form_error">{errors.title}</p>}
@@ -156,6 +165,7 @@ const StartupForm = () => {
           className="startup-form_textarea"
           required
           placeholder="Startup Description"
+          disabled={banLoading}
         />
 
         {errors.description && (
@@ -173,6 +183,7 @@ const StartupForm = () => {
           className="startup-form_input"
           required
           placeholder="Startup Category (Tech, Health, Education...)"
+          disabled={banLoading}
         />
 
         {errors.category && (
@@ -192,6 +203,7 @@ const StartupForm = () => {
             size="sm"
             onClick={() => setImageInputType("url")}
             className="flex items-center gap-2"
+            disabled={banLoading}
           >
             <LinkIcon className="h-4 w-4" />
             Image URL
@@ -202,6 +214,7 @@ const StartupForm = () => {
             size="sm"
             onClick={() => setImageInputType("upload")}
             className="flex items-center gap-2"
+            disabled={banLoading}
           >
             <Upload className="h-4 w-4" />
             Upload Image
@@ -214,11 +227,12 @@ const StartupForm = () => {
             name="link"
             className="startup-form_input"
             placeholder="Startup Image URL"
+            disabled={banLoading}
           />
         ) : (
           <FileInput
             onFileSelect={handleFileSelect}
-            disabled={isUploading}
+            disabled={isUploading || banLoading}
             maxSize={5}
           />
         )}
@@ -241,6 +255,7 @@ const StartupForm = () => {
           textareaProps={{
             placeholder:
               "Briefly describe your idea and what problem it solves",
+            disabled: banLoading,
           }}
           previewOptions={{
             disallowedElements: ["style"],
@@ -253,12 +268,26 @@ const StartupForm = () => {
       <Button
         type="submit"
         className="startup-form_btn text-white"
-        disabled={isPending || isUploading}
+        disabled={isPending || isUploading || banLoading}
       >
-        {isPending ? "Submitting..." : isUploading ? "Uploading..." : "Submit Your Pitch"}
+        {isPending ? "Submitting..." : isUploading ? "Uploading..." : banLoading ? "Checking..." : "Submit Your Pitch"}
         <Send className="size-6 ml-2" />
       </Button>
     </form>
+  );
+};
+
+const StartupForm = () => {
+  return (
+    <BanCheckWrapper>
+      {({ isBanned, banMessage, isLoading: banLoading }) => (
+        <StartupFormContent 
+          isBanned={isBanned} 
+          banMessage={banMessage} 
+          banLoading={banLoading} 
+        />
+      )}
+    </BanCheckWrapper>
   );
 };
 
