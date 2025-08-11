@@ -25,15 +25,32 @@ This project is designed to scale, both in architecture and vision. It combines 
 
 ## Features
 
-  - 🔐 **GitHub Authentication** via NextAuth
-  - 👤 **Dynamic User Profiles** with startup listings
-  - ⚡ **Real-Time Updates** using Sanity's live content API
-  - 🔎 **Advanced Search** across title, username, and category
-  - 📊 **Sentry Integration** for performance and error tracking
-  - ✍️ **Startup Submission Forms** with validation and image support
-  - **Startup Pitch Creation**: Create detailed startup pitches with markdown support
-  - **Image Upload**: Upload startup images with drag-and-drop functionality
-  - **Responsive Design**: Works seamlessly across all devices
+### 🚀 **Core Platform Features**
+- **Startup Pitch Creation**: Create detailed startup pitches with markdown support
+- **Image Upload**: Upload startup images with drag-and-drop functionality
+- **Advanced Search**: Search across title, username, and category
+- **Real-Time Updates**: Using Sanity's live content API
+- **Responsive Design**: Works seamlessly across all devices
+- **Dynamic User Profiles**: User profiles with startup listings
+- **Startup Submission Forms**: Forms with validation and image support
+
+### 👥 **Social & Engagement Features**
+- **GitHub Authentication**: Secure login via NextAuth
+- **Comment System**: Reddit-style threaded comments with likes/dislikes
+- **Like/Dislike System**: Vote on startups and comments
+- **Follow/Unfollow**: Follow other users and see their activity
+- **Messaging System**: Direct messaging between users
+- **Suggested Users**: Discover new users to follow
+- **Followers/Following**: View user connections and counts
+
+### 🛡️ **Administrative & Moderation Features**
+- **Reporting System**: Report startups, comments, and users
+- **Ban Management**: Temporary and permanent user bans
+- **Moderation Dashboard**: Admin panel for content moderation
+- **Sentry Integration**: Performance and error tracking
+- **Content Moderation**: Review and manage reported content
+- **Strike System**: Progressive discipline for rule violations
+- **Admin Actions**: Direct content management and user moderation
 
 ## Tech Stack
 

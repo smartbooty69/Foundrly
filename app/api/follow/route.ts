@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { writeClient } from '@/sanity/lib/write-client';
 import { canUserPerformAction } from '@/lib/ban-checks';
+import { createFollowNotification } from '@/sanity/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -138,6 +139,22 @@ export async function POST(req: Request) {
     }
 
     console.log('Sanity mutation result:', result);
+
+    // Create notification for new follow (only if it's a new follow)
+    if (action === 'follow' && !alreadyFollowing) {
+      try {
+        await createFollowNotification(
+          currentUserId,
+          profileId,
+          currentUser.name || currentUser.username || 'Unknown User',
+          currentUser.image
+        );
+        console.log('Follow notification created successfully');
+      } catch (notificationError) {
+        console.error('Failed to create follow notification:', notificationError);
+        // Don't fail the entire request if notification creation fails
+      }
+    }
 
     // Return updated followers/following for instant UI update
     let updatedProfile, updatedCurrentUser;

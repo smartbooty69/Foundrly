@@ -7,7 +7,7 @@ import Link from 'next/link'
 import React, { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import ChatController from './ChatController'
-
+import NotificationBell from './NotificationBell'
 
 const Navbar = () => {
     const session = useSession();
@@ -34,6 +34,8 @@ const Navbar = () => {
                             <span className="max-sm:hidden">Messages</span>
                             <MessageSquare className='size-6 sm:hidden' />
                         </button>
+
+                        <NotificationBell />
 
                         <button onClick={() => signOut()}>
                             <span className="max-sm:hidden">Logout</span>

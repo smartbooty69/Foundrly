@@ -1,0 +1,1519 @@
+[
+  {
+    "name": "markdown",
+    "type": "string"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "username",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "image",
+        "type": "string"
+      },
+      {
+        "name": "bio",
+        "type": "text"
+      },
+      {
+        "of": [
+          {
+            "to": [
+              {
+                "type": "author"
+              }
+            ],
+            "type": "reference",
+            "title": "Reference to author"
+          }
+        ],
+        "name": "followers",
+        "type": "array"
+      },
+      {
+        "of": [
+          {
+            "to": [
+              {
+                "type": "author"
+              }
+            ],
+            "type": "reference",
+            "title": "Reference to author"
+          }
+        ],
+        "name": "following",
+        "type": "array"
+      },
+      {
+        "description": "Timestamp until which this user is banned (null if not banned)",
+        "name": "bannedUntil",
+        "type": "datetime"
+      },
+      {
+        "initialValue": false,
+        "description": "Whether this user is currently banned",
+        "name": "isBanned",
+        "type": "boolean"
+      },
+      {
+        "description": "History of all bans applied to this user",
+        "of": [
+          {
+            "fields": [
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "timestamp",
+                "type": "datetime"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "1 Hour",
+                      "value": "1h"
+                    },
+                    {
+                      "title": "24 Hours",
+                      "value": "24h"
+                    },
+                    {
+                      "title": "7 Days",
+                      "value": "7d"
+                    },
+                    {
+                      "title": "365 Days",
+                      "value": "365d"
+                    },
+                    {
+                      "title": "Permanent",
+                      "value": "perm"
+                    }
+                  ]
+                },
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "valid",
+                        "constraint": [
+                          "1h",
+                          "24h",
+                          "7d",
+                          "365d",
+                          "perm"
+                        ]
+                      },
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "duration",
+                "type": "string"
+              },
+              {
+                "description": "Reason for the ban",
+                "name": "reason",
+                "type": "string"
+              },
+              {
+                "description": "Reference to the report that triggered this ban",
+                "to": [
+                  {
+                    "type": "report"
+                  }
+                ],
+                "name": "reportId",
+                "type": "reference"
+              },
+              {
+                "description": "Which strike this ban represents (1, 2, or 3 for permanent)",
+                "name": "strikeNumber",
+                "type": "number"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "name": "banHistory",
+        "type": "array"
+      },
+      {
+        "initialValue": 0,
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "min",
+                "constraint": 0
+              },
+              {
+                "flag": "max",
+                "constraint": 3
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "Current number of strikes (0-3, 3 = permanent ban)",
+        "name": "strikeCount",
+        "type": "number"
+      },
+      {
+        "description": "3-Strike System Management",
+        "fields": [
+          {
+            "readOnly": true,
+            "name": "isBanned",
+            "type": "boolean"
+          },
+          {
+            "readOnly": true,
+            "name": "bannedUntil",
+            "type": "datetime"
+          },
+          {
+            "readOnly": true,
+            "name": "strikeCount",
+            "type": "number"
+          },
+          {
+            "of": [
+              {
+                "fields": [
+                  {
+                    "name": "timestamp",
+                    "type": "datetime"
+                  },
+                  {
+                    "name": "duration",
+                    "type": "string"
+                  },
+                  {
+                    "name": "reason",
+                    "type": "string"
+                  },
+                  {
+                    "name": "reportId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "strikeNumber",
+                    "type": "number"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "readOnly": true,
+            "name": "banHistory",
+            "type": "array"
+          }
+        ],
+        "name": "strikeSystem",
+        "type": "object"
+      }
+    ],
+    "name": "author",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "options": {
+          "source": "title"
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug"
+      },
+      {
+        "to": [
+          {
+            "type": "author"
+          }
+        ],
+        "name": "author",
+        "type": "reference"
+      },
+      {
+        "name": "views",
+        "type": "number"
+      },
+      {
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "min",
+                "constraint": 1
+              },
+              {
+                "flag": "max",
+                "constraint": 20
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error",
+            "message": "Category is required"
+          }
+        ],
+        "name": "category",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "uri",
+                "constraint": {
+                  "options": {
+                    "scheme": [
+                      "/^http$/",
+                      "/^https$/"
+                    ],
+                    "allowRelative": false,
+                    "relativeOnly": false,
+                    "allowCredentials": false
+                  }
+                }
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error",
+            "message": "Image is required"
+          }
+        ],
+        "name": "image",
+        "type": "url"
+      },
+      {
+        "name": "pitch",
+        "type": "markdown"
+      },
+      {
+        "initialValue": 0,
+        "name": "likes",
+        "type": "number"
+      },
+      {
+        "initialValue": 0,
+        "name": "dislikes",
+        "type": "number"
+      },
+      {
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "likedBy",
+        "type": "array"
+      },
+      {
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "dislikedBy",
+        "type": "array"
+      },
+      {
+        "of": [
+          {
+            "to": [
+              {
+                "type": "comment"
+              }
+            ],
+            "type": "reference",
+            "title": "Reference to comment"
+          }
+        ],
+        "name": "comments",
+        "type": "array"
+      },
+      {
+        "description": "Timestamp until which this startup is banned (null if not banned)",
+        "name": "bannedUntil",
+        "type": "datetime"
+      },
+      {
+        "initialValue": false,
+        "description": "Whether this startup is currently banned",
+        "name": "isBanned",
+        "type": "boolean"
+      }
+    ],
+    "name": "startup",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "options": {
+          "source": "title"
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug"
+      },
+      {
+        "of": [
+          {
+            "to": [
+              {
+                "type": "startup"
+              }
+            ],
+            "type": "reference",
+            "title": "Reference to startup"
+          }
+        ],
+        "name": "select",
+        "type": "array"
+      }
+    ],
+    "name": "playlist",
+    "type": "document",
+    "title": "Playlists"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "to": [
+          {
+            "type": "author"
+          }
+        ],
+        "name": "author",
+        "type": "reference"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              },
+              {
+                "flag": "min",
+                "constraint": 1
+              },
+              {
+                "flag": "max",
+                "constraint": 1000
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "text",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "createdAt",
+        "type": "datetime"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "to": [
+          {
+            "type": "startup"
+          }
+        ],
+        "name": "startup",
+        "type": "reference"
+      },
+      {
+        "of": [
+          {
+            "to": [
+              {
+                "type": "comment"
+              }
+            ],
+            "type": "reference",
+            "title": "Reference to comment"
+          }
+        ],
+        "name": "replies",
+        "type": "array"
+      },
+      {
+        "initialValue": 0,
+        "name": "likes",
+        "type": "number"
+      },
+      {
+        "initialValue": 0,
+        "name": "dislikes",
+        "type": "number"
+      },
+      {
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "likedBy",
+        "type": "array"
+      },
+      {
+        "of": [
+          {
+            "type": "string"
+          }
+        ],
+        "name": "dislikedBy",
+        "type": "array"
+      },
+      {
+        "to": [
+          {
+            "type": "comment"
+          }
+        ],
+        "name": "parent",
+        "type": "reference"
+      },
+      {
+        "initialValue": false,
+        "description": "Whether this comment has been soft deleted",
+        "name": "deleted",
+        "type": "boolean"
+      },
+      {
+        "description": "Timestamp until which this comment is banned (null if not banned)",
+        "name": "bannedUntil",
+        "type": "datetime"
+      },
+      {
+        "initialValue": false,
+        "description": "Whether this comment is currently banned",
+        "name": "isBanned",
+        "type": "boolean"
+      }
+    ],
+    "name": "comment",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Startup",
+              "value": "startup"
+            },
+            {
+              "title": "Comment",
+              "value": "comment"
+            },
+            {
+              "title": "User",
+              "value": "user"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "startup",
+                  "comment",
+                  "user"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "reportedType",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "to": [
+          {
+            "type": "startup"
+          },
+          {
+            "type": "comment"
+          },
+          {
+            "type": "author"
+          }
+        ],
+        "name": "reportedRef",
+        "type": "reference"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              },
+              {
+                "flag": "min",
+                "constraint": 10
+              },
+              {
+                "flag": "max",
+                "constraint": 1000
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "reason",
+        "type": "text"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "to": [
+          {
+            "type": "author"
+          }
+        ],
+        "name": "reportedBy",
+        "type": "reference"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "timestamp",
+        "type": "datetime"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Pending",
+              "value": "pending"
+            },
+            {
+              "title": "Reviewed",
+              "value": "reviewed"
+            },
+            {
+              "title": "Action Taken",
+              "value": "action-taken"
+            }
+          ]
+        },
+        "initialValue": "pending",
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "pending",
+                  "reviewed",
+                  "action-taken"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "1 Hour",
+              "value": "1h"
+            },
+            {
+              "title": "24 Hours",
+              "value": "24h"
+            },
+            {
+              "title": "7 Days",
+              "value": "7d"
+            },
+            {
+              "title": "365 Days",
+              "value": "365d"
+            },
+            {
+              "title": "Permanently",
+              "value": "perm"
+            }
+          ]
+        },
+        "description": "Ban duration (only filled by admin after action)",
+        "name": "banDuration",
+        "type": "string"
+      },
+      {
+        "description": "Admin notes about the report and action taken",
+        "name": "adminNotes",
+        "type": "text"
+      },
+      {
+        "initialValue": false,
+        "description": "Delete the reported comment (only applies to comment reports)",
+        "hidden": "conditional",
+        "name": "deleteComment",
+        "type": "boolean"
+      }
+    ],
+    "name": "report",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "initialValue": true,
+        "description": "Enable auto-moderation system",
+        "name": "enabled",
+        "type": "boolean"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Low",
+              "value": "low"
+            },
+            {
+              "title": "Medium",
+              "value": "medium"
+            },
+            {
+              "title": "High",
+              "value": "high"
+            },
+            {
+              "title": "Critical",
+              "value": "critical"
+            }
+          ]
+        },
+        "initialValue": "medium",
+        "description": "Overall moderation strictness level",
+        "name": "severity",
+        "type": "string"
+      },
+      {
+        "description": "Actions for different content types",
+        "fields": [
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "Warn",
+                  "value": "warn"
+                },
+                {
+                  "title": "Delete",
+                  "value": "delete"
+                },
+                {
+                  "title": "Ban",
+                  "value": "ban"
+                },
+                {
+                  "title": "Report",
+                  "value": "report"
+                }
+              ]
+            },
+            "initialValue": "delete",
+            "name": "profanity",
+            "type": "string"
+          },
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "Warn",
+                  "value": "warn"
+                },
+                {
+                  "title": "Delete",
+                  "value": "delete"
+                },
+                {
+                  "title": "Ban",
+                  "value": "ban"
+                },
+                {
+                  "title": "Report",
+                  "value": "report"
+                }
+              ]
+            },
+            "initialValue": "ban",
+            "name": "hateSpeech",
+            "type": "string"
+          },
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "Warn",
+                  "value": "warn"
+                },
+                {
+                  "title": "Delete",
+                  "value": "delete"
+                },
+                {
+                  "title": "Ban",
+                  "value": "ban"
+                },
+                {
+                  "title": "Report",
+                  "value": "report"
+                }
+              ]
+            },
+            "initialValue": "ban",
+            "name": "threats",
+            "type": "string"
+          },
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "Warn",
+                  "value": "warn"
+                },
+                {
+                  "title": "Delete",
+                  "value": "delete"
+                },
+                {
+                  "title": "Ban",
+                  "value": "ban"
+                },
+                {
+                  "title": "Report",
+                  "value": "report"
+                }
+              ]
+            },
+            "initialValue": "delete",
+            "name": "spam",
+            "type": "string"
+          },
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "Warn",
+                  "value": "warn"
+                },
+                {
+                  "title": "Delete",
+                  "value": "delete"
+                },
+                {
+                  "title": "Ban",
+                  "value": "ban"
+                },
+                {
+                  "title": "Report",
+                  "value": "report"
+                }
+              ]
+            },
+            "initialValue": "delete",
+            "name": "personalInfo",
+            "type": "string"
+          }
+        ],
+        "name": "actions",
+        "type": "object"
+      },
+      {
+        "description": "Detection thresholds",
+        "fields": [
+          {
+            "initialValue": 500,
+            "description": "Maximum message length in characters",
+            "name": "messageLength",
+            "type": "number"
+          },
+          {
+            "initialValue": 3,
+            "description": "Number of repeated words to flag",
+            "name": "repetitionCount",
+            "type": "number"
+          },
+          {
+            "initialValue": 0.7,
+            "description": "Ratio of capital letters to flag (0-1)",
+            "name": "capsRatio",
+            "type": "number"
+          },
+          {
+            "initialValue": 0.6,
+            "description": "Minimum confidence level for flagging (0-1)",
+            "name": "confidence",
+            "type": "number"
+          }
+        ],
+        "name": "thresholds",
+        "type": "object"
+      },
+      {
+        "description": "Automatic ban settings",
+        "fields": [
+          {
+            "initialValue": true,
+            "description": "Enable automatic banning",
+            "name": "enabled",
+            "type": "boolean"
+          },
+          {
+            "options": {
+              "list": [
+                {
+                  "title": "1 Hour",
+                  "value": "1h"
+                },
+                {
+                  "title": "24 Hours",
+                  "value": "24h"
+                },
+                {
+                  "title": "7 Days",
+                  "value": "7d"
+                },
+                {
+                  "title": "1 Year",
+                  "value": "365d"
+                },
+                {
+                  "title": "Permanent",
+                  "value": "perm"
+                }
+              ]
+            },
+            "initialValue": "24h",
+            "description": "Default ban duration",
+            "name": "duration",
+            "type": "string"
+          },
+          {
+            "initialValue": 2,
+            "description": "Number of strikes before auto-ban",
+            "name": "strikeThreshold",
+            "type": "number"
+          }
+        ],
+        "name": "autoBan",
+        "type": "object"
+      },
+      {
+        "description": "When settings were last updated",
+        "readOnly": true,
+        "name": "lastUpdated",
+        "type": "datetime"
+      }
+    ],
+    "name": "moderationSettings",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Message Deleted",
+              "value": "message_deleted"
+            },
+            {
+              "title": "User Banned",
+              "value": "user_banned"
+            },
+            {
+              "title": "Warning Sent",
+              "value": "warning_sent"
+            },
+            {
+              "title": "Report Created",
+              "value": "report_created"
+            },
+            {
+              "title": "Comment Deleted",
+              "value": "comment_deleted"
+            },
+            {
+              "title": "Startup Banned",
+              "value": "startup_banned"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "message_deleted",
+                  "user_banned",
+                  "warning_sent",
+                  "report_created",
+                  "comment_deleted",
+                  "startup_banned"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "type",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "timestamp",
+        "type": "datetime"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "userId",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "userName",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "reason",
+        "type": "text"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Low",
+              "value": "low"
+            },
+            {
+              "title": "Medium",
+              "value": "medium"
+            },
+            {
+              "title": "High",
+              "value": "high"
+            },
+            {
+              "title": "Critical",
+              "value": "critical"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "severity",
+        "type": "string"
+      },
+      {
+        "description": "ID of the item that was moderated (optional)",
+        "name": "itemId",
+        "type": "string"
+      },
+      {
+        "description": "Type of item that was moderated (optional)",
+        "name": "itemType",
+        "type": "string"
+      }
+    ],
+    "name": "moderationActivity",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "User who will receive this notification",
+        "to": [
+          {
+            "type": "author"
+          }
+        ],
+        "name": "recipient",
+        "type": "reference"
+      },
+      {
+        "options": {
+          "list": [
+            {
+              "title": "Follow",
+              "value": "follow"
+            },
+            {
+              "title": "Comment",
+              "value": "comment"
+            },
+            {
+              "title": "Like",
+              "value": "like"
+            },
+            {
+              "title": "Startup View",
+              "value": "startup_view"
+            },
+            {
+              "title": "Mention",
+              "value": "mention"
+            },
+            {
+              "title": "System",
+              "value": "system"
+            }
+          ]
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "valid",
+                "constraint": [
+                  "follow",
+                  "comment",
+                  "like",
+                  "startup_view",
+                  "mention",
+                  "system"
+                ]
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "type",
+        "type": "string",
+        "title": "Notification Type"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              },
+              {
+                "flag": "max",
+                "constraint": 100
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              },
+              {
+                "flag": "max",
+                "constraint": 500
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "message",
+        "type": "text"
+      },
+      {
+        "description": "User who triggered this notification (optional for system notifications)",
+        "to": [
+          {
+            "type": "author"
+          }
+        ],
+        "name": "sender",
+        "type": "reference"
+      },
+      {
+        "description": "Startup related to this notification (for comments, likes, views)",
+        "to": [
+          {
+            "type": "startup"
+          }
+        ],
+        "name": "startup",
+        "type": "reference",
+        "title": "Related Startup"
+      },
+      {
+        "description": "Comment related to this notification",
+        "to": [
+          {
+            "type": "comment"
+          }
+        ],
+        "name": "comment",
+        "type": "reference",
+        "title": "Related Comment"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "uri",
+                "constraint": {
+                  "options": {
+                    "scheme": [
+                      "/^http$/",
+                      "/^https$/"
+                    ],
+                    "allowRelative": false,
+                    "relativeOnly": false,
+                    "allowCredentials": false
+                  }
+                }
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "URL to navigate to when notification is clicked",
+        "name": "actionUrl",
+        "type": "url",
+        "title": "Action URL"
+      },
+      {
+        "initialValue": false,
+        "description": "Whether the user has read this notification",
+        "name": "isRead",
+        "type": "boolean"
+      },
+      {
+        "description": "When the notification was marked as read",
+        "name": "readAt",
+        "type": "datetime"
+      },
+      {
+        "description": "Additional data for display purposes",
+        "fields": [
+          {
+            "name": "startupTitle",
+            "type": "string"
+          },
+          {
+            "name": "commentText",
+            "type": "text"
+          },
+          {
+            "name": "userName",
+            "type": "string"
+          },
+          {
+            "validation": [
+              {
+                "rules": [
+                  {
+                    "flag": "uri",
+                    "constraint": {
+                      "options": {
+                        "scheme": [
+                          "/^http$/",
+                          "/^https$/"
+                        ],
+                        "allowRelative": false,
+                        "relativeOnly": false,
+                        "allowCredentials": false
+                      }
+                    }
+                  }
+                ],
+                "level": "error"
+              }
+            ],
+            "name": "userImage",
+            "type": "url"
+          }
+        ],
+        "name": "metadata",
+        "type": "object",
+        "title": "Additional Metadata"
+      }
+    ],
+    "name": "notification",
+    "type": "document"
+  }
+]

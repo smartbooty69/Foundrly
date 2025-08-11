@@ -3,6 +3,7 @@ import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { createCommentNotification } from '@/sanity/lib/notifications';
 
 // GET: Fetch comments for a startup (PUBLIC - no auth required)
 export async function GET(req: Request) {
@@ -164,6 +165,36 @@ export async function POST(req: Request) {
         .setIfMissing({ comments: [] })
         .append('comments', [{ _type: 'reference', _ref: comment._id, _key: uuidv4() }])
         .commit();
+
+      // Create notification for the startup owner
+      try {
+        // Get startup owner and startup details
+        const startup = await client.fetch(
+          `*[_type == "startup" && _id == $startupId][0]{
+            author->{_id, name, username, image},
+            title
+          }`,
+          { startupId }
+        );
+
+        if (startup && startup.author?._id !== session.user.id) {
+          // Only create notification if commenter is not the startup owner
+          await createCommentNotification(
+            session.user.id, // commenter
+            startup.author._id, // startup owner
+            startupId,
+            startup.title,
+            session.user.name || session.user.username || 'Unknown User',
+            session.user.image,
+            text
+          );
+          console.log('Comment notification created successfully');
+        }
+      } catch (notificationError) {
+        console.error('Failed to create comment notification:', notificationError);
+        // Don't fail the entire request if notification creation fails
+      }
+
       return NextResponse.json({ success: true, comment });
     }
   } catch (error) {

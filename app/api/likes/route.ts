@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
+import { createLikeNotification } from '@/sanity/lib/notifications';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -93,6 +94,36 @@ export async function POST(req: Request) {
         dislikedBy: dislikedBy,
       })
       .commit();
+
+    // Create notification for new like (only if it's a new like, not un-liking)
+    if (!userHasLiked && likes > doc.likes) {
+      try {
+        // Get startup owner and startup details
+        const startup = await client.fetch(
+          `*[_type == "startup" && _id == $startupId][0]{
+            author->{_id, name, username, image},
+            title
+          }`,
+          { startupId: id }
+        );
+
+        if (startup && startup.author?._id !== userId) {
+          // Only create notification if liker is not the startup owner
+          await createLikeNotification(
+            userId, // liker
+            startup.author._id, // startup owner
+            id, // startup ID
+            startup.title,
+            session.user.name || session.user.username || 'Unknown User',
+            session.user.image
+          );
+          console.log('Like notification created successfully');
+        }
+      } catch (notificationError) {
+        console.error('Failed to create like notification:', notificationError);
+        // Don't fail the entire request if notification creation fails
+      }
+    }
 
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
