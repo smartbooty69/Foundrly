@@ -97,12 +97,57 @@ export async function POST(req: Request) {
         parent: { _type: 'reference', _ref: parentId },
       });
       console.log('Created reply:', reply);
+      
       // Patch parent comment to include reply reference
       await writeClient
         .patch(parentId)
         .setIfMissing({ replies: [] })
         .append('replies', [{ _type: 'reference', _ref: reply._id, _key: uuidv4() }])
         .commit();
+
+      // Create notification for the parent comment author
+      try {
+        console.log('🔔 Attempting to create reply notification...');
+        
+        // Get parent comment author and startup details
+        const parentComment = await client.fetch(
+          `*[_type == "comment" && _id == $parentId][0]{
+            author->{_id, name, username, image},
+            startup->{_id, title},
+            text
+          }`,
+          { parentId }
+        );
+
+        console.log('🔔 Parent comment data:', parentComment);
+
+        if (parentComment && parentComment.author?._id !== session.user.id) {
+          console.log('🔔 Creating reply notification for parent comment author:', parentComment.author._id);
+          
+          // Create reply notification for the parent comment author
+          const notificationId = await createReplyNotification(
+            session.user.id, // replier
+            parentComment.author._id, // parent comment author
+            parentComment.startup._id, // startup ID
+            parentComment.startup.title, // startup title
+            session.user.name || session.user.username || 'Unknown User', // replier name
+            session.user.image, // replier image
+            text, // reply text
+            parentComment.text // parent comment text for context
+          );
+          console.log('✅ Reply notification created successfully with ID:', notificationId);
+        } else {
+          console.log('🔔 Skipping reply notification - replier is parent comment author');
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to create reply notification:', notificationError);
+        console.error('❌ Reply notification error details:', {
+          message: notificationError.message,
+          stack: notificationError.stack
+        });
+        // Don't fail the entire request if notification creation fails
+      }
+
       return NextResponse.json({ success: true, reply });
     } else if (action === 'like' || action === 'dislike') {
       // Like or dislike a comment
@@ -168,6 +213,10 @@ export async function POST(req: Request) {
 
       // Create notification for the startup owner
       try {
+        console.log('🔔 Attempting to create comment notification...');
+        console.log('🔔 Commenter ID:', session.user.id);
+        console.log('🔔 Startup ID:', startupId);
+        
         // Get startup owner and startup details
         const startup = await client.fetch(
           `*[_type == "startup" && _id == $startupId][0]{
@@ -177,9 +226,13 @@ export async function POST(req: Request) {
           { startupId }
         );
 
+        console.log('🔔 Startup data fetched:', startup);
+
         if (startup && startup.author?._id !== session.user.id) {
+          console.log('🔔 Creating comment notification for startup owner:', startup.author._id);
+          
           // Only create notification if commenter is not the startup owner
-          await createCommentNotification(
+          const notificationId = await createCommentNotification(
             session.user.id, // commenter
             startup.author._id, // startup owner
             startupId,
@@ -188,10 +241,16 @@ export async function POST(req: Request) {
             session.user.image,
             text
           );
-          console.log('Comment notification created successfully');
+          console.log('✅ Comment notification created successfully with ID:', notificationId);
+        } else {
+          console.log('🔔 Skipping notification - commenter is startup owner or startup not found');
         }
       } catch (notificationError) {
-        console.error('Failed to create comment notification:', notificationError);
+        console.error('❌ Failed to create comment notification:', notificationError);
+        console.error('❌ Notification error details:', {
+          message: notificationError.message,
+          stack: notificationError.stack
+        });
         // Don't fail the entire request if notification creation fails
       }
 

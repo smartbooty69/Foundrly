@@ -7,7 +7,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 
 export interface Notification {
   id: string;
-  type: 'follow' | 'comment' | 'like' | 'startup_view' | 'system' | 'mention';
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'startup_view' | 'system' | 'mention';
   title: string;
   message: string;
   userId?: string;
@@ -19,6 +19,13 @@ export interface Notification {
   timestamp: string;
   isRead: boolean;
   actionUrl?: string;
+  metadata?: {
+    startupTitle?: string;
+    commentText?: string;
+    userName?: string;
+    userImage?: string;
+    parentCommentText?: string;
+  };
 }
 
 const NotificationBell = () => {
@@ -35,8 +42,12 @@ const NotificationBell = () => {
         return <UserPlus className="w-4 h-4 text-blue-500" />;
       case 'comment':
         return <MessageSquare className="w-4 h-4 text-green-500" />;
+      case 'reply':
+        return <MessageSquare className="w-4 h-4 text-teal-500" />;
       case 'like':
         return <Heart className="w-4 h-4 text-red-500" />;
+      case 'comment_like':
+        return <Heart className="w-4 h-4 text-pink-500" />;
       case 'startup_view':
         return <Eye className="w-4 h-4 text-purple-500" />;
       case 'mention':
@@ -52,8 +63,12 @@ const NotificationBell = () => {
         return 'border-l-blue-500 bg-blue-50';
       case 'comment':
         return 'border-l-green-500 bg-green-50';
+      case 'reply':
+        return 'border-l-teal-500 bg-teal-50';
       case 'like':
         return 'border-l-red-500 bg-red-50';
+      case 'comment_like':
+        return 'border-l-pink-500 bg-pink-50';
       case 'startup_view':
         return 'border-l-purple-500 bg-purple-50';
       case 'mention':
@@ -205,19 +220,31 @@ const NotificationBell = () => {
                               <p className="text-sm font-medium text-gray-900">
                                 {notification.title}
                               </p>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {notification.userName && (
-                                  <span className="font-medium text-gray-900">
-                                    {notification.userName}
-                                  </span>
-                                )}
-                                {' '}{notification.message}
-                                {notification.startupTitle && (
-                                  <span className="font-medium text-gray-900">
-                                    {' '}{notification.startupTitle}
-                                  </span>
-                                )}
-                              </p>
+                                                             <div className="text-sm text-gray-600 mt-1">
+                                 <p>
+                                   {notification.userName && (
+                                     <span className="font-medium text-gray-900">
+                                       {notification.userName}
+                                     </span>
+                                   )}
+                                   {' '}{notification.message}
+                                   {notification.startupTitle && (
+                                     <span className="font-medium text-gray-900">
+                                       {' '}{notification.startupTitle}
+                                     </span>
+                                   )}
+                                 </p>
+                                 {notification.type === 'reply' && notification.metadata?.parentCommentText && (
+                                   <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                     <span className="font-medium">Replying to:</span> "{notification.metadata.parentCommentText}"
+                                   </div>
+                                 )}
+                                 {notification.type === 'comment_like' && notification.metadata?.commentText && (
+                                   <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                     <span className="font-medium">Comment:</span> "{notification.metadata.commentText}"
+                                   </div>
+                                 )}
+                               </div>
                               <p className="text-xs text-gray-400 mt-2">
                                 {formatTimestamp(notification.timestamp)}
                               </p>

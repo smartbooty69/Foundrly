@@ -19,7 +19,9 @@ export const notification = {
         list: [
           { title: 'Follow', value: 'follow' },
           { title: 'Comment', value: 'comment' },
+          { title: 'Reply', value: 'reply' },
           { title: 'Like', value: 'like' },
+          { title: 'Comment Like', value: 'comment_like' },
           { title: 'Startup View', value: 'startup_view' },
           { title: 'Mention', value: 'mention' },
           { title: 'System', value: 'system' }

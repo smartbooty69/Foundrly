@@ -20,6 +20,7 @@ export default function TestNotificationsPage() {
     setResult(null);
 
     try {
+      console.log('🔔 Creating test system notification...');
       const response = await fetch('/api/test-create-notification', {
         method: 'POST',
         headers: {
@@ -28,14 +29,193 @@ export default function TestNotificationsPage() {
       });
 
       const data = await response.json();
+      console.log('🔔 Response:', data);
 
       if (response.ok) {
         setResult(data);
+        console.log('✅ Test system notification created successfully');
       } else {
         setError(data.error || 'Failed to create notification');
+        console.error('❌ Failed to create notification:', data);
       }
     } catch (err) {
-      setError('Network error: ' + (err as Error).message);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestCommentNotification = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test comment notification...');
+      const response = await fetch('/api/test-comment-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test comment notification created successfully');
+      } else {
+        setError(data.error || 'Failed to create comment notification');
+        console.error('❌ Failed to create comment notification:', data);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestRealComment = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test real comment notification...');
+      const response = await fetch('/api/test-real-comment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test real comment notification created successfully');
+      } else {
+        setError(data.error || 'Failed to simulate real comment');
+        console.error('❌ Failed to simulate real comment:', data);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestReplyNotification = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test reply notification...');
+      const response = await fetch('/api/test-reply-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test reply notification created successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to create reply notification';
+        setError(errorMessage);
+        console.error('❌ Failed to create reply notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestCommentLikeNotification = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test comment like notification...');
+      const response = await fetch('/api/test-comment-like-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test comment like notification created successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to create comment like notification';
+        setError(errorMessage);
+        console.error('❌ Failed to create comment like notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace'
+      });
     } finally {
       setIsCreating(false);
     }
@@ -76,13 +256,45 @@ export default function TestNotificationsPage() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-6 space-y-3">
             <button
               onClick={createTestNotification}
               disabled={isCreating}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
             >
-              {isCreating ? 'Creating...' : 'Create Test Notification'}
+              {isCreating ? 'Creating...' : 'Create Test System Notification'}
+            </button>
+            
+            <button
+              onClick={createTestCommentNotification}
+              disabled={isCreating}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Create Test Comment Notification'}
+            </button>
+            
+            <button
+              onClick={createTestRealComment}
+              disabled={isCreating}
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Simulate Real Comment'}
+            </button>
+            
+            <button
+              onClick={createTestReplyNotification}
+              disabled={isCreating}
+              className="bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Test Reply Notification'}
+            </button>
+            
+            <button
+              onClick={createTestCommentLikeNotification}
+              disabled={isCreating}
+              className="bg-pink-600 hover:bg-pink-700 disabled:bg-pink-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Test Comment Like'}
             </button>
           </div>
 
@@ -99,7 +311,33 @@ export default function TestNotificationsPage() {
               <div className="text-green-700">
                 <p><strong>Message:</strong> {result.message}</p>
                 <p><strong>Notification ID:</strong> {result.notificationId}</p>
-                <p><strong>User:</strong> {result.user.name}</p>
+                {result.user && (
+                  <p><strong>User:</strong> {result.user.name || result.user.username || 'Unknown'}</p>
+                )}
+                {result.notificationType && (
+                  <p><strong>Type:</strong> {result.notificationType}</p>
+                )}
+                {result.scenario && (
+                  <div className="mt-2 p-2 bg-green-100 rounded">
+                    <p><strong>Scenario:</strong></p>
+                    <p>• Startup: {result.scenario.startup?.title || 'N/A'}</p>
+                    <p>• Comment: {result.scenario.comment || 'N/A'}</p>
+                  </div>
+                )}
+                                 {result.notificationType === 'reply' && (
+                   <div className="mt-2 p-2 bg-teal-100 rounded">
+                     <p><strong>Reply Details:</strong></p>
+                     <p>• Reply: {result.replyText || 'N/A'}</p>
+                     <p>• To Comment: {result.parentCommentText || 'N/A'}</p>
+                   </div>
+                 )}
+                 {result.notificationType === 'comment_like' && (
+                   <div className="mt-2 p-2 bg-pink-100 rounded">
+                     <p><strong>Comment Like Details:</strong></p>
+                     <p>• Comment: {result.commentText || 'N/A'}</p>
+                     <p>• Startup: {result.startupTitle || 'N/A'}</p>
+                   </div>
+                 )}
               </div>
             </div>
           )}

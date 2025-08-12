@@ -9,7 +9,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
-  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'like' | 'startup_view'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'startup_view'>('all');
   const { 
     notifications, 
     unreadCount, 
@@ -27,8 +27,12 @@ const NotificationsPage = () => {
         return <UserPlus className="w-5 h-5 text-blue-500" />;
       case 'comment':
         return <MessageSquare className="w-5 h-5 text-green-500" />;
+      case 'reply':
+        return <MessageSquare className="w-5 h-5 text-teal-500" />;
       case 'like':
         return <Heart className="w-5 h-5 text-red-500" />;
+      case 'comment_like':
+        return <Heart className="w-5 h-5 text-pink-500" />;
       case 'startup_view':
         return <Eye className="w-5 h-5 text-purple-500" />;
       case 'mention':
@@ -44,8 +48,12 @@ const NotificationsPage = () => {
         return 'border-l-blue-500 bg-blue-50';
       case 'comment':
         return 'border-l-green-500 bg-green-50';
+      case 'reply':
+        return 'border-l-teal-500 bg-teal-50';
       case 'like':
         return 'border-l-red-500 bg-red-50';
+      case 'comment_like':
+        return 'border-l-pink-500 bg-pink-50';
       case 'startup_view':
         return 'border-l-purple-500 bg-purple-50';
       case 'mention':
@@ -142,7 +150,9 @@ const NotificationsPage = () => {
                   { key: 'unread', label: 'Unread' },
                   { key: 'follow', label: 'Follows' },
                   { key: 'comment', label: 'Comments' },
+                  { key: 'reply', label: 'Replies' },
                   { key: 'like', label: 'Likes' },
+                  { key: 'comment_like', label: 'Comment Likes' },
                   { key: 'startup_view', label: 'Views' }
                 ].map((filterOption) => (
                   <button
@@ -224,19 +234,38 @@ const NotificationsPage = () => {
                             )}
                           </div>
                           
-                          <p className="text-gray-700 mb-3">
-                            {notification.userName && (
-                              <span className="font-semibold text-gray-900">
-                                {notification.userName}
-                              </span>
-                            )}
-                            {' '}{notification.message}
-                            {notification.startupTitle && (
-                              <span className="font-semibold text-gray-900">
-                                {' '}{notification.startupTitle}
-                              </span>
-                            )}
-                          </p>
+                                                     <div className="text-gray-700 mb-3">
+                             <p>
+                               {notification.userName && (
+                                 <span className="font-semibold text-gray-900">
+                                   {notification.userName}
+                                 </span>
+                               )}
+                               {' '}{notification.message}
+                               {notification.startupTitle && (
+                                 <span className="font-semibold text-gray-900">
+                                   {' '}{notification.startupTitle}
+                                 </span>
+                               )}
+                             </p>
+                           </div>
+                           
+                           {notification.type === 'reply' && notification.metadata?.parentCommentText && (
+                             <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-teal-500">
+                               <p className="text-sm text-gray-700">
+                                 <span className="font-medium text-teal-700">Replying to:</span>
+                                 <span className="ml-2 italic">"{notification.metadata.parentCommentText}"</span>
+                               </p>
+                             </div>
+                           )}
+                                                      {notification.type === 'comment_like' && notification.metadata?.commentText && (
+                             <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-pink-500">
+                               <p className="text-sm text-gray-700">
+                                 <span className="font-medium text-pink-700">Comment:</span>
+                                 <span className="ml-2 italic">"{notification.metadata.commentText}"</span>
+                               </p>
+                             </div>
+                           )}
                           
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500">

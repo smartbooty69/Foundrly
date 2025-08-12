@@ -59,6 +59,8 @@ export interface SanityNotification {
  */
 export async function createNotification(data: CreateNotificationData): Promise<string> {
   try {
+    console.log('🔔 createNotification called with data:', data);
+    
     const notificationDoc = {
       _type: 'notification',
       recipient: {
@@ -91,11 +93,20 @@ export async function createNotification(data: CreateNotificationData): Promise<
       ...(data.metadata && { metadata: data.metadata })
     };
 
+    console.log('🔔 Notification document to create:', notificationDoc);
+    console.log('🔔 Using writeClient:', !!writeClient);
+
     const result = await writeClient.create(notificationDoc);
+    console.log('✅ Notification created successfully:', result);
     return result._id;
   } catch (error) {
-    console.error('Error creating notification:', error);
-    throw new Error('Failed to create notification');
+    console.error('❌ Error creating notification:', {
+      error: error,
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    throw new Error(`Failed to create notification: ${error.message}`);
   }
 }
 
@@ -108,7 +119,7 @@ export async function getUserNotifications(
   offset: number = 0
 ): Promise<{ notifications: SanityNotification[]; total: number }> {
   try {
-    console.log('getUserNotifications called with:', { userId, limit, offset });
+    console.log('🔔 getUserNotifications called with:', { userId, limit, offset });
     
     if (!userId) {
       throw new Error('userId is required');
@@ -116,10 +127,10 @@ export async function getUserNotifications(
 
     // Get total count
     const totalQuery = `count(*[_type == "notification" && recipient._ref == $userId])`;
-    console.log('Executing total query:', totalQuery);
+    console.log('🔔 Executing total query:', totalQuery);
     
     const total = await client.fetch(totalQuery, { userId });
-    console.log('Total count result:', total);
+    console.log('🔔 Total count result:', total);
 
     // Get notifications with pagination
     const notificationsQuery = `
@@ -142,19 +153,33 @@ export async function getUserNotifications(
       }
     `;
     
-    console.log('Executing notifications query with params:', { userId, limit: offset + limit, offset });
+    console.log('🔔 Executing notifications query with params:', { userId, limit: offset + limit, offset });
     const notifications = await client.fetch(notificationsQuery, {
       userId,
       limit: offset + limit,
       offset
     });
 
-    console.log('Notifications result:', { count: notifications?.length, notifications });
+    console.log('🔔 Raw notifications from Sanity:', { count: notifications?.length, notifications });
+    
+    // Log each notification type for debugging
+    if (notifications && notifications.length > 0) {
+      notifications.forEach((notification: any, index: number) => {
+        console.log(`🔔 Notification ${index + 1}:`, {
+          id: notification._id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          hasMetadata: !!notification.metadata,
+          metadataKeys: notification.metadata ? Object.keys(notification.metadata) : 'none'
+        });
+      });
+    }
 
     return { notifications: notifications || [], total: total || 0 };
   } catch (error) {
-    console.error('Error fetching user notifications:', error);
-    console.error('Error details:', {
+    console.error('❌ Error fetching user notifications:', error);
+    console.error('❌ Error details:', {
       message: error.message,
       stack: error.stack,
       userId,
@@ -266,7 +291,19 @@ export async function deleteOldNotifications(olderThanDays: number = 30): Promis
 export function convertSanityNotificationToFrontend(
   sanityNotification: SanityNotification
 ): Notification {
-  return {
+  console.log('🔄 Converting Sanity notification to frontend format:', {
+    id: sanityNotification._id,
+    type: sanityNotification.type,
+    title: sanityNotification.title,
+    message: sanityNotification.message,
+    hasSender: !!sanityNotification.sender,
+    hasStartup: !!sanityNotification.startup,
+    hasComment: !!sanityNotification.comment,
+    hasMetadata: !!sanityNotification.metadata,
+    metadataKeys: sanityNotification.metadata ? Object.keys(sanityNotification.metadata) : 'none'
+  });
+
+  const converted = {
     id: sanityNotification._id,
     type: sanityNotification.type as any,
     title: sanityNotification.title,
@@ -279,8 +316,12 @@ export function convertSanityNotificationToFrontend(
     commentId: sanityNotification.comment?._ref,
     timestamp: sanityNotification._createdAt,
     isRead: sanityNotification.isRead,
-    actionUrl: sanityNotification.actionUrl
+    actionUrl: sanityNotification.actionUrl,
+    metadata: sanityNotification.metadata
   };
+
+  console.log('🔄 Converted notification:', converted);
+  return converted;
 }
 
 /**
@@ -336,6 +377,37 @@ export async function createCommentNotification(
 }
 
 /**
+ * Create reply notification
+ */
+export async function createReplyNotification(
+  replierId: string,
+  commentAuthorId: string,
+  startupId: string,
+  startupTitle: string,
+  replierName: string,
+  replierImage?: string,
+  replyText?: string,
+  parentCommentText?: string
+): Promise<string> {
+  return createNotification({
+    recipientId: commentAuthorId,
+    type: 'reply',
+    title: 'New Reply',
+    message: 'replied to your comment',
+    senderId: replierId,
+    startupId,
+    actionUrl: `/startup/${startupId}`,
+    metadata: {
+      startupTitle,
+      commentText: replyText,
+      userName: replierName,
+      userImage: replierImage,
+      parentCommentText
+    }
+  });
+}
+
+/**
  * Create like notification
  */
 export async function createLikeNotification(
@@ -356,6 +428,37 @@ export async function createLikeNotification(
     actionUrl: `/startup/${startupId}`,
     metadata: {
       startupTitle,
+      userName: likerName,
+      userImage: likerImage
+    }
+  });
+}
+
+/**
+ * Create comment like notification
+ */
+export async function createCommentLikeNotification(
+  likerId: string,
+  commentAuthorId: string,
+  commentId: string,
+  commentText: string,
+  startupId: string,
+  startupTitle: string,
+  likerName: string,
+  likerImage?: string
+): Promise<string> {
+  return createNotification({
+    recipientId: commentAuthorId,
+    type: 'comment_like',
+    title: 'Comment Liked',
+    message: 'liked your comment',
+    senderId: likerId,
+    startupId,
+    commentId,
+    actionUrl: `/startup/${startupId}`,
+    metadata: {
+      startupTitle,
+      commentText,
       userName: likerName,
       userImage: likerImage
     }
