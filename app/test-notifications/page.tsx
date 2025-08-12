@@ -379,6 +379,128 @@ export default function TestNotificationsPage() {
     }
   };
 
+  const testEmailNotification = async (emailType: string) => {
+    if (!session?.user) {
+      setError('You must be logged in to test email notifications');
+      return;
+    }
+
+    const userEmail = prompt(`Enter email address to test ${emailType} notification:`);
+    if (!userEmail) return;
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('📧 Testing email notification:', emailType);
+      const response = await fetch('/api/test-email-notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailType,
+          userEmail
+        }),
+      });
+
+      const data = await response.json();
+      console.log('📧 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test email notification sent successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to send test email notification';
+        setError(errorMessage);
+        console.error('❌ Failed to send test email notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const testSimpleEmail = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to test email notifications');
+      return;
+    }
+
+    const userEmail = prompt('Enter email address to test basic email functionality:');
+    if (!userEmail) return;
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('📧 Testing basic email functionality');
+      
+      // First test the minimal endpoint
+      console.log('📧 Testing minimal endpoint...');
+      const minimalResponse = await fetch('/api/test-email-minimal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+
+      const minimalData = await minimalResponse.json();
+      console.log('📧 Minimal endpoint response:', minimalData);
+
+      if (!minimalResponse.ok) {
+        setError(`Minimal endpoint failed: ${minimalData.error || 'Unknown error'}`);
+        return;
+      }
+
+      // Now test the full email endpoint
+      console.log('📧 Testing full email endpoint...');
+      const response = await fetch('/api/test-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+
+      const data = await response.json();
+      console.log('📧 Full email endpoint response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test email sent successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to send test email';
+        setError(errorMessage);
+        console.error('❌ Failed to send test email:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -471,14 +593,79 @@ export default function TestNotificationsPage() {
               {isCreating ? 'Creating...' : 'Test Report Notification'}
             </button>
             
-            <button
-              onClick={createTestActionAgainstYou}
-              disabled={isCreating}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
-            >
-              {isCreating ? 'Creating...' : 'Test Action Against You'}
-            </button>
-          </div>
+                         <button
+               onClick={createTestActionAgainstYou}
+               disabled={isCreating}
+               className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+             >
+               {isCreating ? 'Creating...' : 'Test Action Against You'}
+             </button>
+           </div>
+
+           <div className="mb-6">
+             <h2 className="text-lg font-semibold text-gray-800 mb-3">📧 Email Notification Testing</h2>
+             <div className="space-y-3">
+               <button
+                 onClick={testSimpleEmail}
+                 disabled={isCreating}
+                 className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+               >
+                 {isCreating ? 'Testing...' : 'Test Basic Email'}
+               </button>
+               
+               <div className="grid grid-cols-2 gap-3">
+                 <button
+                   onClick={() => testEmailNotification('accountSuspended')}
+                   disabled={isCreating}
+                   className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Account Suspended Email'}
+                 </button>
+                 
+                 <button
+                   onClick={() => testEmailNotification('contentRemoved')}
+                   disabled={isCreating}
+                   className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Content Removed Email'}
+                 </button>
+                 
+                 <button
+                   onClick={() => testEmailNotification('securityAlert')}
+                   disabled={isCreating}
+                   className="bg-red-700 hover:bg-red-800 disabled:bg-red-500 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Security Alert Email'}
+                 </button>
+                 
+
+
+                 <button
+                   onClick={() => testEmailNotification('warningIssued')}
+                   disabled={isCreating}
+                   className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Warning Issued Email'}
+                 </button>
+
+                 <button
+                   onClick={() => testEmailNotification('permanentBan')}
+                   disabled={isCreating}
+                   className="bg-red-800 hover:bg-red-900 disabled:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Permanent Ban Email'}
+                 </button>
+
+                 <button
+                   onClick={() => testEmailNotification('reportSubmitted')}
+                   disabled={isCreating}
+                   className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                 >
+                   {isCreating ? 'Testing...' : 'Report Submitted Email'}
+                 </button>
+               </div>
+             </div>
+           </div>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">

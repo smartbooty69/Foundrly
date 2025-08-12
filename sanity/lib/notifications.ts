@@ -1,6 +1,7 @@
 import { client } from './client';
 import { writeClient } from './write-client';
 import { Notification } from '@/components/NotificationBell';
+import { sendCriticalNotificationEmail } from '@/lib/emailNotifications';
 
 export interface CreateNotificationData {
   recipientId: string;
@@ -106,6 +107,21 @@ export async function createNotification(data: CreateNotificationData): Promise<
 
     const result = await writeClient.create(notificationDoc);
     console.log('✅ Notification created successfully:', result);
+    
+    // Send email for critical notifications
+    try {
+      await sendCriticalNotificationEmail({
+        type: data.type,
+        recipientId: data.recipientId,
+        metadata: data.metadata,
+        title: data.title,
+        message: data.message
+      });
+    } catch (emailError) {
+      console.error('⚠️ Failed to send email notification (non-critical):', emailError);
+      // Don't fail the notification creation if email fails
+    }
+    
     return result._id;
   } catch (error) {
     console.error('❌ Error creating notification:', {
