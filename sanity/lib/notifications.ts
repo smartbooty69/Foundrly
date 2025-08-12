@@ -2,6 +2,7 @@ import { client } from './client';
 import { writeClient } from './write-client';
 import { Notification } from '@/components/NotificationBell';
 import { sendCriticalNotificationEmail } from '@/lib/emailNotifications';
+import { sendPushNotification } from '@/lib/pushNotifications';
 
 export interface CreateNotificationData {
   recipientId: string;
@@ -120,6 +121,20 @@ export async function createNotification(data: CreateNotificationData): Promise<
     } catch (emailError) {
       console.error('⚠️ Failed to send email notification (non-critical):', emailError);
       // Don't fail the notification creation if email fails
+    }
+
+    // Send push notification
+    try {
+      await sendPushNotification({
+        type: data.type,
+        recipientId: data.recipientId,
+        title: data.title,
+        message: data.message,
+        metadata: data.metadata
+      });
+    } catch (pushError) {
+      console.error('⚠️ Failed to send push notification (non-critical):', pushError);
+      // Don't fail the notification creation if push notification fails
     }
     
     return result._id;

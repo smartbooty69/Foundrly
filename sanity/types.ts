@@ -13,6 +13,22 @@
  */
 
 // Source: schema.json
+export type PushSubscription = {
+  _id: string;
+  _type: "pushSubscription";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  userId?: string;
+  endpoint?: string;
+  keys?: {
+    p256dh?: string;
+    auth?: string;
+  };
+  createdAt?: string;
+  isActive?: boolean;
+};
+
 export type Notification = {
   _id: string;
   _type: "notification";
@@ -412,5 +428,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;

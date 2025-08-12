@@ -30,6 +30,7 @@ interface Notification {
   };
 }
 import { useNotifications } from '@/hooks/useNotifications';
+import PushNotificationSettings from '@/components/PushNotificationSettings';
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
@@ -161,6 +162,11 @@ const NotificationsPage = () => {
             )}
           </div>
           <p className="text-gray-600">Stay updated with all your activity on Foundrly</p>
+        </div>
+
+        {/* Push Notification Settings */}
+        <div className="mb-6">
+          <PushNotificationSettings />
         </div>
 
         {/* Filters and Actions */}

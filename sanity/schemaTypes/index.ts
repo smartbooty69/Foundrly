@@ -7,7 +7,8 @@ import { report } from './report'
 import { moderationSettings } from './moderationSettings'
 import { moderationActivity } from './moderationActivity'
 import { notification } from './notification'
+import { pushSubscription } from './pushSubscription'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
-  types: [author, startup, playlist, comment, report, moderationSettings, moderationActivity, notification],
+  types: [author, startup, playlist, comment, report, moderationSettings, moderationActivity, notification, pushSubscription],
 }
