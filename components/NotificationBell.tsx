@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Bell, X, Check, AlertCircle, MessageSquare, Heart, UserPlus, Eye } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export interface Notification {
   id: string;
-  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'startup_view' | 'system' | 'mention';
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention';
   title: string;
   message: string;
   userId?: string;
@@ -25,6 +25,9 @@ export interface Notification {
     userName?: string;
     userImage?: string;
     parentCommentText?: string;
+    reportReason?: string;
+    reportStatus?: string;
+    actionTaken?: string;
   };
 }
 
@@ -35,6 +38,35 @@ const NotificationBell = () => {
     unreadCount, 
     markAsRead
   } = useNotifications();
+
+  // Memoize filtered notifications to prevent unnecessary recalculations
+  const displayNotifications = useMemo(() => {
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
+    const recentNotifications = notifications.filter(notification => {
+      const notificationDate = new Date(notification.timestamp);
+      return notificationDate >= threeDaysAgo;
+    });
+    
+    // Prioritize unread notifications, then sort by date
+    const sortedNotifications = recentNotifications.sort((a, b) => {
+      // First priority: unread notifications
+      if (a.isRead !== b.isRead) {
+        return a.isRead ? 1 : -1;
+      }
+      // Second priority: most recent first
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+    
+    return sortedNotifications.slice(0, 5); // Limit to 5 for dropdown
+  }, [notifications]); // Only recalculate when notifications change
+
+  // Force re-render when notifications change (especially for markAllAsRead)
+  useEffect(() => {
+    // This ensures the component re-renders when notifications state changes
+    // This is important for when markAllAsRead is called from the notifications page
+  }, [notifications, unreadCount]);
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
@@ -48,8 +80,8 @@ const NotificationBell = () => {
         return <Heart className="w-4 h-4 text-red-500" />;
       case 'comment_like':
         return <Heart className="w-4 h-4 text-pink-500" />;
-      case 'startup_view':
-        return <Eye className="w-4 h-4 text-purple-500" />;
+             case 'report':
+         return <AlertCircle className="w-4 h-4 text-orange-500" />;
       case 'mention':
         return <MessageSquare className="w-4 h-4 text-orange-500" />;
       default:
@@ -69,10 +101,10 @@ const NotificationBell = () => {
         return 'border-l-red-500 bg-red-50';
       case 'comment_like':
         return 'border-l-pink-500 bg-pink-50';
-      case 'startup_view':
-        return 'border-l-purple-500 bg-purple-50';
+             case 'report':
+         return 'border-l-orange-500 bg-orange-50';
       case 'mention':
-        return 'border-l-orange-500 bg-orange-50';
+        return 'border-l-orange-500 bg-orange-500';
       default:
         return 'border-l-gray-500 bg-gray-50';
     }
@@ -98,33 +130,6 @@ const NotificationBell = () => {
     }
     setIsOpen(false);
   };
-
-
-
-  // Filter notifications for dropdown: only show notifications from last 3 days
-  const getFilteredNotifications = () => {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    
-    const recentNotifications = notifications.filter(notification => {
-      const notificationDate = new Date(notification.timestamp);
-      return notificationDate >= threeDaysAgo;
-    });
-    
-    // Prioritize unread notifications, then sort by date
-    const sortedNotifications = recentNotifications.sort((a, b) => {
-      // First priority: unread notifications
-      if (a.isRead !== b.isRead) {
-        return a.isRead ? 1 : -1;
-      }
-      // Second priority: most recent first
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    });
-    
-    return sortedNotifications.slice(0, 5); // Limit to 5 for dropdown
-  };
-
-  const displayNotifications = getFilteredNotifications();
 
   return (
     <div className="relative">
@@ -170,14 +175,14 @@ const NotificationBell = () => {
                   </p>
                 )}
               </div>
-                             <div className="flex items-center gap-2">
-                 <button
-                   onClick={() => setIsOpen(false)}
-                   className="text-gray-400 hover:text-gray-600"
-                 >
-                   <X className="w-4 h-4" />
-                 </button>
-               </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Notifications List */}
@@ -220,31 +225,43 @@ const NotificationBell = () => {
                               <p className="text-sm font-medium text-gray-900">
                                 {notification.title}
                               </p>
-                                                             <div className="text-sm text-gray-600 mt-1">
-                                 <p>
-                                   {notification.userName && (
-                                     <span className="font-medium text-gray-900">
-                                       {notification.userName}
-                                     </span>
-                                   )}
-                                   {' '}{notification.message}
-                                   {notification.startupTitle && (
-                                     <span className="font-medium text-gray-900">
-                                       {' '}{notification.startupTitle}
-                                     </span>
-                                   )}
-                                 </p>
-                                 {notification.type === 'reply' && notification.metadata?.parentCommentText && (
-                                   <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                                     <span className="font-medium">Replying to:</span> "{notification.metadata.parentCommentText}"
-                                   </div>
-                                 )}
-                                 {notification.type === 'comment_like' && notification.metadata?.commentText && (
+                              <div className="text-sm text-gray-600 mt-1">
+                                <p>
+                                  {notification.userName && (
+                                    <span className="font-medium text-gray-900">
+                                      {notification.userName}
+                                    </span>
+                                  )}
+                                  {' '}{notification.message}
+                                  {notification.startupTitle && (
+                                    <span className="font-medium text-gray-900">
+                                      {' '}{notification.startupTitle}
+                                    </span>
+                                  )}
+                                </p>
+                                {notification.type === 'reply' && notification.metadata?.parentCommentText && (
+                                  <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                    <span className="font-medium">Replying to:</span> "{notification.metadata.parentCommentText}"
+                                  </div>
+                                )}
+                                                                 {notification.type === 'comment_like' && notification.metadata?.commentText && (
                                    <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
                                      <span className="font-medium">Comment:</span> "{notification.metadata.commentText}"
                                    </div>
                                  )}
-                               </div>
+                                 {notification.type === 'report' && (
+                                   <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                     <div className="space-y-1">
+                                       {notification.metadata?.reportReason && (
+                                         <div><span className="font-medium">Reason:</span> {notification.metadata.reportReason}</div>
+                                       )}
+                                       {notification.metadata?.actionTaken && (
+                                         <div><span className="font-medium">Action:</span> {notification.metadata.actionTaken}</div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 )}
+                              </div>
                               <p className="text-xs text-gray-400 mt-2">
                                 {formatTimestamp(notification.timestamp)}
                               </p>

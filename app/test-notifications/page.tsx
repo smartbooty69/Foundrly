@@ -221,6 +221,164 @@ export default function TestNotificationsPage() {
     }
   };
 
+  const createTestFollowNotification = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test follow notification...');
+      const response = await fetch('/api/test-follow-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test follow notification created successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to create follow notification';
+        setError(errorMessage);
+        console.error('❌ Failed to create follow notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details
+        });
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestReportNotification = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test report notification...');
+      const response = await fetch('/api/test-report-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test report notification created successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to create report notification';
+        setError(errorMessage);
+        console.error('❌ Failed to create report notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details,
+          fullResponse: data
+        });
+        
+        // Log the full response for debugging
+        console.log('🔍 Full API response:', data);
+        console.log('🔍 Response status:', response.status);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const createTestActionAgainstYou = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create notifications');
+      return;
+    }
+
+    setIsCreating(true);
+    setError(null);
+    setResult(null);
+
+    try {
+      console.log('🔔 Creating test action against you notification...');
+      const response = await fetch('/api/test-action-against-you', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      console.log('🔔 Response:', data);
+
+      if (response.ok) {
+        setResult(data);
+        console.log('✅ Test action against you notification created successfully');
+      } else {
+        const errorMessage = data.error || data.details || 'Failed to create action against you notification';
+        setError(errorMessage);
+        console.error('❌ Failed to create action against you notification:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          error: data.error,
+          details: data.details,
+          fullResponse: data
+        });
+        
+        // Log the full response for debugging
+        console.log('🔍 Full API response:', data);
+        console.log('🔍 Response status:', response.status);
+        console.log('🔍 Response headers:', response.headers);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError('Network error: ' + errorMessage);
+      console.error('❌ Network error:', {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace'
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (!session?.user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -296,6 +454,30 @@ export default function TestNotificationsPage() {
             >
               {isCreating ? 'Creating...' : 'Test Comment Like'}
             </button>
+            
+            <button
+              onClick={createTestFollowNotification}
+              disabled={isCreating}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Test Follow Notification'}
+            </button>
+            
+            <button
+              onClick={createTestReportNotification}
+              disabled={isCreating}
+              className="bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Test Report Notification'}
+            </button>
+            
+            <button
+              onClick={createTestActionAgainstYou}
+              disabled={isCreating}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-medium py-2 px-4 rounded-lg transition-colors ml-3"
+            >
+              {isCreating ? 'Creating...' : 'Test Action Against You'}
+            </button>
           </div>
 
           {error && (
@@ -338,6 +520,30 @@ export default function TestNotificationsPage() {
                      <p>• Startup: {result.startupTitle || 'N/A'}</p>
                    </div>
                  )}
+                 {result.notificationType === 'follow' && (
+                   <div className="mt-2 p-2 bg-blue-100 rounded">
+                     <p><strong>Follow Details:</strong></p>
+                     <p>• Follower: {result.followerName || 'N/A'}</p>
+                     <p>• Type: New Follower</p>
+                   </div>
+                 )}
+                                   {result.notificationType === 'report' && (
+                    <div className="mt-2 p-2 bg-orange-100 rounded">
+                      <p><strong>Report Details:</strong></p>
+                      <p>• Reason: {result.metadata?.reportReason || 'N/A'}</p>
+                      <p>• Status: {result.metadata?.reportStatus || 'N/A'}</p>
+                      <p>• Action: {result.metadata?.reportStatus === 'Warning' || result.metadata?.reportStatus === 'Suspension' || result.metadata?.reportStatus === 'Restriction' ? 'Action Taken Against You' : 'N/A'}</p>
+                    </div>
+                  )}
+                  {result.actionDetails && (
+                    <div className="mt-2 p-2 bg-red-100 rounded">
+                      <p><strong>Action Against You Details:</strong></p>
+                      <p>• Title: {result.actionDetails.title || 'N/A'}</p>
+                      <p>• Message: {result.actionDetails.message || 'N/A'}</p>
+                      <p>• Severity: {result.actionDetails.severity || 'N/A'}</p>
+                      <p>• Action: {result.actionDetails.actionTaken || 'N/A'}</p>
+                    </div>
+                  )}
               </div>
             </div>
           )}

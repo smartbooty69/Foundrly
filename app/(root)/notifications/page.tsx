@@ -4,12 +4,36 @@ import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Bell, Filter, Check, X, UserPlus, MessageSquare, Heart, Eye, AlertCircle, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Notification } from '@/components/NotificationBell';
+interface Notification {
+  id: string;
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention';
+  title: string;
+  message: string;
+  userId?: string;
+  userName?: string;
+  userImage?: string;
+  startupId?: string;
+  startupTitle?: string;
+  commentId?: string;
+  timestamp: string;
+  isRead: boolean;
+  actionUrl?: string;
+  metadata?: {
+    startupTitle?: string;
+    commentText?: string;
+    userName?: string;
+    userImage?: string;
+    parentCommentText?: string;
+    reportReason?: string;
+    reportStatus?: string;
+    actionTaken?: string;
+  };
+}
 import { useNotifications } from '@/hooks/useNotifications';
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
-  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'startup_view'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'reply' | 'like' | 'report'>('all');
   const { 
     notifications, 
     unreadCount, 
@@ -33,8 +57,8 @@ const NotificationsPage = () => {
         return <Heart className="w-5 h-5 text-red-500" />;
       case 'comment_like':
         return <Heart className="w-5 h-5 text-pink-500" />;
-      case 'startup_view':
-        return <Eye className="w-5 h-5 text-purple-500" />;
+             case 'report':
+         return <AlertCircle className="w-5 h-5 text-orange-500" />;
       case 'mention':
         return <MessageSquare className="w-5 h-5 text-orange-500" />;
       default:
@@ -54,8 +78,8 @@ const NotificationsPage = () => {
         return 'border-l-red-500 bg-red-50';
       case 'comment_like':
         return 'border-l-pink-500 bg-pink-50';
-      case 'startup_view':
-        return 'border-l-purple-500 bg-purple-50';
+             case 'report':
+         return 'border-l-orange-500 bg-orange-50';
       case 'mention':
         return 'border-l-orange-500 bg-orange-500';
       default:
@@ -77,6 +101,7 @@ const NotificationsPage = () => {
   const filteredNotifications = notifications.filter(notification => {
     if (filter === 'all') return true;
     if (filter === 'unread') return !notification.isRead;
+    if (filter === 'comment') return notification.type === 'comment' || notification.type === 'comment_like' || notification.type === 'reply';
     return notification.type === filter;
   });
 
@@ -145,16 +170,14 @@ const NotificationsPage = () => {
               <Filter className="w-5 h-5 text-gray-400" />
               <span className="text-sm font-medium text-gray-700">Filter:</span>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { key: 'all', label: 'All' },
-                  { key: 'unread', label: 'Unread' },
-                  { key: 'follow', label: 'Follows' },
-                  { key: 'comment', label: 'Comments' },
-                  { key: 'reply', label: 'Replies' },
-                  { key: 'like', label: 'Likes' },
-                  { key: 'comment_like', label: 'Comment Likes' },
-                  { key: 'startup_view', label: 'Views' }
-                ].map((filterOption) => (
+                                 {[
+                   { key: 'all', label: 'All' },
+                   { key: 'unread', label: 'Unread' },
+                   { key: 'follow', label: 'Follows' },
+                   { key: 'comment', label: 'Comments' },
+                   { key: 'like', label: 'Likes' },
+                   { key: 'report', label: 'Reports & Moderation' }
+                 ].map((filterOption) => (
                   <button
                     key={filterOption.key}
                     onClick={() => setFilter(filterOption.key as any)}
@@ -189,10 +212,12 @@ const NotificationsPage = () => {
               <Bell className="w-16 h-16 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
               <p className="text-gray-600">
-                {filter === 'all' 
-                  ? "You're all caught up! Check back later for new notifications."
-                  : `No ${filter} notifications found.`
-                }
+                                 {filter === 'all' 
+                   ? "You're all caught up! Check back later for new notifications."
+                   : filter === 'comment'
+                   ? "No comment, reply, or comment like notifications found."
+                   : `No ${filter} notifications found.`
+                 }
               </p>
             </div>
           ) : (
@@ -258,14 +283,38 @@ const NotificationsPage = () => {
                                </p>
                              </div>
                            )}
-                                                      {notification.type === 'comment_like' && notification.metadata?.commentText && (
-                             <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-pink-500">
-                               <p className="text-sm text-gray-700">
-                                 <span className="font-medium text-pink-700">Comment:</span>
-                                 <span className="ml-2 italic">"{notification.metadata.commentText}"</span>
-                               </p>
-                             </div>
-                           )}
+                                                                                  {notification.type === 'comment_like' && notification.metadata?.commentText && (
+                              <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-pink-500">
+                                <p className="text-sm text-gray-700">
+                                  <span className="font-medium text-pink-700">Comment:</span>
+                                  <span className="ml-2 italic">"{notification.metadata.commentText}"</span>
+                                </p>
+                              </div>
+                            )}
+                            {notification.type === 'report' && (
+                              <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-orange-500">
+                                <div className="text-sm text-gray-700 space-y-1">
+                                  {notification.metadata?.reportReason && (
+                                    <p>
+                                      <span className="font-medium text-orange-700">Reason:</span>
+                                      <span className="ml-2">{notification.metadata.reportReason}</span>
+                                    </p>
+                                  )}
+                                  {notification.metadata?.reportStatus && (
+                                    <p>
+                                      <span className="font-medium text-orange-700">Status:</span>
+                                      <span className="ml-2">{notification.metadata.reportStatus}</span>
+                                    </p>
+                                  )}
+                                  {notification.metadata?.actionTaken && (
+                                    <p>
+                                      <span className="font-medium text-orange-700">Action:</span>
+                                      <span className="ml-2">{notification.metadata.actionTaken}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500">
@@ -326,7 +375,8 @@ const NotificationsPage = () => {
         {notifications.length > 0 && (
           <div className="mt-6 text-center text-sm text-gray-500">
             Showing {filteredNotifications.length} of {total} notifications
-            {filter !== 'all' && ` (filtered by ${filter})`}
+                         {filter !== 'all' && filter === 'comment' && ' (filtered by comments, replies & comment likes)'}
+             {filter !== 'all' && filter !== 'comment' && ` (filtered by ${filter})`}
             {hasMore && ' • Scroll up to load more'}
           </div>
         )}

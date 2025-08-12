@@ -25,7 +25,7 @@ export type Notification = {
     _weak?: boolean;
     [internalGroqTypeReferenceTo]?: "author";
   };
-  type?: "follow" | "comment" | "like" | "startup_view" | "mention" | "system";
+  type?: "follow" | "comment" | "reply" | "like" | "comment_like" | "report" | "mention" | "system";
   title?: string;
   message?: string;
   sender?: {
@@ -54,6 +54,9 @@ export type Notification = {
     commentText?: string;
     userName?: string;
     userImage?: string;
+    reportReason?: string;
+    reportStatus?: string;
+    actionTaken?: string;
   };
 };
 

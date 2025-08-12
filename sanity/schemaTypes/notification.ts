@@ -22,7 +22,7 @@ export const notification = {
           { title: 'Reply', value: 'reply' },
           { title: 'Like', value: 'like' },
           { title: 'Comment Like', value: 'comment_like' },
-          { title: 'Startup View', value: 'startup_view' },
+          { title: 'Report', value: 'report' },
           { title: 'Mention', value: 'mention' },
           { title: 'System', value: 'system' }
         ]
@@ -105,6 +105,21 @@ export const notification = {
           name: 'userImage',
           title: 'User Image',
           type: 'url'
+        },
+        {
+          name: 'reportReason',
+          title: 'Report Reason',
+          type: 'string'
+        },
+        {
+          name: 'reportStatus',
+          title: 'Report Status',
+          type: 'string'
+        },
+        {
+          name: 'actionTaken',
+          title: 'Action Taken',
+          type: 'string'
         }
       ],
       description: 'Additional data for display purposes'

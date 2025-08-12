@@ -4,7 +4,7 @@ import { Notification } from '@/components/NotificationBell';
 
 export interface CreateNotificationData {
   recipientId: string;
-  type: 'follow' | 'comment' | 'like' | 'startup_view' | 'system' | 'mention';
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention';
   title: string;
   message: string;
   senderId?: string;
@@ -16,6 +16,10 @@ export interface CreateNotificationData {
     commentText?: string;
     userName?: string;
     userImage?: string;
+    parentCommentText?: string;
+    reportReason?: string;
+    reportStatus?: string;
+    actionTaken?: string;
   };
 }
 
@@ -51,6 +55,10 @@ export interface SanityNotification {
     commentText?: string;
     userName?: string;
     userImage?: string;
+    parentCommentText?: string;
+    reportReason?: string;
+    reportStatus?: string;
+    actionTaken?: string;
   };
 }
 

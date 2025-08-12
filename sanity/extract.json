@@ -79,11 +79,19 @@
             },
             {
               "type": "string",
+              "value": "reply"
+            },
+            {
+              "type": "string",
               "value": "like"
             },
             {
               "type": "string",
-              "value": "startup_view"
+              "value": "comment_like"
+            },
+            {
+              "type": "string",
+              "value": "report"
             },
             {
               "type": "string",
@@ -249,6 +257,27 @@
               "optional": true
             },
             "userImage": {
+              "type": "objectAttribute",
+              "value": {
+                "type": "string"
+              },
+              "optional": true
+            },
+            "reportReason": {
+              "type": "objectAttribute",
+              "value": {
+                "type": "string"
+              },
+              "optional": true
+            },
+            "reportStatus": {
+              "type": "objectAttribute",
+              "value": {
+                "type": "string"
+              },
+              "optional": true
+            },
+            "actionTaken": {
               "type": "objectAttribute",
               "value": {
                 "type": "string"
