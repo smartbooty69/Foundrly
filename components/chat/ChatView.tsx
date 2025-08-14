@@ -3,6 +3,7 @@ import { StreamChat } from "stream-chat";
 import { useSession } from "next-auth/react";
 import { ChatBanMessage } from "./BanMessage";
 import { moderateContent } from "@/lib/stream-chat-moderation";
+import { useStreamChatPushNotifications } from "@/hooks/useStreamChatPushNotifications";
 
 const BackArrowIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -66,6 +67,14 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
   const [isBanned, setIsBanned] = useState(false);
   const [banDescription, setBanDescription] = useState("");
   const chatBodyRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize Stream Chat push notifications
+  const {
+    isSupported: pushNotificationsSupported,
+    isEnabled: pushNotificationsEnabled,
+    registerForPushNotifications,
+    unregisterFromPushNotifications
+  } = useStreamChatPushNotifications();
 
   useEffect(() => {
     if (!userId || !chatId) return;
@@ -173,7 +182,31 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold text-gray-600 mx-2">{otherUser?.name?.[0] || "?"}</div>
         )}
         <span className="font-semibold flex-1">{otherUser?.name || "Chat"}</span>
-        <button className="p-1 rounded-full hover:bg-gray-100"><MoreOptionsIcon /></button>
+        <div className="flex items-center gap-2">
+          {/* Push Notification Toggle */}
+          {pushNotificationsSupported && (
+            <button
+              onClick={pushNotificationsEnabled ? unregisterFromPushNotifications : registerForPushNotifications}
+              className={`p-2 rounded-full transition-colors ${
+                pushNotificationsEnabled 
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={pushNotificationsEnabled ? 'Disable push notifications' : 'Enable push notifications'}
+            >
+              {pushNotificationsEnabled ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l6.921 6.922a3.121 3.121 0 00-1.035 2.35 3.121 3.121 0 00-1.035-2.35L3.707 2.293zM14.5 8.5a1.5 1.5 0 00-3 0V9c0 1.475.638 2.807 1.65 3.716L14.5 8.5z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          )}
+          <button className="p-1 rounded-full hover:bg-gray-100"><MoreOptionsIcon /></button>
+        </div>
       </div>
 
       {/* Chat Body */}
