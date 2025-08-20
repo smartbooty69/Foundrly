@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { streamChatPushService } from '@/lib/streamChatPushNotifications';
+import { StreamChatPushService } from '@/lib/streamChatPushNotifications';
+import { StreamChat } from 'stream-chat';
 
-export interface StreamChatPushState {
+// Interface for push notification state
+interface PushNotificationState {
   isSupported: boolean;
   isRegistered: boolean;
   isEnabled: boolean;
@@ -13,74 +15,71 @@ export interface StreamChatPushState {
   settings: any;
 }
 
-export function useStreamChatPushNotifications() {
+// Hook for managing Stream Chat push notifications
+export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) => {
   const { data: session } = useSession();
-  const [state, setState] = useState<StreamChatPushState>({
+  const [state, setState] = useState<PushNotificationState>({
     isSupported: false,
     isRegistered: false,
     isEnabled: false,
     isLoading: false,
     error: null,
-    settings: null
+    settings: {}
   });
 
-  // Check if push notifications are supported
+  // Get the Stream Chat push notification service instance
+  const streamChatPushService = StreamChatPushService.getInstance();
+
+  // Initialize push notification service
   useEffect(() => {
-    const isSupported = streamChatPushService.isSupported();
-    setState(prev => ({ ...prev, isSupported }));
-  }, []);
-
-  // Initialize Stream Chat client when session is available
-  useEffect(() => {
-    if (session?.user?.id && state.isSupported) {
-      initializeStreamChat();
+    if (!session?.user?.id) {
+      setState(prev => ({ ...prev, isSupported: false }));
+      return;
     }
-  }, [session?.user?.id, state.isSupported]);
 
-  // Initialize Stream Chat client
-  const initializeStreamChat = useCallback(async () => {
-    if (!session?.user?.id) return;
+    // Check if push notifications are supported
+    const supported = streamChatPushService.isSupported();
+    setState(prev => ({ ...prev, isSupported: supported }));
 
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+    if (supported && existingChatClient) {
+      // Use the existing Stream Chat client
+      streamChatPushService.setChatClient(existingChatClient);
+      console.log('✅ Using existing Stream Chat client for push notifications');
+    } else if (supported && !existingChatClient) {
+      // Initialize a new client if no existing one is provided
+      const initializeService = async () => {
+        try {
+          setState(prev => ({ ...prev, isLoading: true, error: null }));
 
-      // Get Stream Chat token
-      const response = await fetch('/api/chat/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session.user.id })
-      });
+          const res = await fetch("/api/chat/token", {
+            method: "POST",
+            body: JSON.stringify({ userId: session.user.id }),
+            headers: { "Content-Type": "application/json" },
+          });
 
-      if (!response.ok) {
-        throw new Error('Failed to get Stream Chat token');
-      }
+          if (!res.ok) {
+            throw new Error('Failed to get chat token');
+          }
 
-      const { token } = await response.json();
-      const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY!;
+          const { token } = await res.json();
+          const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY!;
+          
+          await streamChatPushService.initialize(apiKey, session.user.id, token);
+          
+          setState(prev => ({ ...prev, isLoading: false, error: null }));
+        } catch (error) {
+          console.error('❌ Failed to initialize Stream Chat for push notifications:', error);
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Failed to initialize Stream Chat'
+          }));
+        }
+      };
 
-      // Initialize Stream Chat client
-      await streamChatPushService.initialize(apiKey, session.user.id, token);
-
-      // Get current push notification settings
-      const settings = await streamChatPushService.getPushNotificationSettings();
-      
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        settings,
-        isEnabled: settings?.push?.enabled || false,
-        isRegistered: true
-      }));
-
-    } catch (error) {
-      console.error('❌ Failed to initialize Stream Chat:', error);
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to initialize Stream Chat'
-      }));
+      initializeService();
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, existingChatClient]);
 
   // Register for push notifications
   const registerForPushNotifications = useCallback(async () => {
@@ -89,38 +88,72 @@ export function useStreamChatPushNotifications() {
       return false;
     }
 
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-      const success = await streamChatPushService.registerForPushNotifications();
-      
-      if (success) {
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          isRegistered: true,
-          isEnabled: true,
-          error: null
-        }));
-        return true;
-      } else {
-        throw new Error('Failed to register for push notifications');
-      }
-    } catch (error) {
-      console.error('❌ Failed to register for push notifications:', error);
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to register for push notifications'
-      }));
+    if (!streamChatPushService.isReady()) {
+      setState(prev => ({ ...prev, error: 'Stream Chat service not ready' }));
       return false;
     }
-  }, [session?.user?.id]);
+
+    // Retry mechanism for connection issues
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+        const success = await streamChatPushService.registerForPushNotifications();
+        
+        if (success) {
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isRegistered: true,
+            isEnabled: true,
+            error: null
+          }));
+          return true;
+        } else {
+          throw new Error('Failed to register for push notifications');
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        console.error(`❌ Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+        
+        // If it's a connection issue, wait before retrying
+        if (attempt < maxRetries && (
+          lastError.message.includes('not connected') || 
+          lastError.message.includes('disconnected') ||
+          lastError.message.includes('User ID is required')
+        )) {
+          console.log(`⏳ Waiting before retry ${attempt + 1}...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          continue;
+        }
+        
+        // If it's not a connection issue or we've exhausted retries, break
+        break;
+      }
+    }
+
+    // All retries failed
+    console.error('❌ All retry attempts failed for push notification registration');
+    setState(prev => ({
+      ...prev,
+      isLoading: false,
+      error: lastError?.message || 'Failed to register for push notifications after multiple attempts'
+    }));
+    return false;
+  }, [session?.user?.id, streamChatPushService]);
 
   // Unregister from push notifications
   const unregisterFromPushNotifications = useCallback(async () => {
     if (!session?.user?.id) {
       setState(prev => ({ ...prev, error: 'User not authenticated' }));
+      return false;
+    }
+
+    if (!streamChatPushService.isReady()) {
+      setState(prev => ({ ...prev, error: 'Stream Chat service not ready' }));
       return false;
     }
 
@@ -150,12 +183,17 @@ export function useStreamChatPushNotifications() {
       }));
       return false;
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, streamChatPushService]);
 
   // Update push notification settings
   const updateSettings = useCallback(async (newSettings: any) => {
     if (!session?.user?.id) {
       setState(prev => ({ ...prev, error: 'User not authenticated' }));
+      return false;
+    }
+
+    if (!streamChatPushService.isReady()) {
+      setState(prev => ({ ...prev, error: 'Stream Chat service not ready' }));
       return false;
     }
 
@@ -184,12 +222,17 @@ export function useStreamChatPushNotifications() {
       }));
       return false;
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, streamChatPushService]);
 
   // Send test push notification
   const sendTestNotification = useCallback(async (channelId: string, message: string) => {
     if (!session?.user?.id) {
       setState(prev => ({ ...prev, error: 'User not authenticated' }));
+      return false;
+    }
+
+    if (!streamChatPushService.isReady()) {
+      setState(prev => ({ ...prev, error: 'Stream Chat service not ready' }));
       return false;
     }
 
@@ -213,7 +256,7 @@ export function useStreamChatPushNotifications() {
       }));
       return false;
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, streamChatPushService]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -228,6 +271,9 @@ export function useStreamChatPushNotifications() {
     unregisterFromPushNotifications,
     updateSettings,
     sendTestNotification,
-    initializeStreamChat
+    initializeStreamChat: () => {
+      // This function is no longer needed as initialization is handled by useEffect
+      // Keeping it for now, but it will be removed if not used elsewhere.
+    }
   };
 }

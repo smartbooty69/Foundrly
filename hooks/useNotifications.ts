@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Notification } from '@/components/NotificationBell';
+import { StreamChat } from 'stream-chat';
+
+const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY!;
 
 export const useNotifications = () => {
   const { data: session } = useSession();
@@ -9,6 +12,8 @@ export const useNotifications = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [totalUnreadMessages, setTotalUnreadMessages] = useState<number | undefined>(undefined);
+  const [isStreamChatLoaded, setIsStreamChatLoaded] = useState(false);
 
   // Fetch notifications from API
   const fetchNotifications = useCallback(async (limit: number = 50, offset: number = 0) => {
@@ -202,6 +207,97 @@ export const useNotifications = () => {
     }
   }, [session?.user, fetchNotifications]);
 
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    let chatClient: StreamChat;
+    let disconnect: (() => void) | undefined;
+
+    async function fetchNotifications() {
+      try {
+        const res = await fetch("/api/chat/token", {
+          method: "POST",
+          body: JSON.stringify({ userId: session.user.id }),
+          headers: { "Content-Type": "application/json" },
+        });
+        
+        if (!res.ok) {
+          throw new Error('Failed to get chat token');
+        }
+        
+        const { token } = await res.json();
+        chatClient = StreamChat.getInstance(apiKey);
+        await chatClient.connectUser({ id: session.user.id }, token);
+
+        const filters = { members: { $in: [session.user.id] }, type: "messaging" };
+        const sort = [{ last_message_at: -1 }];
+        const userChannels = await chatClient.queryChannels(filters, sort, { watch: true, state: true, limit: 30 });
+
+        // Calculate total unread messages across all channels
+        const updateTotalUnread = () => {
+          const total = userChannels.reduce((sum, ch) => {
+            const unread = ch.countUnread();
+            return sum + (unread && unread > 0 ? unread : 0);
+          }, 0);
+          console.log('Updating total unread messages:', total > 0 ? total : 'none', 'from channels:', userChannels.map(ch => ({ id: ch.id, unread: ch.countUnread() !== undefined ? ch.countUnread() : 'undefined' })));
+          setTotalUnreadMessages(total > 0 ? total : undefined);
+          setIsStreamChatLoaded(true);
+          console.log('Stream Chat data loaded, totalUnreadMessages set to:', total > 0 ? total : 'none');
+        };
+
+        // Listen for new messages to update unread counts
+        userChannels.forEach(ch => {
+          ch.on('message.new', () => {
+            if (chatClient && chatClient.userID) {
+              updateTotalUnread();
+            }
+          });
+          ch.on('message.read', () => {
+            if (chatClient && chatClient.userID) {
+              updateTotalUnread();
+            }
+          });
+        });
+
+        // Only update if we have channels
+        if (userChannels.length > 0) {
+          updateTotalUnread();
+        } else {
+          console.log('No channels found, setting isStreamChatLoaded to true with no unread messages');
+          setIsStreamChatLoaded(true);
+          // When no channels exist, set to undefined (no channels = no unread messages to show)
+          setTotalUnreadMessages(undefined);
+        }
+
+        disconnect = () => {
+          try {
+            // Remove event listeners first
+            userChannels.forEach(ch => {
+              try {
+                ch.off('message.new');
+                ch.off('message.read');
+              } catch (error) {
+                console.log('Error removing event listeners:', error);
+              }
+            });
+            
+            // Then disconnect the client
+            if (chatClient && typeof chatClient.disconnectUser === 'function') {
+              chatClient.disconnectUser();
+            }
+          } catch (error) {
+            console.log('Error during cleanup:', error);
+          }
+        };
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    }
+
+    fetchNotifications();
+    return () => disconnect?.();
+  }, [session?.user?.id]);
+
   return {
     notifications,
     unreadCount,
@@ -218,6 +314,8 @@ export const useNotifications = () => {
     getNotificationsByType,
     getUnreadNotifications,
     hasUnreadNotifications,
-    refresh
+    refresh,
+    totalUnreadMessages,
+    isStreamChatLoaded
   };
 }; 

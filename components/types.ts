@@ -6,6 +6,8 @@ export interface Message {
     avatarUrl?: string;
     avatarInitial?: string;
     hasCloseButton?: boolean;
+    unreadCount?: number;
+    lastMessageAt?: string;
 }
 
 export interface Suggested {

@@ -1,15 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StreamChat } from "stream-chat";
 import { useSession } from "next-auth/react";
+import { Bell, BellOff } from "lucide-react";
 import { ChatBanMessage } from "./BanMessage";
 import { moderateContent } from "@/lib/stream-chat-moderation";
 import { useStreamChatPushNotifications } from "@/hooks/useStreamChatPushNotifications";
 
 const BackArrowIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-);
-const MoreOptionsIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" /></svg>
 );
 const AddIcon = () => (
   <svg height="24" width="24" viewBox="0 0 24 24" fill="white"><path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z" /></svg>
@@ -63,6 +61,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
   const [channel, setChannel] = useState<any>(null);
+  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
   const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
   const [isBanned, setIsBanned] = useState(false);
   const [banDescription, setBanDescription] = useState("");
@@ -74,11 +73,10 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
     isEnabled: pushNotificationsEnabled,
     registerForPushNotifications,
     unregisterFromPushNotifications
-  } = useStreamChatPushNotifications();
+  } = useStreamChatPushNotifications(chatClient);
 
   useEffect(() => {
     if (!userId || !chatId) return;
-    let chatClient: StreamChat;
     let channelInstance: any;
     let unsub: any;
 
@@ -101,33 +99,83 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
       }
       
       const { token } = await res.json();
-      chatClient = StreamChat.getInstance(apiKey);
-      await chatClient.connectUser({ id: userId }, token);
+      const newChatClient = StreamChat.getInstance(apiKey);
+      await newChatClient.connectUser({ id: userId }, token);
+      setChatClient(newChatClient);
 
-      channelInstance = chatClient.channel("messaging", chatId);
+      channelInstance = newChatClient.channel("messaging", chatId);
       await channelInstance.watch();
       setChannel(channelInstance);
       setMessages(channelInstance.state.messages);
+      
+      // Mark messages as read when opening the chat
+      await channelInstance.markRead();
 
       unsub = channelInstance.on("message.new", () => {
-        // Just update the state with the current messages from the channel
-        setMessages([...channelInstance.state.messages]);
+        // Check if client is still connected before calling methods
+        if (newChatClient && newChatClient.userID) {
+          // Just update the state with the current messages from the channel
+          setMessages([...channelInstance.state.messages]);
+          // Mark new messages as read
+          try {
+            channelInstance.markRead();
+          } catch (error) {
+            console.log('Error marking messages as read:', error);
+          }
+        }
       });
       channelInstance.on("message.updated", () => {
-        setMessages([...channelInstance.state.messages]);
+        if (newChatClient && newChatClient.userID) {
+          setMessages([...channelInstance.state.messages]);
+        }
       });
       channelInstance.on("reaction.new", () => {
-        setMessages([...channelInstance.state.messages]);
+        if (newChatClient && newChatClient.userID) {
+          setMessages([...channelInstance.state.messages]);
+        }
       });
       channelInstance.on("reaction.deleted", () => {
-        setMessages([...channelInstance.state.messages]);
+        if (newChatClient && newChatClient.userID) {
+          setMessages([...channelInstance.state.messages]);
+        }
       });
     }
     init();
     return () => {
-      unsub?.unsubscribe?.();
-      channelInstance?.stopWatching?.();
-      chatClient?.disconnectUser?.();
+      // Cleanup in correct order: unsubscribe first, then stop watching, then disconnect
+      if (unsub && typeof unsub.unsubscribe === 'function') {
+        try {
+          unsub.unsubscribe();
+        } catch (error) {
+          console.log('Error unsubscribing from channel events:', error);
+        }
+      }
+      
+      if (channelInstance && 
+          typeof channelInstance.stopWatching === 'function' && 
+          chatClient && 
+          !chatClient.disconnected &&
+          channelInstance.state &&
+          !channelInstance.state.disconnected) {
+        try {
+          channelInstance.stopWatching();
+        } catch (error) {
+          console.log('Error stopping channel watch:', error);
+        }
+      }
+      
+      if (chatClient && 
+          typeof chatClient.disconnectUser === 'function' && 
+          !chatClient.disconnected) {
+        try {
+          chatClient.disconnectUser();
+        } catch (error) {
+          console.log('Error disconnecting user:', error);
+        }
+      }
+      
+      // Clear the chat client state
+      setChatClient(null);
     };
   }, [userId, chatId]);
 
@@ -184,28 +232,44 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
         <span className="font-semibold flex-1">{otherUser?.name || "Chat"}</span>
         <div className="flex items-center gap-2">
           {/* Push Notification Toggle */}
-          {pushNotificationsSupported && (
-            <button
-              onClick={pushNotificationsEnabled ? unregisterFromPushNotifications : registerForPushNotifications}
-              className={`p-2 rounded-full transition-colors ${
-                pushNotificationsEnabled 
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              title={pushNotificationsEnabled ? 'Disable push notifications' : 'Enable push notifications'}
-            >
-              {pushNotificationsEnabled ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l6.921 6.922a3.121 3.121 0 00-1.035 2.35 3.121 3.121 0 00-1.035-2.35L3.707 2.293zM14.5 8.5a1.5 1.5 0 00-3 0V9c0 1.475.638 2.807 1.65 3.716L14.5 8.5z" clipRule="evenodd" />
-                </svg>
-              )}
-            </button>
-          )}
-          <button className="p-1 rounded-full hover:bg-gray-100"><MoreOptionsIcon /></button>
+          {(() => {
+            const isReady = pushNotificationsSupported && 
+                           chatClient && 
+                           chatClient.userID && 
+                           !chatClient.disconnected && 
+                           chatClient.connectionID;
+            
+            // Debug logging
+            if (pushNotificationsSupported && chatClient) {
+              console.log('🔍 Push notification button state:', {
+                pushNotificationsSupported,
+                chatClientExists: !!chatClient,
+                userID: chatClient.userID,
+                disconnected: chatClient.disconnected,
+                connectionID: chatClient.connectionID,
+                isReady
+              });
+            }
+            
+            return isReady ? (
+              <button
+                onClick={pushNotificationsEnabled ? unregisterFromPushNotifications : registerForPushNotifications}
+                disabled={!chatClient?.userID || chatClient.disconnected || !chatClient.connectionID}
+                className={`p-3 rounded-full transition-colors border-2 ${
+                  pushNotificationsEnabled 
+                    ? 'bg-green-500 text-white hover:bg-green-600 border-green-600' 
+                    : 'bg-gray-500 text-white hover:bg-gray-600 border-gray-600'
+                } ${!chatClient?.userID || chatClient.disconnected || !chatClient.connectionID ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={pushNotificationsEnabled ? 'Disable push notifications' : 'Enable push notifications'}
+              >
+                {pushNotificationsEnabled ? (
+                  <Bell className="w-5 h-5" />
+                ) : (
+                  <BellOff className="w-5 h-5" />
+                )}
+              </button>
+            ) : null;
+          })()}
         </div>
       </div>
 
@@ -228,6 +292,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
             idx === messages.length - 1 ||
             messages[idx + 1]?.user?.id !== msg.user.id
           );
+          
           return (
             <div key={msg.id ? `${msg.id}-${idx}` : idx} className="flex w-full items-end mb-3 px-2">
               {/* Incoming: [profile][bubble][actions][spacer] */}
@@ -241,7 +306,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
                   <div className="group flex flex-col items-start relative">
                     <div className="flex items-center relative">
                       <div 
-                        className="max-w-[280px] px-4 py-2 bg-gray-100 rounded-2xl text-base shadow break-words cursor-pointer relative"
+                        className={`max-w-[280px] px-4 py-2 rounded-2xl text-base shadow break-words cursor-pointer relative bg-gray-100`}
                         onClick={() => setActiveReactionMessageId(null)}
                       >
                         {msg.text}

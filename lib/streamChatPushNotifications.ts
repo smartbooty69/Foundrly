@@ -14,7 +14,7 @@ export interface StreamChatPushData {
 // Stream Chat Push Notification Service
 export class StreamChatPushService {
   private static instance: StreamChatPushService;
-  private chatClient: StreamChat | null = null;
+  public chatClient: StreamChat | null = null;
 
   static getInstance(): StreamChatPushService {
     if (!StreamChatPushService.instance) {
@@ -33,6 +33,19 @@ export class StreamChatPushService {
       console.error('❌ Failed to initialize Stream Chat client:', error);
       throw error;
     }
+  }
+
+  // Set an existing Stream Chat client (alternative to initialize)
+  setChatClient(chatClient: StreamChat): void {
+    this.chatClient = chatClient;
+    console.log('✅ Stream Chat client set for push notifications');
+  }
+
+  // Check if the service is ready for use
+  isReady(): boolean {
+    return this.chatClient !== null && 
+           this.chatClient.userID !== undefined && 
+           !this.chatClient.disconnected;
   }
 
   // Check if push notifications are supported
@@ -56,20 +69,42 @@ export class StreamChatPushService {
       throw new Error('Stream Chat client not initialized');
     }
 
+    // Validate client state before proceeding
+    const validateClient = () => {
+      if (!this.chatClient?.userID) {
+        throw new Error('Stream Chat client not connected to a user');
+      }
+      if (this.chatClient.disconnected) {
+        throw new Error('Stream Chat client is disconnected');
+      }
+    };
+
+    // Validate before starting
+    validateClient();
+
     if (!this.isSupported()) {
       throw new Error('Push notifications are not supported');
     }
 
     try {
+      // Re-validate before critical operations
+      validateClient();
+
       // Request permission first
       const permission = await this.requestPermission();
       if (permission !== 'granted') {
         throw new Error('Notification permission denied');
       }
 
+      // Re-validate before service worker registration
+      validateClient();
+
       // Register service worker for push notifications
       const registration = await navigator.serviceWorker.register('/sw-stream-chat.js');
       console.log('✅ Service worker registered for Stream Chat:', registration);
+
+      // Re-validate before push subscription
+      validateClient();
 
       // Get push subscription
       const subscription = await registration.pushManager.subscribe({
@@ -77,18 +112,10 @@ export class StreamChatPushService {
         applicationServerKey: this.urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
       });
 
-      // Send subscription to Stream Chat
-      await this.chatClient.updateUser({
-        pushNotificationSettings: {
-          push: {
-            enabled: true,
-            pushNotificationChannels: ['messaging'],
-            pushNotificationChannelsEnabled: ['messaging']
-          }
-        }
-      });
+      // Final validation before Stream Chat operations
+      validateClient();
 
-      // Store subscription in Stream Chat user data
+      // Send subscription to Stream Chat
       await this.chatClient.updateUser({
         pushNotificationSettings: {
           push: {
@@ -111,6 +138,15 @@ export class StreamChatPushService {
   async unregisterFromPushNotifications(): Promise<boolean> {
     if (!this.chatClient) {
       throw new Error('Stream Chat client not initialized');
+    }
+
+    if (!this.chatClient.userID) {
+      throw new Error('Stream Chat client not connected to a user');
+    }
+
+    // Additional safety check - ensure client is still connected
+    if (this.chatClient.disconnected) {
+      throw new Error('Stream Chat client is disconnected');
     }
 
     try {
@@ -159,6 +195,10 @@ export class StreamChatPushService {
       throw new Error('Stream Chat client not initialized');
     }
 
+    if (!this.chatClient.userID) {
+      throw new Error('Stream Chat client not connected to a user');
+    }
+
     try {
       // Get or create the channel
       const channel = this.chatClient.channel('messaging', channelId, {
@@ -187,6 +227,10 @@ export class StreamChatPushService {
   async getPushNotificationSettings(): Promise<any> {
     if (!this.chatClient) {
       throw new Error('Stream Chat client not initialized');
+    }
+
+    if (!this.chatClient.userID) {
+      throw new Error('Stream Chat client not connected to a user');
     }
 
     try {
@@ -219,6 +263,10 @@ export class StreamChatPushService {
   async updatePushNotificationSettings(settings: any): Promise<boolean> {
     if (!this.chatClient) {
       throw new Error('Stream Chat client not initialized');
+    }
+
+    if (!this.chatClient.userID) {
+      throw new Error('Stream Chat client not connected to a user');
     }
 
     try {

@@ -79,6 +79,20 @@
         @apply text-black-100 text-sm font-normal;
     }
 
+    /* Unread message animations */
+    .unread-glow {
+        animation: unread-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes unread-glow {
+        0%, 100% {
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+        }
+        50% {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.6);
+        }
+    }
+
     /* profile */
     .profile_container {
         @apply w-full pb-10 pt-20 px-6 max-w-7xl mx-auto lg:flex-row flex-col flex gap-10;
