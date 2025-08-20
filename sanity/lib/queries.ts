@@ -13,7 +13,50 @@ export const STARTUPS_QUERY =
   description,
   category,
   image,
+  likes,
+  dislikes,
+  "commentsCount": count(comments),
 }`);
+
+// Flexible query for different sorting options
+export const STARTUPS_SORTED_QUERY = (sortBy: string) => {
+  let orderClause = '';
+  switch (sortBy) {
+    case 'popular':
+      // For popularity, we'll use a combination of views and likes
+      // Since GROQ doesn't support math in order, we'll prioritize views then likes
+      orderClause = '| order(views desc, likes desc)';
+      break;
+    case 'viewed':
+      orderClause = '| order(views desc)';
+      break;
+    case 'liked':
+      orderClause = '| order(likes desc)';
+      break;
+    case 'commented':
+      orderClause = '| order(count(comments) desc)';
+      break;
+    default:
+      orderClause = '| order(_createdAt desc)';
+  }
+  
+  return defineQuery(`*[_type == "startup" && defined(slug.current) && !defined($search) || title match $search || category match $search || author->name match $search] ${orderClause} {
+  _id, 
+  title, 
+  slug,
+  _createdAt,
+  author -> {
+    _id, name, image, bio
+  }, 
+  views,
+  description,
+  category,
+  image,
+  likes,
+  dislikes,
+  "commentsCount": count(comments),
+}`);
+};
 
 export const STARTUP_BY_ID_QUERY =
   defineQuery(`*[_type == "startup" && _id == $id][0]{
@@ -86,6 +129,9 @@ export const STARTUPS_BY_AUTHOR_QUERY =
   description,
   category,
   image,
+  likes,
+  dislikes,
+  "commentsCount": count(comments),
 }`);
 
 export const PLAYLIST_BY_SLUG_QUERY =

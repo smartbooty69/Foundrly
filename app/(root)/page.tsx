@@ -1,17 +1,22 @@
 import SearchForm from "../../components/SearchForm";
 import StartupCard, { StartupTypeCard } from "../../components/StartupCard";
-import { STARTUPS_QUERY } from "@/sanity/lib/queries";
+import { STARTUPS_SORTED_QUERY } from "@/sanity/lib/queries";
 import { sanityFetch, SanityLive } from "@/sanity/lib/live";
 import { auth } from "@/auth";
+import FilterDropdown from "../../components/FilterDropdown";
 
 export default async function Home({searchParams}:{
-  searchParams: Promise<{ query?:string }>
+  searchParams: Promise<{ query?:string, filter?:string }>
 }) {
 
   const  query  = await (await searchParams).query;
+  const filter = await (await searchParams).filter;
   const params = {search: query || null};
   const session = await auth();
-  const {data: posts} = await sanityFetch({query: STARTUPS_QUERY, params});
+  
+  // Use the flexible query with the selected filter
+  const selectedQuery = STARTUPS_SORTED_QUERY(filter || 'recent');
+  const {data: posts} = await sanityFetch({query: selectedQuery, params});
 
   return (
     <>
@@ -25,9 +30,12 @@ export default async function Home({searchParams}:{
     </section>
 
     <section className="section_container">
-      <p className="text-30-semibold">
-        {query ? `Showing results for "${query}"` : "Trending Startups"}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-30-semibold">
+          {query ? `Showing results for "${query}"` : getFilterTitle(filter)}
+        </p>
+        <FilterDropdown />
+      </div>
 
       <ul className="mt-7 card_grid">
         {posts?.length > 0 ? (
@@ -46,4 +54,19 @@ export default async function Home({searchParams}:{
 
     </>
   );
+}
+
+function getFilterTitle(filter?: string): string {
+  switch (filter) {
+    case 'popular':
+      return 'Most Popular Startups';
+    case 'viewed':
+      return 'Most Viewed Startups';
+    case 'liked':
+      return 'Most Liked Startups';
+    case 'commented':
+      return 'Most Commented Startups';
+    default:
+      return 'Most Recent Startups';
+  }
 }
