@@ -9,6 +9,8 @@ import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
 import ProfileFollowWrapper from "@/components/ProfileFollowWrapper";
 import { Button } from "@/components/ui/button";
 import MessageButton from "@/components/MessageButton";
+import BadgeLabels from "@/components/BadgeLabels";
+import { enhancedBadgeSystem, TIER_LEVELS } from "@/lib/enhanced-badge-system";
 
 export const experimental_ppr = true;
 
@@ -17,6 +19,73 @@ const Page = async ({ params }: { params: { id: string } }) => {
   const session = await auth();
   const user = await client.fetch(AUTHOR_BY_ID_QUERY, { id });
   if (!user) return notFound();
+
+  // Initialize badge system
+  await enhancedBadgeSystem.initialize();
+  
+  // Fetch evolving badges for the user
+  const evolvingBadges = await enhancedBadgeSystem.getEvolvingBadges(id);
+  
+  // Fetch earned badges for display
+  const userBadges = await client.fetch(`
+    *[_type == "userBadge" && user._ref == $userId] {
+      _id,
+      earnedAt,
+      badge->{
+        _id,
+        name,
+        description,
+        category,
+        icon,
+        color,
+        rarity,
+        tier,
+        isActive
+      }
+    }[badge.isActive == true] | order(earnedAt desc)
+  `, { userId: id });
+
+  // Find the highest tier for each category and combine into single carousel
+  const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4, diamond: 5 };
+  const earnedBadges = userBadges.map((ub: any) => ub.badge).filter((badge: any) => badge && badge.tier && badge.category);
+  
+  // Group badges by category and find highest tier for each
+  const categoryHighestTiers: { [category: string]: { tier: string; badges: any[] } } = {};
+  let allHighestTierBadges: any[] = [];
+  
+  if (earnedBadges.length > 0) {
+    // Group badges by category
+    const badgesByCategory: { [category: string]: any[] } = {};
+    earnedBadges.forEach((badge: any) => {
+      if (!badgesByCategory[badge.category]) {
+        badgesByCategory[badge.category] = [];
+      }
+      badgesByCategory[badge.category].push(badge);
+    });
+    
+    // Find highest tier for each category
+    Object.keys(badgesByCategory).forEach(category => {
+      const categoryBadges = badgesByCategory[category];
+      const highestTierBadge = categoryBadges.reduce((highest: any, badge: any) => {
+        const currentTierOrder = tierOrder[badge.tier as keyof typeof tierOrder] || 0;
+        const highestTierOrder = tierOrder[highest.tier as keyof typeof tierOrder] || 0;
+        return currentTierOrder > highestTierOrder ? badge : highest;
+      }, categoryBadges[0]);
+      
+      const highestTier = highestTierBadge.tier;
+      const highestTierBadges = categoryBadges.filter((badge: any) => badge.tier === highestTier);
+      
+      categoryHighestTiers[category] = {
+        tier: highestTier,
+        badges: highestTierBadges
+      };
+      
+      // Add all highest tier badges to the combined array
+      allHighestTierBadges.push(...highestTierBadges);
+    });
+  }
+
+  // Show evolving badges by default
 
   return (
     <>
@@ -40,6 +109,19 @@ const Page = async ({ params }: { params: { id: string } }) => {
             @{user?.username}
           </p>
           <p className="mt-1 text-center text-14-normal">{user?.bio}</p>
+          
+          {/* Highest Tier Badges */}
+          {allHighestTierBadges.length > 0 && (
+            <div className="mt-4 w-full">
+              <BadgeLabels 
+                badges={allHighestTierBadges} 
+                maxDisplay={6} 
+                showRarity={true} 
+                showTier={true}
+                compact={true} 
+              />
+            </div>
+          )}
 
           <div className="mt-1">
             <ProfileFollowWrapper

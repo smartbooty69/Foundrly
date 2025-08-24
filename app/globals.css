@@ -241,6 +241,16 @@
     .delete-btn {
         @apply border-[2px] border-red-500 font-medium text-[14px] text-white bg-red-500 px-3 py-2 rounded-full !important;
     }
+
+    /* Hide scrollbar for badge labels */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 .w-md-editor-toolbar { 

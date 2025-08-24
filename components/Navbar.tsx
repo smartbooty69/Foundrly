@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { BadgePlus, LogOut, MessageSquare } from 'lucide-react'
+import { BadgePlus, LogOut, MessageSquare, Trophy, Award } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React, { useState } from 'react'
@@ -16,7 +16,7 @@ const Navbar = () => {
     const { totalUnreadMessages, isStreamChatLoaded } = useNotifications();
     
     // Debug logging
-    console.log('Navbar totalUnreadMessages:', totalUnreadMessages > 0 ? totalUnreadMessages : 'none', 'isStreamChatLoaded:', isStreamChatLoaded);
+    console.log('Navbar totalUnreadMessages:', totalUnreadMessages && totalUnreadMessages > 0 ? totalUnreadMessages : 'none', 'isStreamChatLoaded:', isStreamChatLoaded);
 
   return (
     <header className="px-5 py-3 bg-white chadow-sm font-work-sans" >
@@ -47,6 +47,16 @@ const Navbar = () => {
                             </button>
                         </div>
 
+                                                        <Link href={`/badges?user=${session.data.user.id}`} className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
+                                    <span className="max-sm:hidden">Badges</span>
+                                    <Trophy className='size-6 sm:hidden' />
+                                </Link>
+                                
+                                <Link href="/leaderboard" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
+                                    <span className="max-sm:hidden">Leaderboard</span>
+                                    <Award className='size-6 sm:hidden' />
+                                </Link>
+
                         <NotificationBell />
 
                         <button onClick={() => signOut()} className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
@@ -57,7 +67,7 @@ const Navbar = () => {
                         <Link href={`/user/${session.data.user.id}`}>
                             <Avatar className='size-10' >
                                 <AvatarImage src={session.data.user.image || ''} alt={session.data.user.name || ''}/>
-                                <AvatarFallback>{session.data.user.name?.slice(0, 1)}</AvatarFallback>
+                                <AvatarFallback>{session.data.user.name?.slice(0, 1) || 'U'}</AvatarFallback>
                             </Avatar>
                         </Link>
                     </> 

@@ -13,6 +13,68 @@
  */
 
 // Source: schema.json
+export type UserBadge = {
+  _id: string;
+  _type: "userBadge";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  user?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "author";
+  };
+  badge?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "badge";
+  };
+  earnedAt?: string;
+  progress?: {
+    current?: number;
+    target?: number;
+    percentage?: number;
+  };
+  metadata?: {
+    context?: string;
+    relatedContent?: {
+      _ref: string;
+      _type: "reference";
+      _weak?: boolean;
+      [internalGroqTypeReferenceTo]?: "startup";
+    } | {
+      _ref: string;
+      _type: "reference";
+      _weak?: boolean;
+      [internalGroqTypeReferenceTo]?: "comment";
+    };
+  };
+};
+
+export type Badge = {
+  _id: string;
+  _type: "badge";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name?: string;
+  description?: string;
+  category?: "creator" | "community" | "social" | "achievement" | "special";
+  icon?: string;
+  color?: string;
+  rarity?: "common" | "uncommon" | "rare" | "epic" | "legendary";
+  tier?: "bronze" | "silver" | "gold" | "platinum" | "diamond";
+  criteria?: {
+    type?: "count" | "streak" | "date" | "combination";
+    target?: number;
+    metric?: "startups_created" | "comments_posted" | "likes_received" | "followers_gained" | "users_followed" | "views_received" | "days_active" | "reports_submitted";
+    timeframe?: "all_time" | "daily" | "weekly" | "monthly" | "yearly";
+  };
+  isActive?: boolean;
+};
+
 export type PushSubscription = {
   _id: string;
   _type: "pushSubscription";
@@ -428,5 +490,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = UserBadge | Badge | PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;
