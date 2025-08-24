@@ -2469,6 +2469,13 @@
           "type": "boolean"
         },
         "optional": true
+      },
+      "buyMeACoffeeUsername": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "string"
+        },
+        "optional": true
       }
     }
   },

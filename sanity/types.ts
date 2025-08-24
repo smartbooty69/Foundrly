@@ -368,6 +368,7 @@ export type Startup = {
   }>;
   bannedUntil?: string;
   isBanned?: boolean;
+  buyMeACoffeeUsername?: string;
 };
 
 export type Markdown = string;

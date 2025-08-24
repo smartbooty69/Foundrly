@@ -28,7 +28,7 @@ export const createPitch = async (
     });
   }
 
-  const { title, description, category, link } = Object.fromEntries(
+  const { title, description, category, link, buyMeACoffeeUsername } = Object.fromEntries(
     Array.from(form).filter(([key]) => key !== "pitch"),
   );
 
@@ -49,6 +49,7 @@ export const createPitch = async (
         _ref: session?.user?.id,
       },
       pitch,
+      buyMeACoffeeUsername: buyMeACoffeeUsername || undefined,
     };
 
     const result = await writeClient.create({ _type: "startup", ...startup });
@@ -91,7 +92,7 @@ export const updatePitch = async (
     });
   }
 
-  const { title, description, category, link } = Object.fromEntries(
+  const { title, description, category, link, buyMeACoffeeUsername } = Object.fromEntries(
     Array.from(form).filter(([key]) => key !== "pitch"),
   );
 
@@ -108,6 +109,7 @@ export const updatePitch = async (
         current: slug,
       },
       pitch,
+      buyMeACoffeeUsername: buyMeACoffeeUsername || undefined,
     };
 
     const result = await writeClient

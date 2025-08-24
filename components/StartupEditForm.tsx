@@ -83,6 +83,7 @@ const StartupEditFormContent = ({
         link: imageInputType === "url" ? (formData.get("link") as string) : "",
         pitch,
         imageFile: selectedFile,
+        buyMeACoffeeUsername: formData.get("buyMeACoffeeUsername") as string,
       };
 
       await formSchema.parseAsync(formValues);
@@ -97,6 +98,7 @@ const StartupEditFormContent = ({
       finalFormData.append("category", formValues.category);
       finalFormData.append("link", finalImageUrl);
       finalFormData.append("pitch", pitch);
+      finalFormData.append("buyMeACoffeeUsername", formValues.buyMeACoffeeUsername || "");
 
       const result = await updatePitch(prevState, finalFormData, pitch, startup._id);
 
@@ -201,6 +203,27 @@ const StartupEditFormContent = ({
 
         {errors.category && (
           <p className="startup-form_error">{errors.category}</p>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="buyMeACoffeeUsername" className="startup-form_label">
+          Buy me a coffee username (optional)
+        </label>
+        <Input
+          id="buyMeACoffeeUsername"
+          name="buyMeACoffeeUsername"
+          className="startup-form_input"
+          placeholder="Your Buy me a coffee username"
+          defaultValue={startup.buyMeACoffeeUsername || ""}
+          disabled={banLoading}
+        />
+        <p className="text-sm text-gray-500 mt-1">
+          If you have a Buy me a coffee account, enter your username to receive support
+        </p>
+
+        {errors.buyMeACoffeeUsername && (
+          <p className="startup-form_error">{errors.buyMeACoffeeUsername}</p>
         )}
       </div>
 

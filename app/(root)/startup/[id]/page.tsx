@@ -19,6 +19,7 @@ import StartupDetailLikes from "@/components/StartupDetailLikes";
 import CommentList from "@/components/CommentList";
 import CommentForm from "@/components/CommentForm";
 import CommentsSection from "@/components/CommentsSection";
+import BuyMeACoffeeButton from "@/components/BuyMeACoffeeButton";
 import Script from 'next/script';
 
 const md = markdownit();
@@ -56,15 +57,16 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           isLoggedIn={!!session}
           userId={session?.user?.id}
         />
-        <a
-          href="https://www.buymeacoffee.com/yourusername"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <button className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-4 rounded mt-4 flex items-center gap-2">
-            <span>☕</span> Buy Me a Coffee
-          </button>
-        </a>
+        {post.buyMeACoffeeUsername && (
+          <div className="mt-4">
+            <BuyMeACoffeeButton 
+              username={post.buyMeACoffeeUsername}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-4 rounded flex items-center gap-2"
+            >
+              <span>☕</span> Buy Me a Coffee
+            </BuyMeACoffeeButton>
+          </div>
+        )}
       </section>
 
       <section className="section_container">

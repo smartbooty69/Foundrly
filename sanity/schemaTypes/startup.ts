@@ -84,5 +84,11 @@ export const startup = defineType({
             initialValue: false,
             description: "Whether this startup is currently banned",
         }),
+        defineField({
+            name: "buyMeACoffeeUsername",
+            type: "string",
+            description: "Buy me a coffee username (optional)",
+            validation: (Rule) => Rule.optional(),
+        }),
     ],
 });

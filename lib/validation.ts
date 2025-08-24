@@ -21,6 +21,7 @@ export const formSchema = z.object({
     .or(z.literal("")),
   pitch: z.string().min(10),
   imageFile: z.any().optional(), // For uploaded files
+  buyMeACoffeeUsername: z.string().optional(),
 }).refine((data) => {
   // Either link or imageFile must be provided
   return data.link || data.imageFile;
