@@ -133,7 +133,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
                     };
                 });
                 
-                console.log('MessagesScreen updating unread counts:', mappedMessages.map(m => ({ id: m.id, name: m.name, unreadCount: m.unreadCount !== undefined ? m.unreadCount : 'undefined' })));
+
                 setMessages(mappedMessages);
             };
 
@@ -161,7 +161,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
                     ch.off('message.new');
                     ch.off('message.read');
                   } catch (error) {
-                    console.log('Error removing event listeners:', error);
+                    // Error removing event listeners
                   }
                 });
                 
@@ -170,7 +170,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
                   chatClient.disconnectUser();
                 }
               } catch (error) {
-                console.log('Error during cleanup:', error);
+                // Error during cleanup
               }
             };
         }
@@ -182,7 +182,7 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
             try {
               disconnect();
             } catch (error) {
-              console.log('Error during cleanup:', error);
+              // Error during cleanup
             }
           }
         };
@@ -190,7 +190,6 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
 
     const handleSuggestedUserSelect = (user: any) => {
         // Handle suggested user selection - could start a new chat
-        console.log('Selected suggested user:', user);
         // You can implement logic to start a new chat with this user
     };
 
@@ -203,14 +202,12 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
     };
 
     const handleContactSelect = (contact: any) => {
-        console.log('Selected contact for new message:', contact);
         // Here you would implement the logic to start a new chat with the selected contact
         // For now, just go back to the messages screen
         setShowNewMessage(false);
     };
 
     const handleStartChat = (chatId: string, contact: any) => {
-        console.log('Starting new chat:', chatId, contact);
         // Start the new chat by calling onSelectChat with the new chat ID
         onSelectChat(chatId);
         setShowNewMessage(false);

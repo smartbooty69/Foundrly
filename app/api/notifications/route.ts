@@ -10,13 +10,12 @@ import {
 // GET /api/notifications - Get user notifications
 export async function GET(request: NextRequest) {
   try {
-    console.log('✅ Notifications endpoint called - fetching from Sanity');
     
     // Try to get session with better error handling
     let session;
     try {
       session = await auth();
-      console.log('✅ Session check result:', !!session?.user);
+
     } catch (authError) {
       console.error('❌ Authentication error:', authError);
       // Fall back to mock data without user info
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
         }
       ];
 
-      console.log('✅ Returning fallback mock data due to auth error');
+
       
       return NextResponse.json({
         notifications: mockNotifications,
@@ -43,22 +42,16 @@ export async function GET(request: NextRequest) {
     }
     
     if (!session?.user) {
-      console.log('❌ No session or user, returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ Fetching notifications for user:', {
-      id: session.user.id,
-      name: session.user.name,
-      username: session.user.username,
-      email: session.user.email
-    });
+
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log('✅ Query params:', { limit, offset });
+
 
     try {
       // Get notifications from Sanity
@@ -68,20 +61,13 @@ export async function GET(request: NextRequest) {
         offset
       );
 
-      console.log('✅ Sanity response:', { 
-        sanityNotificationsCount: sanityNotifications?.length, 
-        total 
-      });
+
 
       // Convert to frontend format
       const notifications = sanityNotifications.map(convertSanityNotificationToFrontend);
       const unreadCount = await getUnreadNotificationsCount(session.user.id);
 
-      console.log('✅ Final response:', { 
-        notificationsCount: notifications.length, 
-        unreadCount, 
-        hasMore: offset + limit < total 
-      });
+
 
       return NextResponse.json({
         notifications,
@@ -111,7 +97,7 @@ export async function GET(request: NextRequest) {
         }
       ];
       
-      console.log('✅ Returning fallback data due to Sanity error');
+
       
       return NextResponse.json({
         notifications: fallbackNotifications,
@@ -148,7 +134,7 @@ export async function GET(request: NextRequest) {
       }
     ];
     
-    console.log('✅ Returning fallback data due to error');
+
     
     return NextResponse.json({
       notifications: fallbackNotifications,
@@ -163,7 +149,6 @@ export async function GET(request: NextRequest) {
 // PATCH /api/notifications/mark-all-read - Mark all notifications as read
 export async function PATCH(request: NextRequest) {
   try {
-    console.log('✅ PATCH /api/notifications called - marking all as read in Sanity');
     
     // Try to get session with better error handling
     let session;
@@ -182,15 +167,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ Mark all as read for user:', {
-      id: session.user.id,
-      name: session.user.name || session.user.username
-    });
+
 
     try {
       // Mark all notifications as read in Sanity
       await markAllNotificationsAsRead(session.user.id);
-      console.log('✅ Successfully marked all notifications as read in Sanity');
       
       return NextResponse.json({
         message: 'All notifications marked as read',

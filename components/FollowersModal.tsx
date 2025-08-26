@@ -176,10 +176,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         if (isCurrentlyFollowing) {
           // If unfollowing, immediately remove from modal list
           setModalUsers(prev => {
-            console.log('Removing user from modal:', userId);
-            console.log('Current users:', prev);
             const filtered = prev.filter(user => user._id !== userId);
-            console.log('Filtered users:', filtered);
             return filtered;
           });
           setRecentlyUnfollowed(prev => ({
@@ -215,7 +212,6 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           .then(data => {
             if (data) {
               const updatedUsers = type === 'followers' ? data.followers : data.following;
-              console.log('Fresh data from API:', updatedUsers);
               setModalUsers(updatedUsers);
             }
           })
@@ -271,10 +267,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         
         // Optimistic UI update - immediately remove user from modal list
         setModalUsers(prev => {
-          console.log('Removing follower from modal:', userId);
-          console.log('Current followers:', prev);
           const filtered = prev.filter(user => user._id !== userId);
-          console.log('Filtered followers:', filtered);
           return filtered;
         });
         
@@ -295,7 +288,6 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           .then(data => {
             if (data) {
               const updatedUsers = type === 'followers' ? data.followers : data.following;
-              console.log('Fresh data from API (remove):', updatedUsers);
               setModalUsers(updatedUsers);
             }
           })

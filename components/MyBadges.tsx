@@ -55,16 +55,11 @@ export default function MyBadges({ userId }: MyBadgesProps) {
          enhancedBadgeSystem.getUserActivity(userId)
        ]);
 
-       console.log('🔍 DEBUG: Raw data loaded');
-       console.log('All badges count:', allBadges.length);
-       console.log('All badges:', allBadges.map(b => ({ name: b.name, tier: b.tier, category: b.category })));
-       console.log('User badges count:', userBadges.length);
-       console.log('User badges:', userBadges.map(ub => ({ badgeName: ub.badge?.name, badgeTier: ub.badge?.tier })));
-       console.log('User activity:', userActivity);
+       // Data loaded successfully
 
              // Create a map of earned badges for quick lookup
        const earnedBadgeIds = new Set(userBadges.map(ub => ub.badge?._id));
-       console.log('🔍 DEBUG: Earned badge IDs:', Array.from(earnedBadgeIds));
+       // Earned badges processed
 
        // Combine all badges with progress information
        const badgesWithProgressData: BadgeWithProgress[] = allBadges.map(badge => {
@@ -83,13 +78,9 @@ export default function MyBadges({ userId }: MyBadgesProps) {
          };
        });
 
-       console.log('🔍 DEBUG: Badges with progress data');
-       console.log('Total badges with progress:', badgesWithProgressData.length);
-       console.log('Badges by tier:', badgesWithProgressData.reduce((acc, badge) => {
-         acc[badge.tier] = (acc[badge.tier] || 0) + 1;
-         return acc;
-       }, {} as Record<string, number>));
-       console.log('Bronze badges:', badgesWithProgressData.filter(b => b.tier === 'bronze').map(b => ({ name: b.name, isEarned: b.isEarned, progress: b.progress })));
+       // Badges with progress data processed
+       // Badge data processed successfully
+       // Badge tiers processed
 
              // Sort badges: earned first, then by tier, then by progress percentage
        badgesWithProgressData.sort((a, b) => {
@@ -119,7 +110,7 @@ export default function MyBadges({ userId }: MyBadgesProps) {
          tierCompletion[tier] = totalCount > 0 ? (earnedCount / totalCount) * 100 : 0;
        });
        
-       console.log('🔍 DEBUG: Tier completion percentages:', tierCompletion);
+       // Tier completion calculated
        
        // Find the next tier to work on (tier with some progress but not complete)
        let nextActiveTier = null;
@@ -128,7 +119,7 @@ export default function MyBadges({ userId }: MyBadgesProps) {
          const completion = tierCompletion[tier];
          const hasUnearned = badgesWithProgressData.filter(b => b.tier === tier && !b.isEarned).length > 0;
          
-         console.log(`🔍 DEBUG: ${tier} tier - completion: ${completion}%, has unearned: ${hasUnearned}`);
+         // Tier analysis complete
          
          if (completion > 0 && completion < 100 && hasUnearned) {
            // This tier has some progress but is not complete - this is the current active tier
@@ -165,7 +156,7 @@ export default function MyBadges({ userId }: MyBadgesProps) {
          }
        }
        
-       console.log('Setting current active tier to (smart progression):', nextActiveTier);
+       // Active tier determined
        setCurrentActiveTier(nextActiveTier);
 
        setBadgesWithProgress(badgesWithProgressData);
@@ -229,79 +220,44 @@ export default function MyBadges({ userId }: MyBadgesProps) {
     const getFilteredBadges = () => {
     let filtered = badgesWithProgress;
 
-    console.log('🔍 DEBUG: Starting badge filtering');
-    console.log('Filtering badges - selectedTier:', selectedTier, 'currentActiveTier:', currentActiveTier);
-    console.log('Show completed:', showCompleted, 'Show earned only:', showEarnedOnly, 'Show progress only:', showProgressOnly);
-    console.log('All badges count:', badgesWithProgress.length);
-    console.log('All badges:', badgesWithProgress.map(b => ({ name: b.name, tier: b.tier, isEarned: b.isEarned, progress: b.progress.percentage })));
-
     // Filter by tier FIRST (before earned status filtering)
-    console.log('🔍 DEBUG: Before tier filtering - count:', filtered.length, 'selectedTier:', selectedTier, 'currentActiveTier:', currentActiveTier);
     
     if (selectedTier === 'current' && currentActiveTier) {
-      console.log('🔍 DEBUG: Filtering by current active tier:', currentActiveTier);
-      console.log('🔍 DEBUG: Badges in current active tier before filtering:', badgesWithProgress.filter(b => b.tier === currentActiveTier).map(b => ({ name: b.name, tier: b.tier, isEarned: b.isEarned })));
       filtered = filtered.filter(badge => badge.tier === currentActiveTier);
-      console.log('🔍 DEBUG: After "Current Active Tier" filter - count:', filtered.length, 'tier:', currentActiveTier);
     } else if (selectedTier !== 'all' && selectedTier !== 'current') {
-      console.log('🔍 DEBUG: Filtering by specific tier:', selectedTier);
-      console.log('🔍 DEBUG: Available tiers in data:', [...new Set(badgesWithProgress.map(b => b.tier))]);
-      console.log('🔍 DEBUG: Badges with selected tier:', badgesWithProgress.filter(b => b.tier === selectedTier).map(b => ({ name: b.name, tier: b.tier, isEarned: b.isEarned })));
       filtered = filtered.filter(badge => badge.tier === selectedTier);
-      console.log('🔍 DEBUG: After specific tier filter - count:', filtered.length, 'tier:', selectedTier);
     } else if (selectedTier === 'all') {
       // Show all tiers when "All Tiers" is explicitly selected
       // No filtering needed
-      console.log('🔍 DEBUG: No tier filtering applied (All Tiers selected) - count:', filtered.length);
     } else if (currentActiveTier && !showCompleted && !showEarnedOnly && !showProgressOnly) {
       // By default, show only the current active tier
       filtered = filtered.filter(badge => badge.tier === currentActiveTier);
-      console.log('🔍 DEBUG: After default tier filtering - count:', filtered.length, 'tier:', currentActiveTier);
-    } else {
-      console.log('🔍 DEBUG: No tier filtering applied - count:', filtered.length);
-      console.log('🔍 DEBUG: Conditions for default filtering: currentActiveTier:', currentActiveTier, 'showCompleted:', showCompleted, 'showEarnedOnly:', showEarnedOnly, 'showProgressOnly:', showProgressOnly);
     }
 
     // Filter by earned status AFTER tier filtering
-    console.log('🔍 DEBUG: Before earned status filtering - count:', filtered.length);
-    console.log('🔍 DEBUG: Filter states - showEarnedOnly:', showEarnedOnly, 'showProgressOnly:', showProgressOnly, 'showCompleted:', showCompleted, 'selectedTier:', selectedTier);
     
     if (showEarnedOnly) {
       filtered = filtered.filter(badge => badge.isEarned);
-      console.log('🔍 DEBUG: After "Earned Only" filter - count:', filtered.length);
     } else if (showProgressOnly) {
       filtered = filtered.filter(badge => !badge.isEarned && badge.progress.percentage > 0);
-      console.log('🔍 DEBUG: After "In Progress Only" filter - count:', filtered.length);
     } else if (selectedTier === 'current' && !showCompleted) {
       // For "Current Active Tier", show only unearned badges (not completed ones)
       filtered = filtered.filter(badge => !badge.isEarned);
-      console.log('🔍 DEBUG: After "Current Active Tier" filter (unearned only) - count:', filtered.length);
     } else if (selectedTier === 'all' && !showCompleted) {
       // For "All Tiers", hide completed badges when showCompleted is false
       filtered = filtered.filter(badge => !badge.isEarned);
-      console.log('🔍 DEBUG: After "All Tiers" filter (hide completed) - count:', filtered.length);
     } else if (selectedTier !== 'all' && selectedTier !== 'current' && !showCompleted) {
       // For specific tiers, show all badges (both earned and unearned) when showCompleted is true
       // This allows users to see their achievements in that tier
-      console.log('🔍 DEBUG: No earned status filtering for specific tier - count:', filtered.length);
     } else {
       // When showCompleted is true, show all badges (both earned and unearned)
-      console.log('🔍 DEBUG: No earned status filtering applied (showCompleted is true) - count:', filtered.length);
     }
 
     // Filter by category
-    console.log('🔍 DEBUG: Before category filtering - count:', filtered.length, 'selectedCategory:', selectedCategory);
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(badge => badge.category === selectedCategory);
-      console.log('🔍 DEBUG: After category filtering - count:', filtered.length);
-    } else {
-      console.log('🔍 DEBUG: No category filtering applied - count:', filtered.length);
     }
 
-    console.log('🔍 DEBUG: Final filtered badges');
-    console.log('Final count:', filtered.length);
-    console.log('Final badges:', filtered.map(b => ({ name: b.name, tier: b.tier, isEarned: b.isEarned, progress: b.progress.percentage })));
-    console.log('Bronze badges in final result:', filtered.filter(b => b.tier === 'bronze').map(b => ({ name: b.name, isEarned: b.isEarned })));
     return filtered;
   };
 
@@ -315,10 +271,6 @@ export default function MyBadges({ userId }: MyBadgesProps) {
 
      const getTierOptions = () => {
      const tiers = ['all', ...new Set(badgesWithProgress.map(badge => badge.tier).filter(Boolean))];
-     console.log('🔍 DEBUG: Tier options generation');
-     console.log('🔍 DEBUG: All badge tiers:', badgesWithProgress.map(b => b.tier));
-     console.log('🔍 DEBUG: Unique tiers:', [...new Set(badgesWithProgress.map(badge => badge.tier).filter(Boolean))]);
-     console.log('🔍 DEBUG: Final tier options:', tiers);
      return tiers.map(tier => ({
        value: tier,
        label: tier === 'all' ? 'All Tiers' : TIER_LEVELS[tier as keyof typeof TIER_LEVELS]?.label || tier

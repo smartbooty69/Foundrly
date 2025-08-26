@@ -8,7 +8,6 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    console.log('✅ Marking notification as read:', params.id);
     
     // Try to get session with better error handling
     let session;
@@ -29,16 +28,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ User marking notification as read:', {
-      userId: session.user.id,
-      userName: session.user.name || session.user.username,
-      notificationId: params.id
-    });
+
 
     try {
       // Mark notification as read in Sanity
       await markNotificationAsRead(params.id);
-      console.log('✅ Successfully marked notification as read in Sanity');
       
       return NextResponse.json({
         success: true,

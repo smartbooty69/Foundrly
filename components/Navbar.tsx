@@ -15,8 +15,7 @@ const Navbar = () => {
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
     const { totalUnreadMessages, isStreamChatLoaded } = useNotifications();
     
-    // Debug logging
-    console.log('Navbar totalUnreadMessages:', totalUnreadMessages && totalUnreadMessages > 0 ? totalUnreadMessages : 'none', 'isStreamChatLoaded:', isStreamChatLoaded);
+    // Messages loaded
 
   return (
     <header className="px-5 py-3 bg-white chadow-sm font-work-sans" >

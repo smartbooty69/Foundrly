@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
             silent: false // Ensure this triggers notifications
           });
 
-          console.log('✅ Stream Chat push notification sent:', { channelId, message, userId });
+
           
           return NextResponse.json({ 
             success: true, 
@@ -57,11 +57,12 @@ export async function POST(req: NextRequest) {
 
         try {
           // Update user's push notification settings
-          const result = await serverClient.updateUser(userId, {
-            pushNotificationSettings: notificationData
+          const result = await serverClient.upsertUser({
+            id: userId,
+            push_notifications: notificationData
           });
 
-          console.log('✅ Stream Chat user settings updated:', { userId, settings: notificationData });
+
           
           return NextResponse.json({ 
             success: true, 
@@ -84,13 +85,14 @@ export async function POST(req: NextRequest) {
 
         try {
           // Get user's current push notification settings
-          const user = await serverClient.getUserById(userId);
+          const user = await serverClient.queryUsers({ id: { $eq: userId } });
+          const userData = user.users[0];
           
-          console.log('✅ Stream Chat user settings retrieved:', { userId });
+
           
           return NextResponse.json({ 
             success: true, 
-            settings: user.pushNotificationSettings,
+            settings: userData?.push_notifications,
             message: 'User settings retrieved successfully' 
           });
         } catch (error) {
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          console.log('✅ Stream Chat bulk notifications sent:', { totalUsers: notificationData.users.length, results });
+
           
           return NextResponse.json({ 
             success: true, 
@@ -178,13 +180,14 @@ export async function GET(req: NextRequest) {
 
     try {
       // Get user's current push notification settings
-      const user = await serverClient.getUserById(userId);
+      const user = await serverClient.queryUsers({ id: { $eq: userId } });
+      const userData = user.users[0];
       
-      console.log('✅ Stream Chat user settings retrieved via GET:', { userId });
+
       
       return NextResponse.json({ 
         success: true, 
-        settings: user.pushNotificationSettings,
+        settings: userData?.push_notifications,
         message: 'User settings retrieved successfully' 
       });
     } catch (error) {

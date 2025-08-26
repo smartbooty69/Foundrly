@@ -120,7 +120,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
           try {
             channelInstance.markRead();
           } catch (error) {
-            console.log('Error marking messages as read:', error);
+            // Error marking messages as read
           }
         }
       });
@@ -147,7 +147,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
         try {
           unsub.unsubscribe();
         } catch (error) {
-          console.log('Error unsubscribing from channel events:', error);
+          // Error unsubscribing from channel events
         }
       }
       
@@ -160,7 +160,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
         try {
           channelInstance.stopWatching();
         } catch (error) {
-          console.log('Error stopping channel watch:', error);
+          // Error stopping channel watch
         }
       }
       
@@ -170,7 +170,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
         try {
           chatClient.disconnectUser();
         } catch (error) {
-          console.log('Error disconnecting user:', error);
+          // Error disconnecting user
         }
       }
       
@@ -239,17 +239,7 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
                            !chatClient.disconnected && 
                            chatClient.connectionID;
             
-            // Debug logging
-            if (pushNotificationsSupported && chatClient) {
-              console.log('🔍 Push notification button state:', {
-                pushNotificationsSupported,
-                chatClientExists: !!chatClient,
-                userID: chatClient.userID,
-                disconnected: chatClient.disconnected,
-                connectionID: chatClient.connectionID,
-                isReady
-              });
-            }
+
             
             return isReady ? (
               <button

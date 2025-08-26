@@ -90,7 +90,6 @@ const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onGoBack, onSelectC
         setCreatingChat(contact._id);
 
         try {
-            console.log('Starting chat creation for contact:', contact);
             
             // First, create/upsert the user in Stream Chat
             const upsertResponse = await fetch('/api/chat/upsert-user', {
@@ -116,7 +115,7 @@ const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onGoBack, onSelectC
                 throw new Error(`Failed to create user in Stream Chat: ${upsertError.error || upsertError}`);
             }
 
-            console.log('User upserted successfully');
+
 
             // Create a new chat channel
             const chatResponse = await fetch('/api/chat/create-channel', {
@@ -146,7 +145,6 @@ const NewMessageScreen: React.FC<NewMessageScreenProps> = ({ onGoBack, onSelectC
             }
 
             const { channelId } = await chatResponse.json();
-            console.log('Chat channel created successfully:', channelId);
 
             // Call the onStartChat callback if provided
             if (onStartChat) {

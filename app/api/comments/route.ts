@@ -3,7 +3,7 @@ import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
 import { v4 as uuidv4 } from 'uuid';
-import { createCommentNotification } from '@/sanity/lib/notifications';
+import { createCommentNotification, createReplyNotification } from '@/sanity/lib/notifications';
 
 // GET: Fetch comments for a startup (PUBLIC - no auth required)
 export async function GET(req: Request) {
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
         startup: { _type: 'reference', _ref: startupId },
         parent: { _type: 'reference', _ref: parentId },
       });
-      console.log('Created reply:', reply);
+
       
       // Patch parent comment to include reply reference
       await writeClient
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
 
       // Create notification for the parent comment author
       try {
-        console.log('🔔 Attempting to create reply notification...');
+
         
         // Get parent comment author and startup details
         const parentComment = await client.fetch(
@@ -119,10 +119,10 @@ export async function POST(req: Request) {
           { parentId }
         );
 
-        console.log('🔔 Parent comment data:', parentComment);
+
 
         if (parentComment && parentComment.author?._id !== session.user.id) {
-          console.log('🔔 Creating reply notification for parent comment author:', parentComment.author._id);
+
           
           // Create reply notification for the parent comment author
           const notificationId = await createReplyNotification(
@@ -135,11 +135,11 @@ export async function POST(req: Request) {
             text, // reply text
             parentComment.text // parent comment text for context
           );
-          console.log('✅ Reply notification created successfully with ID:', notificationId);
+
         } else {
-          console.log('🔔 Skipping reply notification - replier is parent comment author');
+          // Skipping reply notification - replier is parent comment author
         }
-      } catch (notificationError) {
+      } catch (notificationError: any) {
         console.error('❌ Failed to create reply notification:', notificationError);
         console.error('❌ Reply notification error details:', {
           message: notificationError.message,
@@ -213,9 +213,7 @@ export async function POST(req: Request) {
 
       // Create notification for the startup owner
       try {
-        console.log('🔔 Attempting to create comment notification...');
-        console.log('🔔 Commenter ID:', session.user.id);
-        console.log('🔔 Startup ID:', startupId);
+
         
         // Get startup owner and startup details
         const startup = await client.fetch(
@@ -226,10 +224,10 @@ export async function POST(req: Request) {
           { startupId }
         );
 
-        console.log('🔔 Startup data fetched:', startup);
+
 
         if (startup && startup.author?._id !== session.user.id) {
-          console.log('🔔 Creating comment notification for startup owner:', startup.author._id);
+
           
           // Only create notification if commenter is not the startup owner
           const notificationId = await createCommentNotification(
@@ -241,11 +239,11 @@ export async function POST(req: Request) {
             session.user.image,
             text
           );
-          console.log('✅ Comment notification created successfully with ID:', notificationId);
+
         } else {
-          console.log('🔔 Skipping notification - commenter is startup owner or startup not found');
+          // Skipping notification - commenter is startup owner or startup not found
         }
-      } catch (notificationError) {
+      } catch (notificationError: any) {
         console.error('❌ Failed to create comment notification:', notificationError);
         console.error('❌ Notification error details:', {
           message: notificationError.message,

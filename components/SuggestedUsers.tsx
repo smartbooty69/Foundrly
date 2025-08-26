@@ -70,7 +70,6 @@ export default function SuggestedUsers({
     setCreatingChat(user._id);
 
     try {
-      console.log('Starting chat creation for user:', user);
       
       // First, create/upsert the user in Stream Chat
       const upsertResponse = await fetch('/api/chat/upsert-user', {
@@ -91,7 +90,7 @@ export default function SuggestedUsers({
         throw new Error(`Failed to create user in Stream Chat: ${upsertError}`);
       }
 
-      console.log('User upserted successfully');
+
 
       // Create a new chat channel
       const chatResponse = await fetch('/api/chat/create-channel', {
@@ -116,7 +115,6 @@ export default function SuggestedUsers({
       }
 
       const { channelId } = await chatResponse.json();
-      console.log('Chat channel created successfully:', channelId);
 
       // Call the onStartChat callback if provided
       if (onStartChat) {

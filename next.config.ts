@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
+  output: 'standalone',
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [

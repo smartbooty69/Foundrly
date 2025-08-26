@@ -21,7 +21,6 @@ webpush.setVapidDetails(
 
 export async function POST(request: Request) {
   try {
-    console.log('✅ Push notification send endpoint called');
     
     const session = await auth();
     
@@ -37,7 +36,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log('✅ Sending push notification:', { subscription, notification });
+
 
     // Use the keys directly as strings (web-push handles the conversion internally)
     const pushSubscription = {
@@ -52,7 +51,7 @@ export async function POST(request: Request) {
     const payload = JSON.stringify(notification);
     const result = await webpush.sendNotification(pushSubscription, payload);
 
-    console.log('✅ Push notification sent successfully:', result.statusCode);
+
 
     return NextResponse.json({
       success: true,

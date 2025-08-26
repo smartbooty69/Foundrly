@@ -227,7 +227,7 @@ export default function BadgeLeaderboard({
         })
         .slice(0, limit);
 
-      console.log('BadgeLeaderboard entries:', leaderboardEntries);
+
       setEntries(leaderboardEntries);
     } catch (error) {
       console.error('Failed to load badge leaderboard:', error);

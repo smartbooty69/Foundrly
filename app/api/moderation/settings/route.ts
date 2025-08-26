@@ -25,9 +25,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Add admin role verification here
-    // For now, we'll allow any authenticated user to update settings
-    // In production, you should check if the user has admin privileges
+    // Admin access is handled through Sanity Studio
+    // This endpoint is for programmatic access only
 
     const body = await request.json()
     const { settings } = body

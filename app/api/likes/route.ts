@@ -117,7 +117,7 @@ export async function POST(req: Request) {
             session.user.name || session.user.username || 'Unknown User',
             session.user.image
           );
-          console.log('Like notification created successfully');
+  
         }
       } catch (notificationError) {
         console.error('Failed to create like notification:', notificationError);

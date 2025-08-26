@@ -2,20 +2,35 @@
 
 **Foundrly** is a full-stack web application that enables users to create, share, and discover startup pitches in real time. Designed for both entrepreneurs and investors, Foundrly streamlines startup discovery by combining clean UI, dynamic content, and modern authentication—all built using **Next.js**, **Sanity**, and **NextAuth**.
 
-## Table of Contents
+## 📚 **Documentation**
 
-  - [Overview](https://www.google.com/search?q=%23overview)
-  - [Features](https://www.google.com/search?q=%23features)
-  - [Tech Stack](https://www.google.com/search?q=%23tech-stack)
-  - [Getting Started](https://www.google.com/search?q=%23getting-started)
-  - [Usage](https://www.google.com/search?q=%23usage)
-  - [Authentication](https://www.google.com/search?q=%23authentication)
-  - [User Profile](https://www.google.com/search?q=%23user-profile)
-  - [Startup Submission](https://www.google.com/search?q=%23startup-submission)
-  - [Performance Monitoring](https://www.google.com/search?q=%23performance-monitoring)
-  - [Deployment](https://www.google.com/search?q=%23deployment)
-  - [Contributing](https://www.google.com/search?q=%23contributing)
-  - [License](https://www.google.com/search?q=%23license)
+For comprehensive documentation, visit our **[Documentation Hub](./docs/README.md)** which includes:
+
+- **[Getting Started Guide](./docs/getting-started.md)** - Set up your development environment
+- **[Architecture Overview](./docs/architecture.md)** - Understand the system design
+- **[API Reference](./docs/api/README.md)** - Complete API documentation
+- **[Feature Guides](./docs/features/)** - Badge system, notifications, and more
+- **[Deployment Guide](./docs/deployment.md)** - Deploy to production
+- **[Troubleshooting](./docs/troubleshooting/common-issues.md)** - Common issues and solutions
+
+## 🚀 **Quick Start**
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/foundrly.git
+cd foundrly
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+
+# Start development server
+npm run dev
+```
+
+Visit **[Getting Started Guide](./docs/getting-started.md)** for detailed setup instructions.
 
 ## Overview
 

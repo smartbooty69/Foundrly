@@ -32,8 +32,7 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
     description,
   } = post;
 
-  // Debug: log the author object
-  console.log('StartupCard author:', author);
+  // Author data loaded
 
   const [likes, setLikes] = React.useState(0);
   const [dislikes, setDislikes] = React.useState(0);

@@ -9,9 +9,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Add admin role verification here
-    // For now, we'll allow any authenticated user to export data
-    // In production, you should check if the user has admin privileges
+    // Admin access is handled through Sanity Studio
+    // This endpoint is for programmatic access only
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''

@@ -72,10 +72,10 @@ export const ModerationTest = () => {
 
   const simulateModeration = async (content: string, type?: string) => {
     setIsLoading(true)
-    
+
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     // Simulate moderation logic
     const result: TestResult = {
       id: Date.now().toString(),
@@ -353,4 +353,4 @@ export const ModerationTest = () => {
       )}
     </Stack>
   )
-} 
+}

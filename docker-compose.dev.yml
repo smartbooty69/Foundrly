@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # Next.js Application (Development)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: foundrly-app-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - .:/app
+      # Exclude node_modules to use container's version
+      - /app/node_modules
+      # Exclude .next for better performance
+      - /app/.next
+      # Exclude .git for performance
+      - /app/.git
+      # Cache npm cache
+      - npm-cache:/root/.npm
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - NEXT_TELEMETRY_DISABLED=1
+      - WATCHPACK_POLLING_INTERVAL=1000
+      - CHOKIDAR_INTERVAL=1000
+      # Memory optimization for 8GB RAM
+      - NODE_OPTIONS=--max-old-space-size=2048
+    networks:
+      - foundrly-network
+    restart: unless-stopped
+    # Enable hot reload with polling for Windows/WSL2
+    command: npm run dev
+    # Health check for development (disabled for now)
+    # healthcheck:
+    #   test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 60s
+    # Memory limits for 8GB RAM system
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+volumes:
+  npm-cache:
+    driver: local
+
+networks:
+  foundrly-network:
+    driver: bridge

@@ -381,8 +381,7 @@ export default function BadgeDashboard({
                   if (selectedRarity !== 'all' && badge.rarity !== selectedRarity) return null;
                   if (selectedTier !== 'all' && badge.tier !== selectedTier) return null;
                   
-                  // Debug logging
-                  console.log('Badge:', badge.name, 'Progress:', progress, 'Earned:', isEarned);
+                  // Badge rendering logic
                   
                   return (
                     <div key={badge._id} className="bg-white rounded-lg p-4 shadow-md">

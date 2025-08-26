@@ -26,13 +26,7 @@ export default function BadgeLabels({
   const displayBadges = maxDisplay ? badges.slice(0, maxDisplay) : badges;
   const hasMore = badges.length > maxDisplay;
   
-  // Debug logging
-  console.log('BadgeLabels debug:', {
-    totalBadges: badges.length,
-    maxDisplay,
-    displayBadgesCount: displayBadges.length,
-    hasMore
-  });
+  // Component initialized
 
   const getRarityStyle = (rarity: keyof typeof RARITY_LEVELS) => {
     const rarityConfig = RARITY_LEVELS[rarity];
