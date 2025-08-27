@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import MessageButton from "@/components/MessageButton";
 import BadgeLabels from "@/components/BadgeLabels";
 import { enhancedBadgeSystem, TIER_LEVELS } from "@/lib/enhanced-badge-system";
+import UserSidebarWrapper from "@/components/UserSidebarWrapper";
 
 export const experimental_ppr = true;
 
@@ -87,6 +88,8 @@ const Page = async ({ params }: { params: { id: string } }) => {
 
   // Show evolving badges by default
 
+  const isOwnProfile = session?.user?.id === id;
+
   return (
     <>
       <section className="profile_container">
@@ -135,7 +138,7 @@ const Page = async ({ params }: { params: { id: string } }) => {
 
         <div className="flex-1 flex flex-col gap-5 lg:-mt-5">
           <p className="text-30-bold">
-            {session?.user?.id === id ? "Your" : "All"} Startups
+            {isOwnProfile ? "Your" : "All"} Startups
           </p>
           <ul className="card_grid-sm">
             <Suspense fallback={<StartupCardSkeleton />}>
@@ -144,6 +147,9 @@ const Page = async ({ params }: { params: { id: string } }) => {
           </ul>
         </div>
       </section>
+
+      {/* User Sidebar - Only show for own profile */}
+      <UserSidebarWrapper userId={id} isOwnProfile={isOwnProfile} />
     </>
   );
 };

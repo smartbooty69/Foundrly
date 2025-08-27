@@ -10,6 +10,7 @@ import { notification } from './notification'
 import { pushSubscription } from './pushSubscription'
 import { badge } from './badge'
 import { userBadge } from './userBadge'
+import { accountHistory } from './accountHistory'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -24,5 +25,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     pushSubscription,
     badge,
     userBadge,
+    accountHistory,
   ],
 }

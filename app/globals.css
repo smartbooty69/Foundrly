@@ -8,6 +8,28 @@
     :root {
         --radius: 0.5rem;
     }
+    
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 84% 4.9%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+    }
 }
 
 @layer utilities {
@@ -96,6 +118,55 @@
     /* profile */
     .profile_container {
         @apply w-full pb-10 pt-20 px-6 max-w-7xl mx-auto lg:flex-row flex-col flex gap-10;
+    }
+
+    /* User sidebar responsive adjustments - removed to prevent layout interference */
+    /* The sidebar is now completely floating and doesn't affect document flow */
+
+    /* Ensure sidebar doesn't affect layout */
+    .sidebar-fixed {
+        position: fixed !important;
+        top: 0 !important;
+        right: 0 !important;
+        height: 100vh !important;
+        z-index: 10 !important;
+        pointer-events: auto !important;
+        transform: translateZ(0) !important;
+        will-change: transform !important;
+        isolation: isolate !important;
+    }
+
+    /* Prevent sidebar from affecting document flow */
+    .sidebar-container {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Hide scrollbars but keep scroll functionality */
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* Internet Explorer 10+ */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;  /* Safari and Chrome */
+    }
+
+    /* Sidebar animations and responsive behavior */
+    .sidebar-transition {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Mobile sidebar overlay */
+    @media (max-width: 1023px) {
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 30;
+        }
     }
 
     .profile_card {

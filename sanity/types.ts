@@ -13,6 +13,30 @@
  */
 
 // Source: schema.json
+export type AccountHistory = {
+  _id: string;
+  _type: "accountHistory";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  userId?: string;
+  userName?: string;
+  changeType?: "name_change" | "bio_change" | "image_change" | "startup_created" | "startup_updated" | "startup_deleted" | "account_created" | "email_change" | "username_change" | "privacy_change";
+  timestamp?: string;
+  oldValue?: string;
+  newValue?: string;
+  startupId?: string;
+  startupTitle?: string;
+  changeDetails?: {
+    field?: string;
+    oldData?: string;
+    newData?: string;
+  };
+  ipAddress?: string;
+  userAgent?: string;
+  sessionId?: string;
+};
+
 export type UserBadge = {
   _id: string;
   _type: "userBadge";
@@ -491,5 +515,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = UserBadge | Badge | PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = AccountHistory | UserBadge | Badge | PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;

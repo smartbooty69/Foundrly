@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Stack, Text, Badge, Button, Box, Flex, TextInput, TextArea, Select, Grid } from '@sanity/ui'
 import { TestTube, AlertTriangle, Shield, MessageSquare, User, Settings, Play, CheckCircle, XCircle } from 'lucide-react'
 import { getModerationSettings, type ModerationSettings as ModerationSettingsType } from '../lib/moderation-queries'
+import { formatTime } from '../../lib/utils'
 
 interface TestResult {
   id: string
@@ -264,7 +265,7 @@ export const ModerationTest = () => {
                           {result.type.charAt(0).toUpperCase() + result.type.slice(1)} Detection
                         </Text>
                         <Text size={0} muted>
-                          {new Date(result.timestamp).toLocaleTimeString()}
+                          {formatTime(result.timestamp)}
                         </Text>
                       </Stack>
                       <Flex gap={2}>
