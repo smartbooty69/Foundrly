@@ -26,8 +26,6 @@ export async function POST(req: Request) {
 
     const { profileId, currentUserId, action } = body;
     console.log('API /api/follow called:', { profileId, currentUserId, action });
-    console.log('Token present:', !!writeClient.config().token);
-    console.log('writeClient config:', writeClient.config());
 
     // Validate required fields
     if (!profileId || !currentUserId || !action) {
@@ -61,13 +59,29 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    // Fetch current state
+    // Single optimized query to get both users with their follow status
     let profile, currentUser;
     try {
-      [profile, currentUser] = await Promise.all([
-        writeClient.getDocument(profileId),
-        writeClient.getDocument(currentUserId),
-      ]);
+      const query = `{
+        "profile": *[_type == "author" && _id == $profileId][0]{
+          _id,
+          name,
+          username,
+          image,
+          followers[]->{ _id, name, username, image }
+        },
+        "currentUser": *[_type == "author" && _id == $currentUserId][0]{
+          _id,
+          name,
+          username,
+          image,
+          following[]->{ _id, name, username, image }
+        }
+      }`;
+      
+      const result = await writeClient.fetch(query, { profileId, currentUserId });
+      profile = result.profile;
+      currentUser = result.currentUser;
     } catch (error) {
       console.error('Error fetching documents:', error);
       return NextResponse.json({ 
@@ -83,45 +97,57 @@ export async function POST(req: Request) {
       }, { status: 404 });
     }
 
-    console.log('Fetched profile:', profile);
-    console.log('Fetched currentUser:', currentUser);
-
-    const alreadyFollowing = Array.isArray(profile?.followers) && profile.followers.some((ref: any) => ref._ref === currentUserId);
-    const alreadyInFollowing = Array.isArray(currentUser?.following) && currentUser.following.some((ref: any) => ref._ref === profileId);
-    console.log('alreadyFollowing:', alreadyFollowing, 'alreadyInFollowing:', alreadyInFollowing);
+    const alreadyFollowing = Array.isArray(profile?.followers) && profile.followers.some((follower: any) => follower._id === currentUserId);
+    const alreadyInFollowing = Array.isArray(currentUser?.following) && currentUser.following.some((following: any) => following._id === profileId);
 
     const profilePatch = writeClient.patch(profileId);
     const currentUserPatch = writeClient.patch(currentUserId);
 
+    // Prepare response data for optimistic updates
+    let updatedFollowers = Array.isArray(profile?.followers) ? [...profile.followers] : [];
+    let updatedFollowing = Array.isArray(currentUser?.following) ? [...currentUser.following] : [];
+
     if (action === 'follow') {
       if (!alreadyFollowing) {
-        console.log('Appending to followers');
-        // Ensure followers array exists, then append
         profilePatch.setIfMissing({ followers: [] }).append('followers', [{ 
           _type: 'reference', 
           _ref: currentUserId,
           _key: `follower_${currentUserId}`
         }]);
+        // Add to optimistic response
+        updatedFollowers.push({
+          _id: currentUserId,
+          name: currentUser.name,
+          username: currentUser.username,
+          image: currentUser.image
+        });
       }
       if (!alreadyInFollowing) {
-        console.log('Appending to following');
-        // Ensure following array exists, then append
         currentUserPatch.setIfMissing({ following: [] }).append('following', [{ 
           _type: 'reference', 
           _ref: profileId,
           _key: `following_${profileId}`
         }]);
+        // Add to optimistic response
+        updatedFollowing.push({
+          _id: profileId,
+          name: profile.name,
+          username: profile.username,
+          image: profile.image
+        });
       }
     } else if (action === 'remove_follower') {
-      console.log('Removing follower');
-      // Remove the follower from the current user's followers list
       profilePatch.unset([`followers[_ref=="${currentUserId}"]`]);
-      // Remove the current user from the follower's following list
       currentUserPatch.unset([`following[_ref=="${profileId}"]`]);
+      // Remove from optimistic response
+      updatedFollowers = updatedFollowers.filter((follower: any) => follower._id !== currentUserId);
+      updatedFollowing = updatedFollowing.filter((following: any) => following._id !== profileId);
     } else {
-      console.log('Unsetting followers and following');
       profilePatch.unset([`followers[_ref=="${currentUserId}"]`]);
       currentUserPatch.unset([`following[_ref=="${profileId}"]`]);
+      // Remove from optimistic response
+      updatedFollowers = updatedFollowers.filter((follower: any) => follower._id !== currentUserId);
+      updatedFollowing = updatedFollowing.filter((following: any) => following._id !== profileId);
     }
 
     let result;
@@ -138,8 +164,6 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
-    console.log('Sanity mutation result:', result);
-
     // Create notification for new follow (only if it's a new follow)
     if (action === 'follow' && !alreadyFollowing) {
       try {
@@ -149,38 +173,19 @@ export async function POST(req: Request) {
           currentUser.name || currentUser.username || 'Unknown User',
           currentUser.image
         );
-        console.log('Follow notification created successfully');
       } catch (notificationError) {
         console.error('Failed to create follow notification:', notificationError);
         // Don't fail the entire request if notification creation fails
       }
     }
 
-    // Return updated followers/following for instant UI update
-    let updatedProfile, updatedCurrentUser;
-    try {
-      [updatedProfile, updatedCurrentUser] = await Promise.all([
-        writeClient.getDocument(profileId),
-        writeClient.getDocument(currentUserId),
-      ]);
-    } catch (error) {
-      console.error('Error fetching updated documents:', error);
-      // Still return success since the mutation was successful
-      return NextResponse.json({
-        success: true,
-        message: 'Follow status updated successfully',
-        followers: [],
-        following: [],
-      });
-    }
-
-    console.log('Updated profile:', updatedProfile);
-    console.log('Updated currentUser:', updatedCurrentUser);
-
+    // Return optimistic data immediately without additional database calls
     return NextResponse.json({
       success: true,
-      followers: Array.isArray(updatedProfile?.followers) ? updatedProfile.followers : [],
-      following: Array.isArray(updatedCurrentUser?.following) ? updatedCurrentUser.following : [],
+      followers: updatedFollowers,
+      following: updatedFollowing,
+      action,
+      alreadyFollowing: action === 'follow' ? true : false
     });
   } catch (error) {
     console.error('Unexpected error in follow API:', error);

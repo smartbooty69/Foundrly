@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { BanCheckWrapper } from "@/components/BanCheckWrapper";
@@ -8,24 +8,25 @@ function FollowUnfollowButtonContent(props: {
   profileId: string;
   currentUserId?: string;
   followers?: any[];
-  onFollowChange?: () => void;
+  onFollowChange?: (updatedFollowers: any[], updatedFollowing: any[]) => void;
   isBanned: boolean;
   banMessage: string;
 }) {
   const { profileId, currentUserId, followers = [], onFollowChange, isBanned, banMessage } = props;
-  const isFollowing = Array.isArray(followers) && followers.some((f: any) => f._ref === currentUserId);
+  const isFollowing = Array.isArray(followers) && followers.some((f: any) => f._id === currentUserId);
   const [following, setFollowing] = useState(isFollowing);
   
   // Update local state when followers prop changes
   useEffect(() => {
-    const newIsFollowing = Array.isArray(followers) && followers.some((f: any) => f._ref === currentUserId);
+    const newIsFollowing = Array.isArray(followers) && followers.some((f: any) => f._id === currentUserId);
     setFollowing(newIsFollowing);
   }, [followers, currentUserId]);
+
   const [isPressed, setIsPressed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleFollowToggle = async () => {
+  const handleFollowToggle = useCallback(async () => {
     if (isBanned) {
       toast({ 
         title: 'Account Suspended', 
@@ -46,7 +47,40 @@ function FollowUnfollowButtonContent(props: {
 
     setLoading(true);
     const action = following ? 'unfollow' : 'follow';
-    setFollowing(f => !f); // Optimistic UI
+    
+    // Optimistic update
+    setFollowing(f => !f);
+    
+    // Prepare optimistic data for parent components
+    const currentUser = {
+      _id: currentUserId,
+      name: 'You',
+      username: 'you',
+      image: null
+    };
+    
+    const profileUser = {
+      _id: profileId,
+      name: 'User',
+      username: 'user',
+      image: null
+    };
+
+    let optimisticFollowers = [...followers];
+    let optimisticFollowing: any[] = [];
+
+    if (action === 'follow') {
+      if (!isFollowing) {
+        optimisticFollowers.push(currentUser);
+      }
+    } else {
+      optimisticFollowers = optimisticFollowers.filter((f: any) => f._id !== currentUserId);
+    }
+
+    // Call parent callback with optimistic data
+    if (onFollowChange) {
+      onFollowChange(optimisticFollowers, optimisticFollowing);
+    }
     
     try {
       const res = await fetch('/api/follow', {
@@ -62,22 +96,33 @@ function FollowUnfollowButtonContent(props: {
       const data = await res.json();
       
       if (!data.success) {
+        // Revert optimistic update on error
         setFollowing(f => !f);
+        if (onFollowChange) {
+          onFollowChange(followers, []);
+        }
         toast({ 
           title: 'Error', 
           description: data.message || 'Failed to update follow status', 
           variant: 'destructive' 
         });
       } else {
+        // Update with actual server data
+        if (onFollowChange) {
+          onFollowChange(data.followers || [], data.following || []);
+        }
         toast({ 
           title: action === 'follow' ? 'Followed successfully' : 'Unfollowed successfully', 
-          description: action === 'follow' ? `You are now following ${profileId}` : `You unfollowed ${profileId}`,
+          description: action === 'follow' ? `You are now following this user` : `You unfollowed this user`,
           variant: 'default' 
         });
-        if (onFollowChange) onFollowChange();
       }
     } catch (e: any) {
-      setFollowing(f => !f); 
+      // Revert optimistic update on error
+      setFollowing(f => !f);
+      if (onFollowChange) {
+        onFollowChange(followers, []);
+      }
       console.error('Follow/unfollow error:', e);
       
       let errorMessage = 'Failed to update follow status';
@@ -95,7 +140,7 @@ function FollowUnfollowButtonContent(props: {
     } finally {
       setLoading(false);
     }
-  };
+  }, [following, isFollowing, profileId, currentUserId, followers, onFollowChange, isBanned, banMessage, toast]);
 
   // Don't render the button if viewing your own profile
   if (profileId === currentUserId) {
@@ -131,12 +176,12 @@ export default function FollowUnfollowButton(props: {
   profileId: string;
   currentUserId?: string;
   followers?: any[];
-  onFollowChange?: () => void;
+  onFollowChange?: (updatedFollowers: any[], updatedFollowing: any[]) => void;
 }) {
   return (
     <BanCheckWrapper>
       {({ isBanned, banMessage }) => (
-        <FollowUnfollowButtonContent 
+        <FollowUnfollowButtonContent
           {...props}
           isBanned={isBanned}
           banMessage={banMessage}

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import FollowersFollowingToast from "@/components/FollowersFollowingToast";
 import FollowUnfollowButton from "@/components/FollowUnfollowButton";
 import MessageButton from "@/components/MessageButton";
@@ -21,33 +21,45 @@ export default function ProfileFollowWrapper({
   const [following, setFollowing] = useState(initialFollowing);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Auto-refresh followers/following data every 5 seconds
+  // Reduced polling frequency from 5 seconds to 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       refetchUser();
-    }, 5000);
+    }, 30000); // 30 seconds
     return () => clearInterval(interval);
   }, [profileId]);
 
-  const refetchUser = async () => {
+  const refetchUser = useCallback(async () => {
     setIsLoading(true);
-    fetch(`/api/user/${profileId}`, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Priority': 'high'
-      }
-    })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
+    try {
+      const res = await fetch(`/api/user/${profileId}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Priority': 'high'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
         if (data && !data.error) {
           setFollowers(Array.isArray(data.followers) ? data.followers : []);
           setFollowing(Array.isArray(data.following) ? data.following : []);
         }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  };
+      }
+    } catch (error) {
+      // Silently fail - keep existing data
+      console.error('Failed to refetch user data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [profileId]);
+
+  const handleFollowChange = useCallback((updatedFollowers: any[], updatedFollowing: any[]) => {
+    // Update state immediately with optimistic data
+    setFollowers(updatedFollowers);
+    setFollowing(updatedFollowing);
+  }, []);
 
   return (
     <>
@@ -64,7 +76,7 @@ export default function ProfileFollowWrapper({
           profileId={profileId}
           currentUserId={currentUserId}
           followers={followers}
-          onFollowChange={refetchUser}
+          onFollowChange={handleFollowChange}
         />
         <MessageButton profileId={profileId} currentUserId={currentUserId} />
       </div>

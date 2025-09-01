@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
-import { AUTHOR_FOLLOWERS_FOLLOWING_QUERY } from '@/sanity/lib/queries';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,10 +27,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       }, { status: 400 });
     }
 
-    // Fetch user data
+    // Fetch user data with resolved followers and following
     let user;
     try {
-      user = await client.fetch(AUTHOR_FOLLOWERS_FOLLOWING_QUERY, { id });
+      const query = `*[_type == "author" && _id == $id][0]{
+        _id,
+        followers[]->{ _id, name, username, image },
+        following[]->{ _id, name, username, image }
+      }`;
+      
+      user = await client.fetch(query, { id });
     } catch (error) {
       console.error('Error fetching user:', error);
       return NextResponse.json({ 

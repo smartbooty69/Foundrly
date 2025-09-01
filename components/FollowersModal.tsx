@@ -105,7 +105,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         .catch(() => {
         });
       }
-    }, 5000); 
+    }, 30000); // 30 seconds
 
     return () => clearInterval(cleanupInterval);
   }, [isOpen, profileId, type]);
@@ -141,7 +141,24 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
       });
       return;
     }
+    
     setLoadingStates(prev => ({ ...prev, [userId]: true }));
+    
+    // Optimistic update
+    if (isCurrentlyFollowing) {
+      setModalUsers(prev => prev.filter(user => user._id !== userId));
+      setRecentlyUnfollowed(prev => ({
+        ...prev,
+        [userId]: Date.now()
+      }));
+    } else {
+      setRecentlyUnfollowed(prev => {
+        const newState = { ...prev };
+        delete newState[userId];
+        return newState;
+      });
+    }
+    
     try {
       const res = await fetch('/api/follow', {
         method: 'POST',
@@ -152,9 +169,11 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           action: isCurrentlyFollowing ? 'unfollow' : 'follow'
         }),
       });
+      
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
+      
       const data = await res.json();
       if (data.success) {
         toast({ 
@@ -165,54 +184,27 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           variant: 'default' 
         });
         
-                
-        if (isCurrentlyFollowing) {
-          
-          setModalUsers(prev => {
-            const filtered = prev.filter(user => user._id !== userId);
-            return filtered;
-          });
-          setRecentlyUnfollowed(prev => ({
-            ...prev,
-            [userId]: Date.now()
-          }));
-        } else {
-          
-          setRecentlyUnfollowed(prev => {
-            const newState = { ...prev };
-            delete newState[userId];
-            return newState;
-          });
+        // Update with server data if available
+        if (data.followers || data.following) {
+          const updatedUsers = type === 'followers' ? data.followers : data.following;
+          if (Array.isArray(updatedUsers)) {
+            setModalUsers(updatedUsers);
+          }
         }
-        
         
         if (onFollowChange) {
           onFollowChange();
         }
-        
-        
-        setTimeout(() => {
-          fetch(`/api/user/${profileId}/resolved?t=${Date.now()}`, {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0',
-              'Priority': 'high'
-            }
-          })
-          .then(res => res.ok ? res.json() : null)
-          .then(data => {
-            if (data) {
-              const updatedUsers = type === 'followers' ? data.followers : data.following;
-              setModalUsers(updatedUsers);
-            }
-          })
-          .catch((error) => {
-            console.error('Error refreshing modal data:', error);
-          });
-        }, 100); 
       } else {
+                 // Revert optimistic update on error
+         if (isCurrentlyFollowing) {
+           // Re-add the user back to the list
+           const userToReadd = recentlyUnfollowed[userId] ? 
+             { _id: userId, name: username, username, image: '' } : null;
+           if (userToReadd) {
+             setModalUsers(prev => [...prev, userToReadd]);
+           }
+         }
         throw new Error(data.message || 'Failed to update follow status');
       }
     } catch (error: any) {
