@@ -20,7 +20,6 @@ import CommentList from "@/components/CommentList";
 import CommentForm from "@/components/CommentForm";
 import CommentsSection from "@/components/CommentsSection";
 import BuyMeACoffeeButton from "@/components/BuyMeACoffeeButton";
-import Script from 'next/script';
 
 const md = markdownit();
 
@@ -163,19 +162,6 @@ const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
           <View id={id} />
         </Suspense>
       </section>
-      <Script
-        data-name="BMC-Widget"
-        data-cfasync="false"
-        src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js"
-        data-id="yourusername"
-        data-description="Support me on Buy me a coffee!"
-        data-message="Thank you for visiting. You can now buy me a coffee!"
-        data-color="#FFDD00"
-        data-position="Right"
-        data-x_margin="18"
-        data-y_margin="18"
-        strategy="afterInteractive"
-      />
     </>
   );
 };

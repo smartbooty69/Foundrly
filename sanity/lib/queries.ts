@@ -16,6 +16,7 @@ export const STARTUPS_QUERY =
   likes,
   dislikes,
   "commentsCount": count(comments),
+  buyMeACoffeeUsername,
 }`);
 
 // Flexible query for different sorting options
@@ -55,6 +56,7 @@ export const STARTUPS_SORTED_QUERY = (sortBy: string) => {
   likes,
   dislikes,
   "commentsCount": count(comments),
+  buyMeACoffeeUsername,
 }`);
 };
 
@@ -72,6 +74,7 @@ export const STARTUP_BY_ID_QUERY =
   category,
   image,
   pitch,
+  buyMeACoffeeUsername,
 }`);
 
 export const STARTUP_VIEWS_QUERY = defineQuery(`
@@ -132,6 +135,7 @@ export const STARTUPS_BY_AUTHOR_QUERY =
   likes,
   dislikes,
   "commentsCount": count(comments),
+  buyMeACoffeeUsername,
 }`);
 
 export const PLAYLIST_BY_SLUG_QUERY =
