@@ -20,8 +20,8 @@ interface FollowersModalProps {
   users: Follower[];
   currentUserId?: string;
   onFollowChange?: () => void;
-  currentUserFollowing?: any[]; // Add current user's following list
-  profileId?: string; // Add profileId for refetching
+  currentUserFollowing?: any[]; 
+  profileId?: string; 
 }
 
 const FollowersModal: React.FC<FollowersModalProps> = ({
@@ -41,10 +41,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
   const [modalUsers, setModalUsers] = useState<Follower[]>(users);
   const { toast } = useToast();
 
-  // Refetch data when modal opens for real-time updates
   useEffect(() => {
     if (isOpen && profileId) {
-      // Fetch fresh data in background (non-blocking)
       fetch(`/api/user/${profileId}/resolved`, {
         cache: 'no-store',
         headers: {
@@ -60,10 +58,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         }
       })
       .catch(() => {
-        // Silently fail - keep current data
       });
     } else {
-      // Update modalUsers when users prop changes
       setModalUsers(users);
     }
   }, [isOpen, profileId, type, users]);
@@ -76,11 +72,10 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
     setFilteredUsers(filtered);
   }, [modalUsers, searchTerm]);
 
-  // Clean up recently unfollowed users after 30 seconds and refresh modal data
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       const now = Date.now();
-      const thirtySecondsAgo = now - 30000; // 30 seconds
+      const thirtySecondsAgo = now - 30000; 
       
       setRecentlyUnfollowed(prev => {
         const newState = { ...prev };
@@ -92,7 +87,6 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         return newState;
       });
 
-      // Refresh modal data every 5 seconds when modal is open (instant refresh)
       if (isOpen && profileId) {
         fetch(`/api/user/${profileId}/resolved`, {
           cache: 'no-store',
@@ -109,10 +103,9 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           }
         })
         .catch(() => {
-          // Silently fail - keep current data
         });
       }
-    }, 5000); // Check every 5 seconds
+    }, 5000); 
 
     return () => clearInterval(cleanupInterval);
   }, [isOpen, profileId, type]);
@@ -172,9 +165,9 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           variant: 'default' 
         });
         
-                // Optimistic UI update - immediately remove/add user from modal list
+                
         if (isCurrentlyFollowing) {
-          // If unfollowing, immediately remove from modal list
+          
           setModalUsers(prev => {
             const filtered = prev.filter(user => user._id !== userId);
             return filtered;
@@ -184,7 +177,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
             [userId]: Date.now()
           }));
         } else {
-          // If following, remove from recently unfollowed list
+          
           setRecentlyUnfollowed(prev => {
             const newState = { ...prev };
             delete newState[userId];
@@ -192,12 +185,12 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           });
         }
         
-        // Update parent component
+        
         if (onFollowChange) {
           onFollowChange();
         }
         
-        // Force immediate refresh with aggressive cache busting
+        
         setTimeout(() => {
           fetch(`/api/user/${profileId}/resolved?t=${Date.now()}`, {
             cache: 'no-store',
@@ -218,7 +211,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           .catch((error) => {
             console.error('Error refreshing modal data:', error);
           });
-        }, 100); // Small delay to ensure API has updated
+        }, 100); 
       } else {
         throw new Error(data.message || 'Failed to update follow status');
       }
@@ -249,8 +242,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          profileId: currentUserId, // Remove from current user's followers
-          currentUserId: userId, // The follower to remove
+          profileId: currentUserId, 
+          currentUserId: userId, 
           action: 'remove_follower'
         }),
       });
@@ -265,7 +258,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           variant: 'default' 
         });
         
-        // Optimistic UI update - immediately remove user from modal list
+        
         setModalUsers(prev => {
           const filtered = prev.filter(user => user._id !== userId);
           return filtered;
@@ -273,7 +266,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
         
         if (onFollowChange) onFollowChange();
         
-        // Force immediate refresh with aggressive cache busting
+        
         setTimeout(() => {
           fetch(`/api/user/${profileId}/resolved?t=${Date.now()}`, {
             cache: 'no-store',
@@ -294,7 +287,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
           .catch((error) => {
             console.error('Error refreshing modal data (remove):', error);
           });
-        }, 100); // Small delay to ensure API has updated
+        }, 100); 
       } else {
         throw new Error(data.message || 'Failed to remove follower');
       }
@@ -374,10 +367,10 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
                 <div className="flex items-center space-x-2">
                   {currentUserId && user._id !== currentUserId && (
                     (() => {
-                      // For following modal: if user is in the following list, they ARE being followed
-                      // For followers modal: check if current user is following them
+                      
+                      
                       const isFollowing = type === 'following' 
-                        ? true // In following modal, everyone shown is being followed
+                        ? true 
                         : Array.isArray(currentUserFollowing) && 
                           currentUserFollowing.some((f: any) => f._ref === user._id);
                       
@@ -401,8 +394,8 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
                             </button>
                           )}
                           
-                          {/* Remove button for followers list */}
-                          {type === 'followers' && (
+                          {/* Remove button for followers list - only show on own profile */}
+                          {type === 'followers' && profileId === currentUserId && (
                             <button 
                               className="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded px-3 py-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-red-500"
                               onClick={() => handleRemoveFollower(user._id, user.username)}
@@ -424,7 +417,7 @@ const FollowersModal: React.FC<FollowersModalProps> = ({
     </div>
   );
 
-  // Use portal to render modal at document root
+  
   return createPortal(modalContent, document.body);
 };
 

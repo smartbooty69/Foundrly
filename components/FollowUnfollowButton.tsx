@@ -62,7 +62,7 @@ function FollowUnfollowButtonContent(props: {
       const data = await res.json();
       
       if (!data.success) {
-        setFollowing(f => !f); // Revert on error
+        setFollowing(f => !f);
         toast({ 
           title: 'Error', 
           description: data.message || 'Failed to update follow status', 
@@ -77,7 +77,7 @@ function FollowUnfollowButtonContent(props: {
         if (onFollowChange) onFollowChange();
       }
     } catch (e: any) {
-      setFollowing(f => !f); // Revert on error
+      setFollowing(f => !f); 
       console.error('Follow/unfollow error:', e);
       
       let errorMessage = 'Failed to update follow status';
