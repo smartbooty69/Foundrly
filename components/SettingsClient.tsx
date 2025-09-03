@@ -50,12 +50,12 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
         
         <div className="space-y-6">
           {/* Account Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
             <div className="space-y-6">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Settings</h2>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[22px] border-[3px] border-gray-300">
                     <div>
                       <h3 className="font-medium text-gray-900">Profile Information</h3>
                       <p className="text-sm text-gray-500">Update your name, bio, and profile picture</p>
@@ -69,7 +69,7 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
                     </Button>
                   </div>
                   
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[22px] border-[3px] border-gray-300">
                     <div>
                       <h3 className="font-medium text-gray-900">Email Preferences</h3>
                       <p className="text-sm text-gray-500">Manage notification and email settings</p>

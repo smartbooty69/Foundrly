@@ -32,7 +32,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, panel }) => {
         className={
           panel
             ? "bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-xl md:max-w-2xl lg:max-w-3xl h-[80vh] flex flex-col overflow-hidden p-0 relative animate-fade-in"
-            : "bg-white rounded-xl shadow-xl max-w-full w-full sm:w-[400px] p-6 relative animate-fade-in"
+            : "bg-white rounded-[22px] shadow-200 border-[5px] border-black max-w-full w-full sm:w-[400px] p-6 relative animate-fade-in"
         }
       >
         {children}

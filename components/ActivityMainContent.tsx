@@ -27,6 +27,7 @@ interface ActivityMainContentProps {
 // Tab options for interactions
 const interactionTabs = [
   { value: 'likes', label: 'Likes' },
+  { value: 'dislikes', label: 'Dislikes' },
   { value: 'comments', label: 'Comments' },
   { value: 'reviews', label: 'Reviews' },
 ];

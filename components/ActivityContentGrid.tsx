@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ActivityGridItem from './ActivityGridItem';
+import StartupCard from './StartupCard';
 import { client } from '@/sanity/lib/client';
 import { USER_ACTIVITY_QUERY, TEST_REPORTS_QUERY, ALL_REPORTS_QUERY, STARTUP_IDS_FROM_REPORTS_QUERY, STARTUPS_BY_IDS_QUERY, USER_REPORTED_CONTENT_QUERY } from '@/sanity/lib/activity-queries';
 
@@ -166,6 +167,11 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
           `, { userId });
           
 
+        } else if (activityType === 'dislikes') {
+          // Use the existing query for dislikes (same as likes but for disliked content)
+          const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
+          const params = { userId, startDate, endDate };
+          data = await client.fetch(query, params);
         } else {
           // Use the existing query for likes
           const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
@@ -211,6 +217,17 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
           
           setStartups([]);
           setComments(sortedComments);
+        } else if (activityType === 'dislikes') {
+          // For dislikes, we only have startups
+          let sortedData = [...data];
+          if (filters?.sortBy === 'oldest') {
+            sortedData.sort((a, b) => new Date(a._createdAt).getTime() - new Date(b._createdAt).getTime());
+          } else {
+            sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
+          }
+          
+          setStartups(sortedData);
+          setComments([]);
         } else {
           // For likes, we only have startups
           let sortedData = [...data];
@@ -235,10 +252,14 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
-        {Array.from({ length: 12 }).map((_, index) => (
-          <div key={index} className="aspect-square bg-gray-200 animate-pulse rounded"></div>
-        ))}
+      <div className="pr-20">
+        <ul className="card_grid-compact">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <li key={index}>
+              <div className="startup-card_skeleton animate-pulse"></div>
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }
@@ -273,6 +294,15 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
         </div>
       );
     }
+  } else if (activityType === 'dislikes') {
+    // For dislikes, check only startups
+    if (startups.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No disliked content found</p>
+        </div>
+      );
+    }
   } else {
     // For likes, check only startups
     if (startups.length === 0) {
@@ -285,92 +315,66 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1">
+    <div className="pr-20">
       {/* Render startups (for likes and reported startups) */}
+      {startups.length > 0 && (
+        <ul className="card_grid-compact">
       {startups.map((startup) => (
-        <ActivityGridItem 
+            <StartupCard 
           key={startup._id} 
-          startup={startup}
-          activityType={activityType}
+              post={startup}
+              isOwner={false}
+              isLoggedIn={!!userId}
+              userId={userId}
+              showDescription={false}
+              showCategory={false}
+              showDetailsButton={false}
         />
       ))}
+        </ul>
+      )}
       
       {/* Render comments (for comments section and reported comments) */}
-      {comments.map((comment) => (
-        <div key={comment._id} className="aspect-square bg-white border border-gray-200 rounded-sm relative overflow-hidden">
-          {/* Startup Image */}
-          <div className="w-full h-1/2 relative">
-            {comment.startup.image ? (
-              <img 
-                src={comment.startup.image} 
-                alt={comment.startup.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-400 text-xs">No Image</span>
-              </div>
-            )}
-            {/* Overlay with startup title */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-1">
-              <p className="text-xs truncate">{comment.startup.title}</p>
-            </div>
-          </div>
-          
-          {/* Comment Content */}
-          <div className="p-3 h-1/2 flex flex-col">
-            <div className="flex items-center mb-1">
-              <div className="w-6 h-6 bg-gray-300 rounded-full mr-2"></div>
-              <span className="text-xs text-gray-600">{comment.author.name}</span>
-            </div>
-            
-            {/* Comment Type Badge */}
-            <div className="mb-1 flex items-center gap-2">
-              {comment.parentComment ? (
-                <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span>Reply to {comment.parentComment.author?.name || 'Unknown'}</span>
-                  {comment.parentComment.author?._id === comment.author._id && (
-                    <span className="text-blue-500">(self)</span>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-full flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                  </svg>
-                  <span>Comment</span>
-                </div>
-              )}
-            </div>
-            
-            <p className="text-xs text-gray-800 flex-1 line-clamp-2">{comment.text}</p>
-            
-            <div className="mt-1 text-xs text-gray-500">
-              {activityType === 'reviews' ? (
-                <p>Reason: {comment.userReports?.[0]?.reason || 'Unknown'}</p>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-                    </svg>
-                    <span className="text-green-600 font-medium">{comment.likes || 0}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M18 9.5a1.5 1.5 0 11-3 0v-6a1.5 1.5 0 013 0v6zM14 9.667v-5.43a2 2 0 00-1.105-1.79l-.05-.025A4 4 0 0011.055 2H5.64a2 2 0 00-1.962 1.608l-1.2 6A2 2 0 004.44 12H8v4a2 2 0 002 2 1 1 0 001-1v-.667a4 4 0 01.8-2.4l1.4-1.866a4 4 0 00.8-2.4z" />
-                    </svg>
-                    <span className="text-red-600 font-medium">{comment.dislikes || 0}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+      {comments.length > 0 && (
+        <div className="mt-6">
+          <ul className="card_grid-compact">
+            {comments.map((comment) => {
+              // Convert comment data to startup data format for StartupCard
+              const startupData = {
+                _id: comment.startup._id,
+                title: comment.startup.title,
+                slug: comment.startup.slug,
+                _createdAt: comment.createdAt,
+                author: comment.author,
+                views: 0,
+                description: comment.text,
+                category: '',
+                image: comment.startup.image,
+                likes: comment.likes,
+                dislikes: comment.dislikes,
+                commentsCount: 0,
+                activityType: 'comment'
+              };
+              
+              return (
+                <StartupCard 
+                  key={comment._id} 
+                  post={startupData}
+                  isOwner={false}
+                  isLoggedIn={!!userId}
+                  userId={userId}
+                  showDescription={false}
+                  showCategory={false}
+                  showDetailsButton={false}
+                  showComment={true}
+                  commentType={activityType === 'reviews' ? 'report' : (comment.parentComment ? 'reply' : 'comment')}
+                  showLikesDislikes={false}
+                />
+              );
+            })}
+          </ul>
         </div>
-      ))}
+      )}
     </div>
   );
 };

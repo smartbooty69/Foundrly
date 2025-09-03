@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import ActivitySidebar from "@/components/ActivitySidebar";
 import ActivityMainContent from "@/components/ActivityMainContent";
+import UserSidebarWrapper from "@/components/UserSidebarWrapper";
 
 export default function ActivityPage() {
   const { data: session } = useSession();
@@ -35,7 +36,13 @@ export default function ActivityPage() {
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
         />
-        <ActivityMainContent activeSection={activeSection} />
+        <div className="flex-1 flex">
+          <ActivityMainContent activeSection={activeSection} />
+          <UserSidebarWrapper 
+            userId={session.user.id} 
+            isOwnProfile={true} 
+          />
+        </div>
       </div>
     </div>
   );

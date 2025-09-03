@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { client } from "@/sanity/lib/client";
 import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
 import SettingsClient from "@/components/SettingsClient";
+import UserSidebarWrapper from "@/components/UserSidebarWrapper";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -20,6 +21,16 @@ export default async function SettingsPage() {
     redirect('/auth/signin');
   }
 
-  return <SettingsClient currentUser={currentUser} />;
+  return (
+    <div className="flex min-h-screen">
+      <div className="flex-1">
+        <SettingsClient currentUser={currentUser} />
+      </div>
+      <UserSidebarWrapper 
+        userId={session.user.id} 
+        isOwnProfile={true} 
+      />
+    </div>
+  );
 }
 

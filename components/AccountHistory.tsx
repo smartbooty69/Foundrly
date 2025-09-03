@@ -235,7 +235,7 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pr-20">
       {/* Tabs */}
       <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
         {tabs.map((tab) => (
@@ -272,15 +272,12 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
           >
             Sort & filter
           </button>
-          <button className="font-semibold text-sm text-blue-500 hover:text-blue-400">
-            Select
-          </button>
         </div>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+        <div className="p-4 bg-red-50 border-[5px] border-red-200 rounded-[22px] shadow-200 mb-6">
           <p className="text-red-800">{error}</p>
         </div>
       )}
@@ -313,7 +310,7 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
             sortedHistoryData.map((event) => (
               <div
                 key={event._id}
-                className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+                className="p-4 bg-white border-[5px] border-black rounded-[22px] shadow-200 hover:shadow-300 hover:border-primary transition-all duration-500"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1">

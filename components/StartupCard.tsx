@@ -18,9 +18,15 @@ interface StartupCardProps {
   isOwner?: boolean;
   isLoggedIn?: boolean;
   userId?: string;
+  showDescription?: boolean;
+  showCategory?: boolean;
+  showDetailsButton?: boolean;
+  showComment?: boolean;
+  commentType?: 'comment' | 'reply' | 'report';
+  showLikesDislikes?: boolean;
 }
 
-const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: StartupCardProps) => {
+const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -141,59 +147,9 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
     <li className="startup-card group hover:bg-blue-50 transition-colors duration-200">
       <div className="flex-between">
         <p className="startup_card_date">{formatDate(_createdAt)}</p>
-        <div className="flex items-center gap-3">
-          {initialLoading ? (
-            <svg className="animate-spin h-6 w-6 text-gray-400" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-          ) : (
-            <>
-              <button
-                aria-label="Like"
-                onClick={handleLike}
-                disabled={!isLoggedIn || likeLoading}
-                title={!isLoggedIn ? 'Log in to like' : ''}
-                className={`flex items-center p-1 rounded-full transition-colors duration-200
-                  ${liked ? 'bg-green-100 text-green-600' : 'text-gray-500 hover:bg-green-50 hover:text-green-600'} ${!isLoggedIn || likeLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                type="button"
-              >
-                {likeLoading ? (
-                  <svg className="animate-spin h-4 w-4 text-green-600" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : (
-                  <ThumbsUp className="size-5 text-green-600" />
-                )}
-                <span className="ml-1 text-xs">{likes}</span>
-              </button>
-              <button
-                aria-label="Dislike"
-                onClick={handleDislike}
-                disabled={!isLoggedIn || dislikeLoading}
-                title={!isLoggedIn ? 'Log in to dislike' : ''}
-                className={`flex items-center p-1 rounded-full transition-colors duration-200
-                  ${disliked ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:bg-red-50 hover:text-red-600'} ${!isLoggedIn || dislikeLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-                type="button"
-              >
-                {dislikeLoading ? (
-                  <svg className="animate-spin h-4 w-4 text-red-600" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                ) : (
-                  <ThumbsDown className="size-5 text-red-600" />
-                )}
-                <span className="ml-1 text-xs">{dislikes}</span>
-              </button>
-            </>
-          )}
-
-          <div className="flex gap-1.5 ml-2">
-            <EyeIcon className="size-6 text-primary" />
-            <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
-          </div>
+        <div className="flex gap-1.5">
+          <EyeIcon className="size-6 text-primary" />
+          <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
         </div>
       </div>
 
@@ -224,19 +180,117 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId }: Star
       </div>
 
       <Link href={`/startup/${_id}`}>
-        <p className="startup-card_desc">{description}</p>
+        {showDescription && (
+          <p className="startup-card_desc">{description}</p>
+        )}
 
         <img src={image} alt="placeholder" className="startup-card_img" />
+        
+                {/* Likes and Dislikes after image */}
+        {showLikesDislikes && (
+          <div className="flex items-center justify-center mt-4 mb-2">
+            {initialLoading ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-full">
+                  <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  <span className="text-sm text-gray-500">Loading...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <button
+                  aria-label="Like"
+                  onClick={handleLike}
+                  disabled={!isLoggedIn || likeLoading}
+                  title={!isLoggedIn ? 'Log in to like' : ''}
+                  className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+                    ${liked 
+                      ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' 
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-600'
+                    } 
+                    ${!isLoggedIn || likeLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                  type="button"
+                >
+                  {likeLoading ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                  ) : (
+                    <ThumbsUp className={`size-5 transition-transform duration-200 ${liked ? 'text-white' : 'text-gray-500 group-hover:text-green-600'}`} />
+                  )}
+                  <span className="text-sm font-medium">{likes}</span>
+                </button>
+                
+                <button
+                  aria-label="Dislike"
+                  onClick={handleDislike}
+                  disabled={!isLoggedIn || dislikeLoading}
+                  title={!isLoggedIn ? 'Log in to dislike' : ''}
+                  className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+                    ${disliked 
+                      ? 'bg-red-500 text-white shadow-red-200 hover:bg-red-600' 
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600'
+                    } 
+                    ${!isLoggedIn || dislikeLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                  type="button"
+                >
+                  {dislikeLoading ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                  ) : (
+                    <ThumbsDown className={`size-5 transition-transform duration-200 ${disliked ? 'text-white' : 'text-gray-500 group-hover:text-red-600'}`} />
+                  )}
+                  <span className="text-sm font-medium">{dislikes}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Comment display with icon */}
+        {showComment && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              {commentType === 'reply' ? (
+                <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              ) : commentType === 'report' ? (
+                <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0 3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                </svg>
+              )}
+              <span className="text-xs font-medium text-gray-700">
+                {commentType === 'reply' ? 'Reply' : commentType === 'report' ? 'Report' : 'Comment'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-800 line-clamp-3">{description}</p>
+            </div>
+          )}
       </Link>
 
-      <div className="flex-between gap-3 mt-5">
+      <div className="flex-between gap-3 mt-3">
+        {showCategory && (
         <Link href={`/?query=${category?.toLowerCase()}`}>
           <p className="text-16-medium truncate max-w-xs whitespace-nowrap">{category}</p>
         </Link>
+        )}
         <div className="action-buttons">
+          {showDetailsButton && (
           <Button className="startup-card_btn" asChild>
             <Link href={`/startup/${_id}`}>Details</Link>
           </Button>
+          )}
           
           {isOwner && (
             <div className="flex gap-2">

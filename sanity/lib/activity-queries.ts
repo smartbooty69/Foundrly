@@ -177,6 +177,9 @@ export const USER_ACTIVITY_QUERY = (activityType: string, startDate?: string, en
     case 'likes':
       baseQuery = `*[_type == "startup" && $userId in likedBy ${dateFilter}]`;
       break;
+    case 'dislikes':
+      baseQuery = `*[_type == "startup" && $userId in dislikedBy ${dateFilter}]`;
+      break;
     case 'comments':
       baseQuery = `*[_type == "startup" && _id in *[_type == "comment" && author._ref == $userId ${dateFilter}].startup._ref]`;
       break;

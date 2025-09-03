@@ -97,6 +97,10 @@
         @apply grid sm:grid-cols-2 gap-5;
     }
 
+    .card_grid-compact {
+        @apply grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-4;
+    }
+
     .no-result {
         @apply text-black-100 text-sm font-normal;
     }

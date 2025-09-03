@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Avatar } from './ui/avatar';
-import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface ProfileEditModalProps {
   isOpen: boolean;
@@ -113,19 +113,13 @@ const ProfileEditModal = ({ isOpen, onClose, currentProfile, onProfileUpdate }: 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Edit Profile</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+                 <div className="flex items-center justify-between">
+           <h2 className="text-xl font-semibold text-gray-900">Edit Profile</h2>
+         </div>
 
         {/* Success Message */}
         {success && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-green-50 border-[3px] border-green-300 rounded-[22px]">
             <CheckCircle className="w-5 h-5 text-green-600" />
             <span className="text-green-800 font-medium">Profile updated successfully!</span>
           </div>
@@ -133,7 +127,7 @@ const ProfileEditModal = ({ isOpen, onClose, currentProfile, onProfileUpdate }: 
 
         {/* Error Message */}
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-red-50 border-[3px] border-red-300 rounded-[22px]">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <span className="text-red-800">{error}</span>
           </div>
