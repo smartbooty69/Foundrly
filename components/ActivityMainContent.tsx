@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { RefreshCw } from 'lucide-react';
 import ActivityContentGrid from './ActivityContentGrid';
 import SortFilterModal from './SortFilterModal';
 import AccountHistory from './AccountHistory';
@@ -55,6 +56,24 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
       year: '2025'
     }
   });
+  
+  // Account History state
+  const [isAccountHistoryModalOpen, setIsAccountHistoryModalOpen] = useState(false);
+  const [selectedAccountHistoryTab, setSelectedAccountHistoryTab] = useState<string>('');
+  const [accountHistoryLoading, setAccountHistoryLoading] = useState(false);
+  const [accountHistoryFilters, setAccountHistoryFilters] = useState<FilterState>({
+    sortBy: 'newest',
+    startDate: {
+      month: 'January',
+      day: '1',
+      year: '2025'
+    },
+    endDate: {
+      month: 'December',
+      day: '31',
+      year: '2025'
+    }
+  });
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -67,9 +86,33 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
   const handleTabChange = (tabValue: string) => {
     setSelectedTab(tabValue);
   };
+  
+  // Account History handlers
+  const handleAccountHistoryOpenModal = () => setIsAccountHistoryModalOpen(true);
+  const handleAccountHistoryCloseModal = () => setIsAccountHistoryModalOpen(false);
+  
+  const handleAccountHistoryApplyFilters = (filters: FilterState) => {
+    setAccountHistoryFilters(filters);
+    console.log('Applied Account History filters:', filters);
+  };
+  
+  const handleAccountHistoryTabChange = (tabValue: string) => {
+    setSelectedAccountHistoryTab(tabValue);
+  };
+  
+  const handleAccountHistoryRefresh = () => {
+    // This will be handled by the AccountHistory component
+    setAccountHistoryLoading(true);
+    // Reset loading after a short delay to show the refresh animation
+    setTimeout(() => setAccountHistoryLoading(false), 1000);
+  };
 
   const getSortText = () => {
     return currentFilters.sortBy === 'newest' ? 'Newest to oldest' : 'Oldest to newest';
+  };
+  
+  const getAccountHistorySortText = () => {
+    return accountHistoryFilters.sortBy === 'newest' ? 'Newest to oldest' : 'Oldest to newest';
   };
 
   const getActivityType = () => {
@@ -123,6 +166,94 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
             {getSectionDescription()}
           </p>
         </div>
+        
+        {/* Fixed Tabs and Filters for Interactions Section */}
+        {activeSection === 'interactions' && (
+          <div className="space-y-6">
+            {/* Tabs */}
+            <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
+              {interactionTabs.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => handleTabChange(tab.value)}
+                  className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors
+                    ${
+                      selectedTab === tab.value
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Filters */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-sm sm:text-base">{getSortText()}</h3>
+              <div className="flex items-center space-x-6">
+                <button 
+                  onClick={handleOpenModal}
+                  className="font-semibold text-sm hover:text-primary transition-colors"
+                >
+                  Sort & filter
+                </button>
+                <button className="font-semibold text-sm text-blue-500 hover:text-blue-400">
+                  Select
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Fixed Tabs and Filters for Account History Section */}
+        {activeSection === 'account-history' && (
+          <div className="space-y-6">
+            {/* Tabs */}
+            <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
+              {[
+                { value: '', label: 'All Changes' },
+                { value: 'profile_info', label: 'Profile Info' },
+                { value: 'startups', label: 'Startups' },
+                { value: 'bio_description', label: 'Bio & Description' },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => handleAccountHistoryTabChange(tab.value)}
+                  className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors
+                    ${
+                      selectedAccountHistoryTab === tab.value
+                        ? 'text-primary border-b-2 border-primary'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+
+            {/* Filters */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-semibold text-sm sm:text-base">{getAccountHistorySortText()}</h3>
+              <div className="flex items-center space-x-6">
+                <button 
+                  onClick={handleAccountHistoryRefresh}
+                  disabled={accountHistoryLoading}
+                  className="font-semibold text-sm hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 inline mr-2 ${accountHistoryLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button 
+                  onClick={handleAccountHistoryOpenModal}
+                  className="font-semibold text-sm hover:text-primary transition-colors"
+                >
+                  Sort & filter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Scrollable Content */}
@@ -130,51 +261,21 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
         <div className="p-4 sm:p-8">
           {activeSection === 'account-history' ? (
             // Account History Section
-            <AccountHistory userId={session?.user?.id || ''} />
+            <AccountHistory 
+              userId={session?.user?.id || ''} 
+              selectedTab={selectedAccountHistoryTab}
+              onTabChange={handleAccountHistoryTabChange}
+              filters={accountHistoryFilters}
+              onRefresh={handleAccountHistoryRefresh}
+              loading={accountHistoryLoading}
+            />
           ) : activeSection === 'interactions' ? (
-            // Interactions Section with AccountHistory-style header
-            <div className="space-y-6">
-              {/* Tabs */}
-              <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
-                {interactionTabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => handleTabChange(tab.value)}
-                    className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors
-                      ${
-                        selectedTab === tab.value
-                          ? 'text-primary border-b-2 border-primary'
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </nav>
-
-              {/* Filters */}
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-semibold text-sm sm:text-base">{getSortText()}</h3>
-                <div className="flex items-center space-x-6">
-                  <button 
-                    onClick={handleOpenModal}
-                    className="font-semibold text-sm hover:text-primary transition-colors"
-                  >
-                    Sort & filter
-                  </button>
-                  <button className="font-semibold text-sm text-blue-500 hover:text-blue-400">
-                    Select
-                  </button>
-                </div>
-              </div>
-
-              {/* Content Grid */}
-              <ActivityContentGrid 
-                activityType={getActivityType()}
-                userId={session?.user?.id}
-                filters={currentFilters}
-              />
-            </div>
+            // Interactions Section - Content Grid Only
+            <ActivityContentGrid 
+              activityType={getActivityType()}
+              userId={session?.user?.id}
+              filters={currentFilters}
+            />
           ) : (
             // Other Activity Sections
             <ActivityContentGrid 
@@ -192,6 +293,15 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           onApply={handleApplyFilters}
+        />
+      )}
+      
+      {/* Sort & Filter Modal for Account History */}
+      {activeSection === 'account-history' && (
+        <SortFilterModal
+          isOpen={isAccountHistoryModalOpen}
+          onClose={handleAccountHistoryCloseModal}
+          onApply={handleAccountHistoryApplyFilters}
         />
       )}
     </div>

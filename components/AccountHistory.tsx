@@ -87,27 +87,37 @@ const tabs = [
 
 interface AccountHistoryProps {
   userId: string;
+  selectedTab: string;
+  onTabChange: (tabValue: string) => void;
+  filters: {
+    sortBy: 'newest' | 'oldest';
+    startDate: {
+      month: string;
+      day: string;
+      year: string;
+    };
+    endDate: {
+      month: string;
+      day: string;
+      year: string;
+    };
+  };
+  onRefresh: () => void;
+  loading: boolean;
 }
 
-const AccountHistory = ({ userId }: AccountHistoryProps) => {
+const AccountHistory = ({ 
+  userId, 
+  selectedTab, 
+  onTabChange, 
+  filters, 
+  onRefresh, 
+  loading 
+}: AccountHistoryProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [historyData, setHistoryData] = useState<HistoryEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedChangeType, setSelectedChangeType] = useState<string>('');
-  const [currentFilters, setCurrentFilters] = useState<FilterState>({
-    sortBy: 'newest',
-    startDate: {
-      month: 'January',
-      day: '1',
-      year: '2025'
-    },
-    endDate: {
-      month: 'December',
-      day: '31',
-      year: '2025'
-    }
-  });
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -118,12 +128,12 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
   };
 
   const getSortText = () => {
-    return currentFilters.sortBy === 'newest' ? 'Newest to oldest' : 'Oldest to newest';
+    return filters.sortBy === 'newest' ? 'Newest to oldest' : 'Oldest to newest';
   };
 
   // Handle tab change
   const handleTabChange = (changeType: string) => {
-    setSelectedChangeType(changeType);
+    onTabChange(changeType);
   };
 
   // Fetch account history data
@@ -198,12 +208,17 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
       fetchHistoryData();
     }
   }, [selectedChangeType, userId]);
+  
+  // Update selectedChangeType when selectedTab prop changes
+  useEffect(() => {
+    setSelectedChangeType(selectedTab);
+  }, [selectedTab]);
 
-  // Apply sorting based on current filters
+  // Apply sorting based on filters prop
   const sortedHistoryData = useMemo(() => {
     const sorted = [...historyData];
     
-    if (currentFilters.sortBy === 'newest') {
+    if (filters.sortBy === 'newest') {
       // Sort by timestamp in descending order (newest first)
       sorted.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } else {
@@ -212,7 +227,7 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
     }
     
     return sorted;
-  }, [historyData, currentFilters.sortBy]);
+  }, [historyData, filters.sortBy]);
 
   // Format timestamp to relative time
   const formatTimestamp = (timestamp: string) => {
@@ -236,44 +251,6 @@ const AccountHistory = ({ userId }: AccountHistoryProps) => {
 
   return (
     <div className="space-y-6 pr-20">
-      {/* Tabs */}
-      <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => handleTabChange(tab.value)}
-            className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors
-              ${
-                selectedChangeType === tab.value
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Filters */}
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-semibold text-sm sm:text-base">{getSortText()}</h3>
-        <div className="flex items-center space-x-6">
-          <button 
-            onClick={fetchHistoryData}
-            disabled={loading}
-            className="font-semibold text-sm hover:text-primary transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 inline mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button 
-            onClick={handleOpenModal}
-            className="font-semibold text-sm hover:text-primary transition-colors"
-          >
-            Sort & filter
-          </button>
-        </div>
-      </div>
 
       {/* Error Message */}
       {error && (
