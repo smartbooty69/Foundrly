@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Author, Startup } from "@/sanity/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import DeleteStartupButton from "./DeleteStartupButton";
+import InterestedModal from "./InterestedModal";
 import React from "react";
 import CountUp from 'react-countup';
 
@@ -53,23 +54,27 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   const [saved, setSaved] = React.useState(false);
   const [savedBy, setSavedBy] = React.useState<string[]>([]);
   const [interested, setInterested] = React.useState(false);
+  const [interestedBy, setInterestedBy] = React.useState<string[]>([]);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [interestedLoading, setInterestedLoading] = React.useState(false);
+  const [isInterestedModalOpen, setIsInterestedModalOpen] = React.useState(false);
   const hasIncremented = React.useRef(false);
 
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [likesRes, dislikesRes, savedRes] = await Promise.all([
+        const [likesRes, dislikesRes, savedRes, interestedRes] = await Promise.all([
           fetch(`/api/likes?id=${_id}`),
           fetch(`/api/dislikes?id=${_id}`),
-          fetch(`/api/saved?id=${_id}`)
+          fetch(`/api/saved?id=${_id}`),
+          fetch(`/api/interested?id=${_id}`)
         ]);
 
-        const [likeData, dislikeData, savedData] = await Promise.all([
+        const [likeData, dislikeData, savedData, interestedData] = await Promise.all([
           likesRes.ok ? likesRes.json() : { likes: 0, likedBy: [], dislikes: 0, dislikedBy: [] },
           dislikesRes.ok ? dislikesRes.json() : { dislikes: 0, dislikedBy: [], likes: 0, likedBy: [] },
-          savedRes.ok ? savedRes.json() : { savedBy: [] }
+          savedRes.ok ? savedRes.json() : { savedBy: [] },
+          interestedRes.ok ? interestedRes.json() : { interestedBy: [] }
         ]);
 
         setLikes(likeData.likes ?? 0);
@@ -80,6 +85,8 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         setDisliked(userId ? (dislikeData.dislikedBy ?? []).includes(userId) : false);
         setSavedBy(savedData.savedBy ?? []);
         setSaved(userId ? (savedData.savedBy ?? []).includes(userId) : false);
+        setInterestedBy(interestedData.interestedBy ?? []);
+        setInterested(userId ? (interestedData.interestedBy ?? []).includes(userId) : false);
         setInitialLoading(false);
       } catch (error) {
         console.error('Error fetching startup data:', error);
@@ -92,6 +99,8 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         setDisliked(false);
         setSavedBy([]);
         setSaved(false);
+        setInterestedBy([]);
+        setInterested(false);
         setInitialLoading(false);
       }
     };
@@ -206,11 +215,22 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   const handleInterested = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!userId || interestedLoading) return;
-    setInterestedLoading(true);
-    // TODO: Implement interested functionality with API call
-    setInterested(!interested);
-    setInterestedLoading(false);
+    if (!userId) return;
+    
+    // Check if user is trying to show interest in their own startup
+    if (post.author && post.author._id === userId) {
+      alert('You cannot show interest in your own startup');
+      return;
+    }
+    
+    // Open the modal instead of making direct API call
+    setIsInterestedModalOpen(true);
+  };
+
+  const handleInterestedSuccess = () => {
+    // Update the interested state after successful form submission
+    setInterested(true);
+    setInterestedBy(prev => [...prev, userId!]);
   };
 
   return (
@@ -334,14 +354,20 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
                   <button
                     aria-label="Interested"
                     onClick={(e) => handleInterested(e)}
-                    disabled={!isLoggedIn || interestedLoading}
-                    title={!isLoggedIn ? 'Log in to show interest' : ''}
+                    disabled={!isLoggedIn || interestedLoading || (post.author && post.author._id === userId)}
+                    title={
+                      !isLoggedIn 
+                        ? 'Log in to show interest' 
+                        : (post.author && post.author._id === userId)
+                        ? 'You cannot show interest in your own startup'
+                        : ''
+                    }
                     className={`group flex items-center justify-center p-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
                       ${interested 
                         ? 'bg-purple-500 text-white shadow-purple-200 hover:bg-purple-600' 
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600'
                       } 
-                      ${!isLoggedIn || interestedLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                      ${!isLoggedIn || interestedLoading || (post.author && post.author._id === userId) ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
                     type="button"
                   >
                     {interestedLoading ? (
@@ -439,6 +465,15 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         </div>
       </div>
       
+      {/* Interested Modal */}
+      <InterestedModal
+        isOpen={isInterestedModalOpen}
+        onClose={() => setIsInterestedModalOpen(false)}
+        startupId={_id}
+        startupTitle={title || ""}
+        userId={userId}
+        onSuccess={handleInterestedSuccess}
+      />
 
     </li>
   );

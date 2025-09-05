@@ -1,26 +1,41 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Bell, X, Check, AlertCircle, MessageSquare, Heart, UserPlus, Eye } from 'lucide-react';
+import { Bell, X, Check, AlertCircle, MessageSquare, Heart, UserPlus, Eye, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useNotifications } from '@/hooks/useNotifications';
 
 export interface Notification {
-  id: string;
-  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention';
+  _id: string;
+  _createdAt: string;
+  _updatedAt: string;
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention' | 'interested_submission';
   title: string;
   message: string;
-  userId?: string;
-  userName?: string;
-  userImage?: string;
-  startupId?: string;
-  startupTitle?: string;
-  commentId?: string;
-  timestamp: string;
   isRead: boolean;
-  actionUrl?: string;
+  isEmailSent: boolean;
+  emailSentAt?: string;
+  readAt?: string;
+  sender?: {
+    _id: string;
+    name: string;
+    email: string;
+    image?: string;
+  };
+  startup?: {
+    _id: string;
+    title: string;
+    slug: string;
+  };
+  interestedSubmission?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   metadata?: {
     startupTitle?: string;
+    senderName?: string;
+    senderEmail?: string;
     commentText?: string;
     userName?: string;
     userImage?: string;
@@ -45,7 +60,7 @@ const NotificationBell = () => {
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     
     const recentNotifications = notifications.filter(notification => {
-      const notificationDate = new Date(notification.timestamp);
+      const notificationDate = new Date(notification._createdAt);
       return notificationDate >= threeDaysAgo;
     });
     
@@ -56,7 +71,7 @@ const NotificationBell = () => {
         return a.isRead ? 1 : -1;
       }
       // Second priority: most recent first
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      return new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime();
     });
     
     return sortedNotifications.slice(0, 5); // Limit to 5 for dropdown
@@ -80,10 +95,12 @@ const NotificationBell = () => {
         return <Heart className="w-4 h-4 text-red-500" />;
       case 'comment_like':
         return <Heart className="w-4 h-4 text-pink-500" />;
-             case 'report':
-         return <AlertCircle className="w-4 h-4 text-orange-500" />;
+      case 'report':
+        return <AlertCircle className="w-4 h-4 text-orange-500" />;
       case 'mention':
         return <MessageSquare className="w-4 h-4 text-orange-500" />;
+      case 'interested_submission':
+        return <Users className="w-4 h-4 text-purple-500" />;
       default:
         return <AlertCircle className="w-4 h-4 text-gray-500" />;
     }
@@ -101,10 +118,12 @@ const NotificationBell = () => {
         return 'border-l-red-500 bg-red-50';
       case 'comment_like':
         return 'border-l-pink-500 bg-pink-50';
-             case 'report':
-         return 'border-l-orange-500 bg-orange-50';
+      case 'report':
+        return 'border-l-orange-500 bg-orange-50';
       case 'mention':
         return 'border-l-orange-500 bg-orange-500';
+      case 'interested_submission':
+        return 'border-l-purple-500 bg-purple-50';
       default:
         return 'border-l-gray-500 bg-gray-50';
     }
@@ -123,10 +142,11 @@ const NotificationBell = () => {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      await markAsRead(notification.id);
+      await markAsRead(notification._id);
     }
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
+    // Navigate to interested page for interested submission notifications
+    if (notification.type === 'interested_submission') {
+      window.location.href = '/interested';
     }
     setIsOpen(false);
   };
@@ -166,7 +186,7 @@ const NotificationBell = () => {
                     {(() => {
                       const oldestNotification = notifications[notifications.length - 1];
                       if (oldestNotification) {
-                        const oldestDate = new Date(oldestNotification.timestamp);
+                        const oldestDate = new Date(oldestNotification._createdAt);
                         const daysOld = Math.floor((new Date().getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24));
                         return ` • Oldest: ${daysOld}d ago`;
                       }
@@ -197,7 +217,7 @@ const NotificationBell = () => {
                 <div className="divide-y divide-gray-100">
                   {displayNotifications.map((notification) => (
                     <div
-                      key={notification.id}
+                      key={notification._id}
                       className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors border-l-4 ${getNotificationColor(notification.type)} ${
                         !notification.isRead ? 'bg-white' : ''
                       }`}
@@ -205,11 +225,11 @@ const NotificationBell = () => {
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
-                          {notification.userImage ? (
+                          {notification.sender?.image ? (
                             <Avatar className="w-8 h-8">
-                              <AvatarImage src={notification.userImage} />
+                              <AvatarImage src={notification.sender.image} />
                               <AvatarFallback>
-                                {notification.userName?.slice(0, 1)}
+                                {notification.sender.name?.slice(0, 1)}
                               </AvatarFallback>
                             </Avatar>
                           ) : (
@@ -227,15 +247,15 @@ const NotificationBell = () => {
                               </p>
                               <div className="text-sm text-gray-600 mt-1">
                                 <p>
-                                  {notification.userName && (
+                                  {notification.sender?.name && (
                                     <span className="font-medium text-gray-900">
-                                      {notification.userName}
+                                      {notification.sender.name}
                                     </span>
                                   )}
                                   {' '}{notification.message}
-                                  {notification.startupTitle && (
+                                  {notification.startup?.title && (
                                     <span className="font-medium text-gray-900">
-                                      {' '}{notification.startupTitle}
+                                      {' '}{notification.startup.title}
                                     </span>
                                   )}
                                 </p>
@@ -261,9 +281,17 @@ const NotificationBell = () => {
                                      </div>
                                    </div>
                                  )}
+                                 {notification.type === 'interested_submission' && notification.interestedSubmission && (
+                                   <div className="mt-1 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                     <div className="space-y-1">
+                                       <div><span className="font-medium">User:</span> {notification.interestedSubmission.name}</div>
+                                       <div><span className="font-medium">Email:</span> {notification.interestedSubmission.email}</div>
+                                     </div>
+                                   </div>
+                                 )}
                               </div>
                               <p className="text-xs text-gray-400 mt-2">
-                                {formatTimestamp(notification.timestamp)}
+                                {formatTimestamp(notification._createdAt)}
                               </p>
                             </div>
                             

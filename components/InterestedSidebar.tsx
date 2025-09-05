@@ -1,38 +1,31 @@
 'use client';
 
 import {
-  Bookmark,
   Heart,
-  User,
+  Users,
 } from 'lucide-react';
 
-interface SavedSidebarProps {
+interface InterestedSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
 }
 
 const navItems = [
   {
-    id: 'saved-startups',
-    icon: Bookmark,
-    title: 'Saved Startups',
-    description: 'Review and manage your saved startup pitches.',
-  },
-  {
     id: 'interested-startups',
     icon: Heart,
     title: 'Interested Startups',
-    description: "See which startups you've shown interest in.",
+    description: 'See which startups you\'ve shown interest in.',
   },
   {
-    id: 'saved-users',
-    icon: User,
-    title: 'Saved Users',
-    description: 'Manage your saved user profiles.',
+    id: 'manage-interested-users',
+    icon: Users,
+    title: 'Manage Interested Users',
+    description: 'View and manage users who have shown interest in your startups only.',
   },
 ];
 
-const SavedSidebar = ({ activeSection, onSectionChange }: SavedSidebarProps) => {
+const InterestedSidebar = ({ activeSection, onSectionChange }: InterestedSidebarProps) => {
   const handleSectionChange = (sectionId: string) => {
     if (typeof onSectionChange === 'function') {
       onSectionChange(sectionId);
@@ -41,7 +34,7 @@ const SavedSidebar = ({ activeSection, onSectionChange }: SavedSidebarProps) => 
 
   return (
     <aside className="hidden md:flex flex-col w-96 bg-white p-8 border-r border-gray-200 h-full overflow-y-auto scrollbar-hide flex-shrink-0">
-      <h1 className="text-2xl font-bold mb-10">Your Saved Items</h1>
+      <h1 className="text-2xl font-bold mb-10">Your Interested Items</h1>
       <nav>
         <ul>
           {navItems.map((item) => (
@@ -72,4 +65,4 @@ const SavedSidebar = ({ activeSection, onSectionChange }: SavedSidebarProps) => 
   );
 };
 
-export default SavedSidebar;
+export default InterestedSidebar;

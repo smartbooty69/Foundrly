@@ -8,6 +8,7 @@ import {
   Settings, 
   Activity, 
   Bookmark, 
+  Heart,
   Moon, 
   Sun, 
   Flag, 
@@ -42,6 +43,12 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
       icon: Bookmark,
       href: '/saved',
       description: 'Access content that has been bookmarked'
+    },
+    {
+      name: 'Interested',
+      icon: Heart,
+      href: '/interested',
+      description: 'View startups you\'ve shown interest in'
     },
     {
       name: 'Switch appearance',

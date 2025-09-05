@@ -13,6 +13,47 @@
  */
 
 // Source: schema.json
+export type InterestedSubmission = {
+  _id: string;
+  _type: "interestedSubmission";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  startup?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "startup";
+  };
+  startupTitle?: string;
+  user?: {
+    _ref: string;
+    _type: "reference";
+    _weak?: boolean;
+    [internalGroqTypeReferenceTo]?: "author";
+  };
+  userId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  role?: "investor" | "angel-investor" | "vc" | "founder" | "entrepreneur" | "advisor" | "mentor" | "employee" | "student" | "other";
+  location?: string;
+  investmentAmount?: string;
+  investmentType?: "equity" | "loan" | "partnership" | "advisory" | "mentorship" | "collaboration" | "other";
+  timeline?: "immediate" | "short-term" | "medium-term" | "long-term" | "exploring";
+  preferredContact?: "email" | "phone" | "linkedin" | "any";
+  linkedin?: string;
+  website?: string;
+  experience?: string;
+  message?: string;
+  howDidYouHear?: "search" | "social-media" | "referral" | "event" | "news" | "direct" | "other";
+  consentToContact?: boolean;
+  status?: "new" | "contacted" | "in-discussion" | "interested" | "not-interested" | "closed";
+  notes?: string;
+  submittedAt?: string;
+};
+
 export type AccountHistory = {
   _id: string;
   _type: "accountHistory";
@@ -113,53 +154,6 @@ export type PushSubscription = {
   };
   createdAt?: string;
   isActive?: boolean;
-};
-
-export type Notification = {
-  _id: string;
-  _type: "notification";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  recipient?: {
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    [internalGroqTypeReferenceTo]?: "author";
-  };
-  type?: "follow" | "comment" | "reply" | "like" | "comment_like" | "report" | "mention" | "system";
-  title?: string;
-  message?: string;
-  sender?: {
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    [internalGroqTypeReferenceTo]?: "author";
-  };
-  startup?: {
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    [internalGroqTypeReferenceTo]?: "startup";
-  };
-  comment?: {
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    [internalGroqTypeReferenceTo]?: "comment";
-  };
-  actionUrl?: string;
-  isRead?: boolean;
-  readAt?: string;
-  metadata?: {
-    startupTitle?: string;
-    commentText?: string;
-    userName?: string;
-    userImage?: string;
-    reportReason?: string;
-    reportStatus?: string;
-    actionTaken?: string;
-  };
 };
 
 export type ModerationActivity = {
@@ -394,6 +388,7 @@ export type Startup = {
   isBanned?: boolean;
   buyMeACoffeeUsername?: string;
   savedBy?: Array<string>;
+  interestedBy?: Array<string>;
 };
 
 export type Markdown = string;
@@ -516,5 +511,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = AccountHistory | UserBadge | Badge | PushSubscription | Notification | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = InterestedSubmission | AccountHistory | UserBadge | Badge | PushSubscription | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;

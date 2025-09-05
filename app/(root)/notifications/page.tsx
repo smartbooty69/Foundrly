@@ -2,24 +2,39 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, Filter, Check, X, UserPlus, MessageSquare, Heart, Eye, AlertCircle, Loader2 } from 'lucide-react';
+import { Bell, Filter, Check, X, UserPlus, MessageSquare, Heart, Eye, AlertCircle, Loader2, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 interface Notification {
-  id: string;
-  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention';
+  _id: string;
+  _createdAt: string;
+  _updatedAt: string;
+  type: 'follow' | 'comment' | 'reply' | 'like' | 'comment_like' | 'report' | 'system' | 'mention' | 'interested_submission';
   title: string;
   message: string;
-  userId?: string;
-  userName?: string;
-  userImage?: string;
-  startupId?: string;
-  startupTitle?: string;
-  commentId?: string;
-  timestamp: string;
   isRead: boolean;
-  actionUrl?: string;
+  isEmailSent: boolean;
+  emailSentAt?: string;
+  readAt?: string;
+  sender?: {
+    _id: string;
+    name: string;
+    email: string;
+    image?: string;
+  };
+  startup?: {
+    _id: string;
+    title: string;
+    slug: string;
+  };
+  interestedSubmission?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   metadata?: {
     startupTitle?: string;
+    senderName?: string;
+    senderEmail?: string;
     commentText?: string;
     userName?: string;
     userImage?: string;
@@ -34,16 +49,16 @@ import PushNotificationSettings from '@/components/PushNotificationSettings';
 
 const NotificationsPage = () => {
   const { data: session } = useSession();
-  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'reply' | 'like' | 'report'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'follow' | 'comment' | 'reply' | 'like' | 'report' | 'interested_submission'>('all');
   const { 
     notifications, 
     unreadCount, 
-    isLoading, 
-    hasMore,
-    total,
+    loading, 
+    pagination,
     markAsRead, 
     markAllAsRead,
-    loadMore
+    deleteNotification,
+    refreshNotifications
   } = useNotifications();
 
   const getNotificationIcon = (type: Notification['type']) => {
@@ -58,10 +73,12 @@ const NotificationsPage = () => {
         return <Heart className="w-5 h-5 text-red-500" />;
       case 'comment_like':
         return <Heart className="w-5 h-5 text-pink-500" />;
-             case 'report':
-         return <AlertCircle className="w-5 h-5 text-orange-500" />;
+      case 'report':
+        return <AlertCircle className="w-5 h-5 text-orange-500" />;
       case 'mention':
         return <MessageSquare className="w-5 h-5 text-orange-500" />;
+      case 'interested_submission':
+        return <Users className="w-5 h-5 text-purple-500" />;
       default:
         return <AlertCircle className="w-5 h-5 text-gray-500" />;
     }
@@ -79,10 +96,12 @@ const NotificationsPage = () => {
         return 'border-l-red-500 bg-red-50';
       case 'comment_like':
         return 'border-l-pink-500 bg-pink-50';
-             case 'report':
-         return 'border-l-orange-500 bg-orange-50';
+      case 'report':
+        return 'border-l-orange-500 bg-orange-50';
       case 'mention':
         return 'border-l-orange-500 bg-orange-500';
+      case 'interested_submission':
+        return 'border-l-purple-500 bg-purple-50';
       default:
         return 'border-l-gray-500 bg-gray-50';
     }
@@ -108,10 +127,11 @@ const NotificationsPage = () => {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
-      await markAsRead(notification.id);
+      await markAsRead(notification._id);
     }
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
+    // Navigate to interested page for interested submission notifications
+    if (notification.type === 'interested_submission') {
+      window.location.href = '/interested';
     }
   };
 
@@ -120,8 +140,8 @@ const NotificationsPage = () => {
   };
 
   const handleLoadMore = async () => {
-    if (hasMore && !isLoading) {
-      await loadMore();
+    if (pagination?.hasMore && !loading) {
+      await refreshNotifications();
     }
   };
 
@@ -136,7 +156,7 @@ const NotificationsPage = () => {
     );
   }
 
-  if (isLoading && notifications.length === 0) {
+  if (loading && notifications.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -182,6 +202,7 @@ const NotificationsPage = () => {
                    { key: 'follow', label: 'Follows' },
                    { key: 'comment', label: 'Comments' },
                    { key: 'like', label: 'Likes' },
+                   { key: 'interested_submission', label: 'Interested Users' },
                    { key: 'report', label: 'Reports & Moderation' }
                  ].map((filterOption) => (
                   <button
@@ -230,18 +251,18 @@ const NotificationsPage = () => {
             <div className="divide-y divide-gray-100">
               {filteredNotifications.map((notification) => (
                 <div
-                  key={notification.id}
+                  key={notification._id}
                   className={`p-6 hover:bg-gray-50 transition-colors border-l-4 ${getNotificationColor(notification.type)} ${
                     !notification.isRead ? 'bg-white' : ''
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
-                      {notification.userImage ? (
+                      {notification.sender?.image ? (
                         <Avatar className="w-12 h-12">
-                          <AvatarImage src={notification.userImage} />
+                          <AvatarImage src={notification.sender.image} />
                           <AvatarFallback>
-                            {notification.userName?.slice(0, 1)}
+                            {notification.sender.name?.slice(0, 1)}
                           </AvatarFallback>
                         </Avatar>
                       ) : (
@@ -267,15 +288,15 @@ const NotificationsPage = () => {
                           
                                                      <div className="text-gray-700 mb-3">
                              <p>
-                               {notification.userName && (
+                               {notification.sender?.name && (
                                  <span className="font-semibold text-gray-900">
-                                   {notification.userName}
+                                   {notification.sender.name}
                                  </span>
                                )}
                                {' '}{notification.message}
-                               {notification.startupTitle && (
+                               {notification.startup?.title && (
                                  <span className="font-semibold text-gray-900">
-                                   {' '}{notification.startupTitle}
+                                   {' '}{notification.startup.title}
                                  </span>
                                )}
                              </p>
@@ -321,30 +342,43 @@ const NotificationsPage = () => {
                                 </div>
                               </div>
                             )}
+                            
+                            {notification.type === 'interested_submission' && notification.interestedSubmission && (
+                              <div className="mb-3 p-3 bg-gray-100 rounded-lg border-l-4 border-purple-500">
+                                <div className="text-sm text-gray-700 space-y-1">
+                                  <p>
+                                    <span className="font-medium text-purple-700">Interested User:</span>
+                                    <span className="ml-2">{notification.interestedSubmission.name}</span>
+                                  </p>
+                                  <p>
+                                    <span className="font-medium text-purple-700">Email:</span>
+                                    <span className="ml-2">{notification.interestedSubmission.email}</span>
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-500">
-                              {formatTimestamp(notification.timestamp)}
+                              {formatTimestamp(notification._createdAt)}
                             </p>
                             
                             <div className="flex items-center gap-2">
                               {!notification.isRead && (
                                 <button
-                                  onClick={() => markAsRead(notification.id)}
+                                  onClick={() => markAsRead(notification._id)}
                                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                                 >
                                   Mark as read
                                 </button>
                               )}
                               
-                              {notification.actionUrl && (
-                                <button
-                                  onClick={() => handleNotificationClick(notification)}
-                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                                >
-                                  View
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleNotificationClick(notification)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                              >
+                                {notification.type === 'interested_submission' ? 'View Details' : 'View'}
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -358,14 +392,14 @@ const NotificationsPage = () => {
         </div>
 
         {/* Load More Button */}
-        {hasMore && (
+        {pagination?.hasMore && (
           <div className="mt-6 text-center">
             <button
               onClick={handleLoadMore}
-              disabled={isLoading}
+              disabled={loading}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Loading...
@@ -380,10 +414,10 @@ const NotificationsPage = () => {
         {/* Summary */}
         {notifications.length > 0 && (
           <div className="mt-6 text-center text-sm text-gray-500">
-            Showing {filteredNotifications.length} of {total} notifications
+            Showing {filteredNotifications.length} of {pagination?.total || 0} notifications
                          {filter !== 'all' && filter === 'comment' && ' (filtered by comments, replies & comment likes)'}
              {filter !== 'all' && filter !== 'comment' && ` (filtered by ${filter})`}
-            {hasMore && ' • Scroll up to load more'}
+            {pagination?.hasMore && ' • Scroll up to load more'}
           </div>
         )}
       </div>

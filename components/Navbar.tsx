@@ -18,7 +18,7 @@ const Navbar = () => {
     // Messages loaded
 
   return (
-    <header className="px-5 py-3 bg-white shadow-sm font-work-sans relative z-50" >
+    <header className="fixed top-0 left-0 right-0 px-5 py-3 bg-white shadow-sm font-work-sans z-50" >
         <nav className="flex justify-between items-center">
             <Link href="/">
                 <Image src="/logo.png" alt="logo" width={144} height={30} />

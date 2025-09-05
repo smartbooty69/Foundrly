@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import SavedStartupsList from './SavedStartupsList';
+import InterestedStartupsList from './InterestedStartupsList';
 import SortFilterModal from './SortFilterModal';
+import InterestedUsersManager from './InterestedUsersManager';
 
 interface FilterState {
   sortBy: 'newest' | 'oldest';
@@ -19,17 +20,17 @@ interface FilterState {
   };
 }
 
-interface SavedMainContentProps {
+interface InterestedMainContentProps {
   activeSection: string;
 }
 
-// Tab options for saved startups
-const savedStartupsTabs = [
-  { value: 'all', label: 'All Saved' },
+// Tab options for interested startups
+const interestedStartupsTabs = [
+  { value: 'all', label: 'All Interested' },
   { value: 'categories', label: 'Categories' },
 ];
 
-const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
+const InterestedMainContent = ({ activeSection }: InterestedMainContentProps) => {
   const { data: session } = useSession();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,27 +78,23 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
 
   const getSectionTitle = () => {
     switch (activeSection) {
-      case 'saved-startups':
-        return 'Saved Startups';
       case 'interested-startups':
         return 'Interested Startups';
-      case 'saved-users':
-        return 'Saved Users';
+      case 'manage-interested-users':
+        return 'Manage Interested Users';
       default:
-        return 'Saved Startups';
+        return 'Interested Startups';
     }
   };
 
   const getSectionDescription = () => {
     switch (activeSection) {
-      case 'saved-startups':
-        return 'Review and manage your saved startup pitches';
       case 'interested-startups':
         return 'See which startups you\'ve shown interest in';
-      case 'saved-users':
-        return 'Manage your saved user profiles';
+      case 'manage-interested-users':
+        return 'View and manage users who have shown interest in your startups only';
       default:
-        return 'Review and manage your saved startup pitches';
+        return 'See which startups you\'ve shown interest in';
     }
   };
 
@@ -113,12 +110,12 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
           </p>
         </div>
         
-        {/* Fixed Tabs and Filters for Saved Startups Section */}
-        {activeSection === 'saved-startups' && (
+        {/* Fixed Tabs and Filters for Interested Startups Section */}
+        {activeSection === 'interested-startups' && (
           <div className="space-y-6">
             {/* Tabs */}
             <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
-              {savedStartupsTabs.map((tab) => (
+              {interestedStartupsTabs.map((tab) => (
                 <button
                   key={tab.value}
                   onClick={() => handleTabChange(tab.value)}
@@ -177,58 +174,18 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="p-4 sm:p-8">
-          {activeSection === 'saved-startups' ? (
-            // Saved Startups Section
-            <SavedStartupsList 
-              savedStartups={[]} 
+          {activeSection === 'interested-startups' && (
+            <InterestedStartupsList 
+              interestedStartups={[]} 
               userId={session?.user?.id || ''}
               selectedTab={selectedTab}
               selectedCategory={selectedCategory}
               onCategoriesLoaded={handleCategoriesLoaded}
             />
-          ) : activeSection === 'interested-startups' ? (
-            // Interested Startups Section
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No interested startups yet</h3>
-              <p className="text-gray-500 mb-4">
-                Start exploring startups and show interest in the ones you find interesting!
-              </p>
-              <a 
-                href="/"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Browse Startups
-              </a>
-            </div>
-          ) : activeSection === 'saved-users' ? (
-            // Saved Users Section
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No saved users yet</h3>
-              <p className="text-gray-500 mb-4">
-                Start exploring user profiles and save the ones you want to follow!
-              </p>
-              <a 
-                href="/"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Browse Users
-              </a>
-            </div>
-          ) : (
-            // Default fallback
-            <SavedStartupsList 
-              savedStartups={savedStartups || []} 
-              userId={session?.user?.id || ''} 
+          )}
+          {activeSection === 'manage-interested-users' && (
+            <InterestedUsersManager 
+              userId={session?.user?.id || ''}
             />
           )}
         </div>
@@ -244,4 +201,4 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
   );
 };
 
-export default SavedMainContent;
+export default InterestedMainContent;

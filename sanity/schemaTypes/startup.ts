@@ -97,5 +97,12 @@ export const startup = defineType({
             initialValue: [],
             description: "Array of user IDs who have saved this startup",
         }),
+        defineField({
+            name: "interestedBy",
+            type: "array",
+            of: [{ type: "string" }],
+            initialValue: [],
+            description: "Array of user IDs who have shown interest in this startup",
+        }),
     ],
 });

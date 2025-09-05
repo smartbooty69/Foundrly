@@ -6,7 +6,9 @@ export default function Layout({children}:Readonly<{children:React.ReactNode}>) 
        <ThemeProvider>
          <main className='font-work-sans'>
           <Navbar />
-          {children}
+          <div className="pt-16">
+            {children}
+          </div>
          </main>
        </ThemeProvider>
     )
