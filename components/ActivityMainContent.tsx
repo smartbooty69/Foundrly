@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { RefreshCw } from 'lucide-react';
 import ActivityContentGrid from './ActivityContentGrid';
 import SortFilterModal from './SortFilterModal';
 import AccountHistory from './AccountHistory';
@@ -60,7 +59,6 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
   // Account History state
   const [isAccountHistoryModalOpen, setIsAccountHistoryModalOpen] = useState(false);
   const [selectedAccountHistoryTab, setSelectedAccountHistoryTab] = useState<string>('');
-  const [accountHistoryLoading, setAccountHistoryLoading] = useState(false);
   const [accountHistoryFilters, setAccountHistoryFilters] = useState<FilterState>({
     sortBy: 'newest',
     startDate: {
@@ -98,13 +96,6 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
   
   const handleAccountHistoryTabChange = (tabValue: string) => {
     setSelectedAccountHistoryTab(tabValue);
-  };
-  
-  const handleAccountHistoryRefresh = () => {
-    // This will be handled by the AccountHistory component
-    setAccountHistoryLoading(true);
-    // Reset loading after a short delay to show the refresh animation
-    setTimeout(() => setAccountHistoryLoading(false), 1000);
   };
 
   const getSortText = () => {
@@ -237,18 +228,13 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
               <h3 className="font-semibold text-sm sm:text-base">{getAccountHistorySortText()}</h3>
               <div className="flex items-center space-x-6">
                 <button 
-                  onClick={handleAccountHistoryRefresh}
-                  disabled={accountHistoryLoading}
-                  className="font-semibold text-sm hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-4 h-4 inline mr-2 ${accountHistoryLoading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-                <button 
                   onClick={handleAccountHistoryOpenModal}
                   className="font-semibold text-sm hover:text-primary transition-colors"
                 >
                   Sort & filter
+                </button>
+                <button className="font-semibold text-sm text-blue-500 hover:text-blue-400">
+                  Select
                 </button>
               </div>
             </div>
@@ -266,8 +252,8 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
               selectedTab={selectedAccountHistoryTab}
               onTabChange={handleAccountHistoryTabChange}
               filters={accountHistoryFilters}
-              onRefresh={handleAccountHistoryRefresh}
-              loading={accountHistoryLoading}
+              onRefresh={() => {}}
+              loading={false}
             />
           ) : activeSection === 'interactions' ? (
             // Interactions Section - Content Grid Only

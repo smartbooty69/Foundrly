@@ -393,6 +393,7 @@ export type Startup = {
   bannedUntil?: string;
   isBanned?: boolean;
   buyMeACoffeeUsername?: string;
+  savedBy?: Array<string>;
 };
 
 export type Markdown = string;

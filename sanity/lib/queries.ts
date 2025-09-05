@@ -197,3 +197,23 @@ export const ALL_USERS_QUERY = defineQuery(`
     following[]->{ _id, name, username, image }
 }
 `);
+
+export const SAVED_STARTUPS_QUERY = defineQuery(`
+*[_type == "startup" && $userId in savedBy] | order(_createdAt desc) {
+  _id, 
+  title, 
+  slug,
+  _createdAt,
+  author -> {
+    _id, name, image, bio
+  }, 
+  views,
+  description,
+  category,
+  image,
+  likes,
+  dislikes,
+  "commentsCount": count(comments),
+  buyMeACoffeeUsername,
+  savedBy
+}`);

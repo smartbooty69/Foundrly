@@ -90,5 +90,12 @@ export const startup = defineType({
             description: "Buy me a coffee username (optional)",
             validation: (Rule) => Rule.optional(),
         }),
+        defineField({
+            name: "savedBy",
+            type: "array",
+            of: [{ type: "string" }],
+            initialValue: [],
+            description: "Array of user IDs who have saved this startup",
+        }),
     ],
 });

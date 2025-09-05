@@ -51,24 +51,52 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   const [initialLoading, setInitialLoading] = React.useState(true);
   const [totalViews, setTotalViews] = React.useState<number>(views ?? 0);
   const [saved, setSaved] = React.useState(false);
+  const [savedBy, setSavedBy] = React.useState<string[]>([]);
   const [interested, setInterested] = React.useState(false);
   const [saveLoading, setSaveLoading] = React.useState(false);
   const [interestedLoading, setInterestedLoading] = React.useState(false);
   const hasIncremented = React.useRef(false);
 
   React.useEffect(() => {
-    Promise.all([
-      fetch(`/api/likes?id=${_id}`).then(res => res.json()),
-      fetch(`/api/dislikes?id=${_id}`).then(res => res.json())
-    ]).then(([likeData, dislikeData]) => {
-      setLikes(likeData.likes ?? 0);
-      setLikedBy(likeData.likedBy ?? []);
-      setLiked(userId ? (likeData.likedBy ?? []).includes(userId) : false);
-      setDislikes(dislikeData.dislikes ?? 0);
-      setDislikedBy(dislikeData.dislikedBy ?? []);
-      setDisliked(userId ? (dislikeData.dislikedBy ?? []).includes(userId) : false);
-      setInitialLoading(false);
-    });
+    const fetchData = async () => {
+      try {
+        const [likesRes, dislikesRes, savedRes] = await Promise.all([
+          fetch(`/api/likes?id=${_id}`),
+          fetch(`/api/dislikes?id=${_id}`),
+          fetch(`/api/saved?id=${_id}`)
+        ]);
+
+        const [likeData, dislikeData, savedData] = await Promise.all([
+          likesRes.ok ? likesRes.json() : { likes: 0, likedBy: [], dislikes: 0, dislikedBy: [] },
+          dislikesRes.ok ? dislikesRes.json() : { dislikes: 0, dislikedBy: [], likes: 0, likedBy: [] },
+          savedRes.ok ? savedRes.json() : { savedBy: [] }
+        ]);
+
+        setLikes(likeData.likes ?? 0);
+        setLikedBy(likeData.likedBy ?? []);
+        setLiked(userId ? (likeData.likedBy ?? []).includes(userId) : false);
+        setDislikes(dislikeData.dislikes ?? 0);
+        setDislikedBy(dislikeData.dislikedBy ?? []);
+        setDisliked(userId ? (dislikeData.dislikedBy ?? []).includes(userId) : false);
+        setSavedBy(savedData.savedBy ?? []);
+        setSaved(userId ? (savedData.savedBy ?? []).includes(userId) : false);
+        setInitialLoading(false);
+      } catch (error) {
+        console.error('Error fetching startup data:', error);
+        // Set default values on error
+        setLikes(0);
+        setLikedBy([]);
+        setLiked(false);
+        setDislikes(0);
+        setDislikedBy([]);
+        setDisliked(false);
+        setSavedBy([]);
+        setSaved(false);
+        setInitialLoading(false);
+      }
+    };
+
+    fetchData();
   }, [_id, userId]);
 
   // Initial fetch of views
@@ -156,8 +184,22 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
     e.stopPropagation();
     if (!userId || saveLoading) return;
     setSaveLoading(true);
-    // TODO: Implement save functionality with API call
-    setSaved(!saved);
+    
+    try {
+      const res = await fetch(`/api/saved?id=${_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setSaved(data.saved);
+        setSavedBy(data.savedBy ?? savedBy);
+      }
+    } catch (error) {
+      console.error('Error saving startup:', error);
+    }
+    
     setSaveLoading(false);
   };
 

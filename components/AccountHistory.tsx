@@ -118,12 +118,12 @@ const AccountHistory = ({
   const [historyData, setHistoryData] = useState<HistoryEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedChangeType, setSelectedChangeType] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
   const handleApplyFilters = (filters: FilterState) => {
-    setCurrentFilters(filters);
     console.log('Applied filters:', filters);
   };
 
@@ -146,7 +146,7 @@ const AccountHistory = ({
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
 
     try {
@@ -197,7 +197,7 @@ const AccountHistory = ({
       console.error('AccountHistory: Error fetching account history:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch account history');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -260,7 +260,7 @@ const AccountHistory = ({
       )}
 
       {/* Loading State */}
-      {loading && historyData.length === 0 && (
+      {isLoading && historyData.length === 0 && (
         <div className="text-center py-8">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
           <p className="text-gray-500">Loading account history...</p>
@@ -268,7 +268,7 @@ const AccountHistory = ({
       )}
 
       {/* History List */}
-      {!loading && (
+      {!isLoading && (
         <div className="space-y-4">
           {sortedHistoryData.length === 0 ? (
             <div className="text-center py-8">
