@@ -4,6 +4,7 @@ import { STARTUPS_SORTED_QUERY } from "@/sanity/lib/queries";
 import { sanityFetch, SanityLive } from "@/sanity/lib/live";
 import { auth } from "@/auth";
 import FilterDropdown from "../../components/FilterDropdown";
+import AIRecommendations from "../../components/AIRecommendations";
 
 export default async function Home({searchParams}:{
   searchParams: Promise<{ query?:string, filter?:string }>
@@ -27,6 +28,11 @@ export default async function Home({searchParams}:{
       <p className="sub-heading !max-w-3xl">Submit Ideas, Vote on Pitches, and Get Noticed in Virtual Competition</p>
 
       <SearchForm query={query} />
+    </section>
+
+    {/* AI Recommendations above filters */}
+    <section className="section_container">
+      <AIRecommendations limit={6} />
     </section>
 
     <section className="section_container">

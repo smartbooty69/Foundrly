@@ -234,9 +234,11 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   };
 
   return (
-    <li className="startup-card group hover:bg-blue-50 transition-colors duration-200">
+  <li className="startup-card group hover:bg-blue-50 transition-colors duration-200" style={{ listStyle: 'none', marginBottom: '0.5rem' }}>
       <div className="flex-between">
-        <p className="startup_card_date">{formatDate(_createdAt)}</p>
+        <div className="flex items-center gap-2">
+          <span className="startup_card_date">{formatDate(_createdAt)}</span>
+        </div>
         <div className="flex gap-1.5">
           <EyeIcon className="size-6 text-primary" />
           <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>

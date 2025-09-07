@@ -2,7 +2,21 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Anthropic } from '@anthropic-ai/sdk';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { client } from '@/sanity/lib/client';
+import { STARTUPS_QUERY } from '../sanity/lib/queries';
 
+/**
+ * Fetch recommended startups for a user from Sanity.
+ * For now, returns latest startups as 'recommended'.
+ */
+export async function getPersonalizedRecommendations(userId: string, limit: number = 6) {
+  // You can add user-based logic here for personalization
+  const startups = await client.fetch(STARTUPS_QUERY, { search: null });
+  return {
+    startups: startups.slice(0, limit),
+    reasons: ["Latest startups recommended for you"],
+    confidence: 0.9
+  };
+}
 // Initialize AI services
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const anthropic = new Anthropic({

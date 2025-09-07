@@ -322,7 +322,10 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
       {startups.map((startup) => (
             <StartupCard 
           key={startup._id} 
-              post={startup}
+              post={{
+                ...startup,
+                _createdAt: typeof startup._createdAt === 'string' ? startup._createdAt.replace(/^\s*[•.]+\s*/, "") : startup._createdAt
+              }}
               isOwner={false}
               isLoggedIn={!!userId}
               userId={userId}
@@ -344,7 +347,7 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
                 _id: comment.startup._id,
                 title: comment.startup.title,
                 slug: comment.startup.slug,
-                _createdAt: comment.createdAt,
+                _createdAt: typeof comment.createdAt === 'string' ? comment.createdAt.replace(/^\s*[•.]+\s*/, "") : comment.createdAt,
                 author: comment.author,
                 views: 0,
                 description: comment.text,

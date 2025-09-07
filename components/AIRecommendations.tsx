@@ -6,8 +6,13 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Carousel } from './ui/carousel';
 import { Brain, TrendingUp, RefreshCw, Users, Target, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
 import StartupCard from './StartupCard';
+import RecommendedStartupCard from './RecommendedStartupCard';
+import { useEffect } from 'react';
+import { client } from '@/sanity/lib/client';
+import { STARTUP_BY_ID_QUERY } from '@/sanity/lib/queries';
 
 interface AIRecommendationsProps {
   limit?: number;
@@ -27,150 +32,81 @@ export default function AIRecommendations({
   if (isLoading) {
     return (
       <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">AI Recommendations</h3>
+        <div className="flex items-center justify-between mb-7">
+          <div className="flex items-center gap-3">
+            <p className="text-30-semibold">Recommended Startups for you</p>
+          </div>
         </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center gap-2 text-gray-500">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>Finding personalized recommendations...</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl shadow p-6 animate-pulse">
+              <div className="h-6 w-2/3 bg-gray-200 rounded mb-4" />
+              <div className="h-4 w-1/2 bg-gray-200 rounded mb-2" />
+              <div className="h-4 w-1/3 bg-gray-200 rounded mb-2" />
+              <div className="h-32 w-full bg-gray-100 rounded mb-4" />
+              <div className="flex gap-2 mt-2">
+                <div className="h-8 w-16 bg-gray-200 rounded" />
+                <div className="h-8 w-16 bg-gray-200 rounded" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error) {
-    return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">AI Recommendations</h3>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={refetch} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
+      return (
+        <div className={`space-y-4 ${className}`}>
+          <div className="flex items-center justify-between mb-7">
+        <div className="flex items-center gap-3">
+          <p className="text-30-semibold">Recommended Startups for you</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button onClick={refetch} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Try Again
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
   }
 
   if (!recommendations || !recommendations.startups || recommendations.startups.length === 0) {
-    return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">AI Recommendations</h3>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">No recommendations available</p>
-              <p className="text-sm text-gray-400">
-                Start exploring startups to get personalized recommendations
-              </p>
+      return (
+        <div className={`space-y-4 ${className}`}>
+          <div className="flex items-center justify-between mb-7">
+            <div className="flex items-center gap-3">
+              <p className="text-30-semibold">Recommended Startups for you</p>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-2">No recommendations available</p>
+                <p className="text-sm text-gray-400">
+                  Start exploring startups to get personalized recommendations
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
   }
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">AI Recommendations</h3>
-        </div>
-        <Button onClick={refetch} size="sm" variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
 
-      {/* Recommendations Summary */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-gray-600">
-                  {recommendations.startups?.length || 0} personalized recommendations
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Brain className="h-4 w-4 text-blue-600" />
-                <span className="text-sm text-gray-600">
-                  {Math.round((recommendations.confidence || 0) * 100)}% confidence
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Recommendation Reasons */}
-      {recommendations.reasons && recommendations.reasons.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm">
-              <Target className="h-4 w-4" />
-              Why these recommendations?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {recommendations.reasons.map((reason, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {reason}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Recommended Startups Carousel - Mobile */}
       <div className="md:hidden">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-medium">Recommended for you</h4>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileCurrentIndex(Math.max(0, mobileCurrentIndex - 1))}
-              disabled={mobileCurrentIndex === 0}
-              className="bg-white/90 hover:bg-white shadow-lg border-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileCurrentIndex(Math.min((recommendations.startups?.length || 1) - 1, mobileCurrentIndex + 1))}
-              disabled={mobileCurrentIndex >= (recommendations.startups?.length || 1) - 1}
-              className="bg-white/90 hover:bg-white shadow-lg border-2"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
         <div className="w-full max-w-6xl mx-auto">
           <Carousel
             itemsPerView={1}
@@ -183,21 +119,12 @@ export default function AIRecommendations({
             className="w-full"
           >
           {recommendations.startups?.map((startup, index) => (
-            <div key={startup._id || index} className="relative h-full">
-              <StartupCard 
-                post={startup} 
-                isLoggedIn={true} 
-                userId={null}
-                onStartupSelect={onStartupSelect}
-              />
-              {startup.similarity && (
-                <div className="absolute top-2 right-2 z-10">
-                  <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
-                    {Math.round(startup.similarity * 100)}% match
-                  </Badge>
-                </div>
-              )}
-            </div>
+            <RecommendedStartupCard
+              key={startup._id || index}
+              id={startup._id}
+              similarity={startup.similarity}
+              onStartupSelect={onStartupSelect}
+            />
           ))}
           </Carousel>
         </div>
@@ -205,8 +132,10 @@ export default function AIRecommendations({
 
       {/* Desktop Carousel */}
       <div className="hidden md:block">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-lg font-medium">Recommended for you</h4>
+        <div className="flex items-center justify-between mb-7">
+          <div className="flex items-center gap-3">
+            <p className="text-30-semibold">Recommended Startups for you</p>
+          </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -239,23 +168,14 @@ export default function AIRecommendations({
             onIndexChange={setDesktopCurrentIndex}
             className="w-full"
           >
-          {recommendations.startups?.map((startup, index) => (
-            <div key={startup._id || index} className="relative h-full">
-              <StartupCard 
-                post={startup} 
-                isLoggedIn={true} 
-                userId={null}
+            {recommendations.startups?.map((startup, index) => (
+              <RecommendedStartupCard
+                key={startup._id || index}
+                id={startup._id}
+                similarity={startup.similarity}
                 onStartupSelect={onStartupSelect}
               />
-              {startup.similarity && (
-                <div className="absolute top-2 right-2 z-10">
-                  <Badge variant="secondary" className="text-xs bg-white/90 backdrop-blur-sm">
-                    {Math.round(startup.similarity * 100)}% match
-                  </Badge>
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
           </Carousel>
         </div>
       </div>
@@ -266,7 +186,7 @@ export default function AIRecommendations({
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <Users className="h-4 w-4" />
             <span>
-              Recommendations are personalized based on your interests and activity
+              Recommendations are personalized based on your interests and activity using AI
             </span>
           </div>
         </CardContent>
