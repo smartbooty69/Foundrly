@@ -43,6 +43,9 @@ const config: Config = {
                 200: "2px 2px 0px 2px rgb(78, 113, 255)",
                 300: "2px 2px 0px 2px rgb(141, 216, 255)",
             },
+            maxWidth: {
+                '8xl': '88rem',
+            },
         },
     },
     plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],

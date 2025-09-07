@@ -89,3 +89,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: 'Failed to toggle interested' }, { status: 500 });
   }
 }
+
+

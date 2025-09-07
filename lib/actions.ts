@@ -5,6 +5,7 @@ import { parseServerActionResponse } from "@/lib/utils";
 import slugify from "slugify";
 import { writeClient } from "@/sanity/lib/write-client";
 import { canUserPerformAction } from "@/lib/ban-checks";
+import { syncStartupVector } from "@/lib/ai-vector-sync";
 
 export const createPitch = async (
   state: any,
@@ -53,6 +54,14 @@ export const createPitch = async (
     };
 
     const result = await writeClient.create({ _type: "startup", ...startup });
+
+    // Sync with AI vector database in the background
+    try {
+      await syncStartupVector(result._id, 'create');
+    } catch (error) {
+      console.error('Error syncing startup vector:', error);
+      // Don't fail the startup creation if vector sync fails
+    }
 
     return parseServerActionResponse({
       ...result,

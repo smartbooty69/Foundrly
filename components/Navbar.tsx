@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { BadgePlus, LogOut, MessageSquare, Trophy, Award } from 'lucide-react'
+import { BadgePlus, LogOut, MessageSquare, Trophy, Award, Brain } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import React, { useState } from 'react'
@@ -54,6 +54,11 @@ const Navbar = () => {
                                 <Link href="/leaderboard" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
                                     <span className="max-sm:hidden">Leaderboard</span>
                                     <Award className='size-6 sm:hidden' />
+                                </Link>
+
+                                <Link href="/ai-features" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
+                                    <span className="max-sm:hidden">AI Features</span>
+                                    <Brain className='size-6 sm:hidden' />
                                 </Link>
 
                         <NotificationBell />
