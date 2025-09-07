@@ -578,16 +578,29 @@ Format as JSON with fields: score, strengths, weaknesses, suggestions, marketIns
       
       try {
         const parsedAnalysis = JSON.parse(analysis);
-        return parsedAnalysis;
+        // Ensure all required fields are present and fallback if missing
+        return {
+          overallScore: typeof parsedAnalysis.score === 'number' ? parsedAnalysis.score : 7,
+          strengths: Array.isArray(parsedAnalysis.strengths) && parsedAnalysis.strengths.length > 0 ? parsedAnalysis.strengths : ['Clear concept', 'Good potential'],
+          weaknesses: Array.isArray(parsedAnalysis.weaknesses) && parsedAnalysis.weaknesses.length > 0 ? parsedAnalysis.weaknesses : ['Needs more detail', 'Market validation required'],
+          suggestions: Array.isArray(parsedAnalysis.suggestions) && parsedAnalysis.suggestions.length > 0 ? parsedAnalysis.suggestions : ['Add market research', 'Define target audience'],
+          missingElements: Array.isArray(parsedAnalysis.missingElements) ? parsedAnalysis.missingElements : [],
+          marketInsights: typeof parsedAnalysis.marketInsights === 'object' && parsedAnalysis.marketInsights !== null ? parsedAnalysis.marketInsights : {},
+          category: typeof parsedAnalysis.category === 'string' && parsedAnalysis.category ? parsedAnalysis.category : '',
+          tags: Array.isArray(parsedAnalysis.recommendedTags) && parsedAnalysis.recommendedTags.length > 0 ? parsedAnalysis.recommendedTags : [category.toLowerCase()],
+          confidence: typeof parsedAnalysis.confidence === 'number' ? parsedAnalysis.confidence : 0.7
+        };
       } catch (parseError) {
         // Fallback structured response
         return {
-          score: 7,
+          overallScore: 7,
           strengths: ['Clear concept', 'Good potential'],
           weaknesses: ['Needs more detail', 'Market validation required'],
           suggestions: ['Add market research', 'Define target audience'],
-          marketInsights: 'AI-generated market analysis',
-          recommendedTags: [category.toLowerCase()],
+          missingElements: [],
+          marketInsights: {},
+          category: '',
+          tags: [category.toLowerCase()],
           confidence: 0.7
         };
       }

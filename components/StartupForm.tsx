@@ -20,6 +20,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
   banMessage: string; 
   banLoading: boolean; 
 }) => {
+  const [pitchAnalysis, setPitchAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -112,7 +115,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
 
       return result;
     } catch (error) {
-      console.error("[StartupForm] Submission error:", error);
+      if (!(error instanceof z.ZodError)) {
+        console.error("[StartupForm] Submission error:", error);
+      }
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
@@ -121,6 +126,12 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           }
         });
         setErrors(newErrors);
+        // Show a single toast with all error messages
+        const allMessages = error.errors.map(e => e.message).join("\n");
+        toast({
+          title: "Notice",
+          description: allMessages,
+        });
       } else {
         toast({
           title: "Error",
@@ -165,7 +176,6 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           value={title}
           onChange={e => setTitle(e.target.value)}
         />
-        {errors.title && <p className="startup-form_error">{errors.title}</p>}
       </div>
 
       <div>
@@ -182,9 +192,6 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           value={description}
           onChange={e => setDescription(e.target.value)}
         />
-        {errors.description && (
-          <p className="startup-form_error">{errors.description}</p>
-        )}
       </div>
 
       <div>
@@ -201,9 +208,6 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           value={category}
           onChange={e => setCategory(e.target.value)}
         />
-        {errors.category && (
-          <p className="startup-form_error">{errors.category}</p>
-        )}
       </div>
 
       <div>
@@ -221,9 +225,6 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           If you have a Buy me a coffee account, enter your username to receive support
         </p>
 
-        {errors.buyMeACoffeeUsername && (
-          <p className="startup-form_error">{errors.buyMeACoffeeUsername}</p>
-        )}
       </div>
 
       <div>
@@ -272,53 +273,127 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           />
         )}
 
-        {errors.link && <p className="startup-form_error">{errors.link}</p>}
       </div>
 
       <div data-color-mode="light">
-        <div className="flex items-center gap-2 mb-2">
+        {aiError && <p className="startup-form_error">{aiError}</p>}
+        {analysisError && <p className="startup-form_error">{analysisError}</p>}
+        <label htmlFor="pitch" className="startup-form_label">
+          Pitch
+        </label>
+        <div className="flex gap-2 mb-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="flex items-center gap-2"
             onClick={async () => {
-              setAiLoading(true);
-              setAiError(null);
-              try {
-                console.log("[StartupForm] AI Pitch Generation Triggered", { title, description, category });
-                if (!title || !description) {
-                  setAiError("Please fill in both title and description fields.");
+                setAiLoading(true);
+                setAiError(null);
+                try {
+                  console.log("[StartupForm] AI Pitch Generation Triggered", { title, description, category });
+                  if (!title || !description) {
+                    toast({
+                      title: "Notice",
+                      description: "Please fill in both title and description fields.",
+                    });
+                    setAiLoading(false);
+                    return;
+                  }
+                  const response = await fetch("/api/ai/generate-content", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, description, category }),
+                  });
+                  const data = await response.json();
+                  console.log("[StartupForm] AI Response:", JSON.stringify(data, null, 2));
+                  if (!response.ok || !data.success) throw new Error(data.message || "AI generation failed");
+                  // Try multiple possible response formats
+                  let generatedPitch = "";
+                  if (data.content?.pitch) {
+                    generatedPitch = data.content.pitch;
+                  } else if (data.pitch) {
+                    generatedPitch = data.pitch;
+                  } else if (typeof data.content === "string") {
+                    generatedPitch = data.content;
+                  }
+                  // If still empty, try to parse JSON from description
+                  if (!generatedPitch && data.content?.description) {
+                    try {
+                      const match = data.content.description.match(/```json\n([\s\S]*?)\n```/);
+                      if (match && match[1]) {
+                        let jsonStr = match[1];
+                        // Clean up bad escape sequences (remove double backslashes, fix quotes)
+                        jsonStr = jsonStr.replace(/\\([\"'])/g, '$1');
+                        // Try parsing
+                        try {
+                          const parsed = JSON.parse(jsonStr);
+                          if (parsed.pitch) {
+                            generatedPitch = parsed.pitch;
+                          }
+                        } catch (jsonErr) {
+                          // Fallback: extract pitch with regex
+                          const pitchMatch = jsonStr.match(/"pitch"\s*:\s*"([\s\S]*?)"\s*,/);
+                          if (pitchMatch && pitchMatch[1]) {
+                            generatedPitch = pitchMatch[1].replace(/\\n/g, '\n');
+                          }
+                          console.warn("[StartupForm] Fallback pitch extraction used due to JSON parse error", jsonErr);
+                        }
+                      }
+                    } catch (err) {
+                      console.warn("[StartupForm] Failed to extract pitch from description JSON block", err);
+                    }
+                  }
+                  setPitch(generatedPitch);
+                  toast({ title: "AI Pitch Generated", description: "You can edit or submit this pitch." });
+                } catch (err: any) {
+                  console.error("[StartupForm] AI Pitch Generation Error:", err);
+                  setAiError(err.message || "Failed to generate pitch");
+                } finally {
                   setAiLoading(false);
-                  return;
                 }
-                const response = await fetch("/api/ai/generate-content", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ title, description, category }),
-                });
-                const data = await response.json();
-                console.log("[StartupForm] AI Response:", data);
-                if (!response.ok || !data.success) throw new Error(data.message || "AI generation failed");
-                setPitch(data.content.pitch || "");
-                toast({ title: "AI Pitch Generated", description: "You can edit or submit this pitch." });
-              } catch (err: any) {
-                console.error("[StartupForm] AI Pitch Generation Error:", err);
-                setAiError(err.message || "Failed to generate pitch");
-              } finally {
-                setAiLoading(false);
-              }
             }}
             disabled={aiLoading || banLoading}
           >
-            {aiLoading ? "Generating..." : "Generate Pitch with AI"}
+            <Send className="h-4 w-4" />
+            {aiLoading ? "Generating..." : "Generate Pitch"}
           </Button>
-          <span className="text-xs text-gray-500">or write your own pitch below</span>
+          <Button
+            type="button"
+            variant={isAnalyzing ? "default" : "outline"}
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={async () => {
+              setIsAnalyzing(true);
+              setAnalysisError(null);
+              try {
+                if (!pitch.trim() || !title.trim()) {
+                  setAnalysisError("Please provide both title and pitch content.");
+                  setIsAnalyzing(false);
+                  return;
+                }
+                const response = await fetch("/api/ai/pitch-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ pitch, title, category }),
+                });
+                const data = await response.json();
+                console.log("[StartupForm] AI Pitch Analysis Response:", data);
+                if (!response.ok || !data.success) throw new Error(data.message || "AI analysis failed");
+                setPitchAnalysis(data.analysis);
+                toast({ title: "Pitch Analysis Complete", description: "See feedback below." });
+              } catch (err: any) {
+                setAnalysisError(err.message || "Failed to analyze pitch");
+              } finally {
+                setIsAnalyzing(false);
+              }
+            }}
+            disabled={isAnalyzing || banLoading || !pitch.trim() || !title.trim()}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {isAnalyzing ? "Analyzing..." : "Analyze Pitch"}
+          </Button>
         </div>
-        {aiError && <p className="startup-form_error">{aiError}</p>}
-        <label htmlFor="pitch" className="startup-form_label">
-          Pitch
-        </label>
-
         <MDEditor
           value={pitch}
           onChange={(value) => setPitch(value as string)}
@@ -336,7 +411,71 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           }}
         />
 
-        {errors.pitch && <p className="startup-form_error">{errors.pitch}</p>}
+        {pitchAnalysis && (
+          <div className="mt-6 p-5 rounded-xl bg-white shadow border border-gray-200 max-w-lg" style={{fontFamily:'inherit'}}>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-extrabold text-2xl text-black">AI Pitch Analysis</span>
+                <span className="ml-2 text-xs text-gray-500">Score: <span className="font-bold">{pitchAnalysis.overallScore ? pitchAnalysis.overallScore : "-"}/10</span></span>
+              </div>
+              {/* Score fallback: show N/A/10 if missing */}
+              {/* ...existing code... */}
+              <div className="mb-2">
+                <span className="font-bold text-green-700">Strengths:</span>
+                {pitchAnalysis.strengths?.length > 0 ? (
+                  <ul className="ml-4 list-disc text-black">
+                    {pitchAnalysis.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-red-600">Areas for Improvement:</span>
+                {pitchAnalysis.weaknesses?.length > 0 ? (
+                  <ul className="ml-4 list-disc text-black">
+                    {pitchAnalysis.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-blue-700">AI Suggestions:</span>
+                {pitchAnalysis.suggestions?.length > 0 ? (
+                  <ul className="ml-4 list-disc text-black">
+                    {pitchAnalysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-orange-600">Missing Elements:</span>
+                {pitchAnalysis.missingElements?.length > 0 ? (
+                  <ul className="ml-4 list-disc text-gray-800">
+                    {pitchAnalysis.missingElements.map((m, i) => <li key={i}>{m}</li>)}
+                  </ul>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-purple-700">Market Insights:</span>
+                {(pitchAnalysis.marketInsights?.marketSize || pitchAnalysis.marketInsights?.competition || pitchAnalysis.marketInsights?.trends) ? (
+                  <ul className="ml-4 list-disc text-black">
+                    {pitchAnalysis.marketInsights.marketSize && <li>Market Size: {pitchAnalysis.marketInsights.marketSize}</li>}
+                    {pitchAnalysis.marketInsights.competition && <li>Competition: {pitchAnalysis.marketInsights.competition}</li>}
+                    {pitchAnalysis.marketInsights.trends && <li>Trends: {pitchAnalysis.marketInsights.trends}</li>}
+                  </ul>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-black">Suggested Category:</span> <span className="font-medium text-gray-400">{pitchAnalysis.category ? pitchAnalysis.category : "None"}</span>
+              </div>
+              <div className="mb-2">
+                <span className="font-bold text-black">Suggested Tags:</span>
+                {pitchAnalysis.tags?.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {pitchAnalysis.tags.map((tag, i) => <span key={i} className="bg-gray-200 px-2 py-1 rounded text-xs font-medium">{tag}</span>)}
+                  </div>
+                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Button
