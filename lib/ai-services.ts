@@ -261,13 +261,13 @@ export class AIService {
           };
         })
         .filter(startup => {
-          // Very strict filtering - only show highly relevant results
-          return startup.similarity > 0.72;
+          // Lower confidence threshold to show more results
+          return startup.similarity > 0.60;
         })
         .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
         .slice(0, limit); // Limit to requested number
 
-      // If no high-quality results, try with lower threshold but still strict
+      // If no high-quality results, try with even lower threshold
       if (startupsWithSimilarity.length === 0) {
         startupsWithSimilarity = startups
           .map(startup => {
@@ -278,8 +278,8 @@ export class AIService {
             };
           })
           .filter(startup => {
-            // Still strict but slightly more lenient
-            return startup.similarity > 0.68;
+            // Fallback threshold
+            return startup.similarity > 0.50;
           })
           .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
           .slice(0, Math.min(3, limit)); // Limit to max 3 results for fallback
