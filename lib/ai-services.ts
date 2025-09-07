@@ -440,26 +440,67 @@ export class AIService {
       let prompt: string;
       
       if (existingTitle && existingDescription) {
-        // Generate additional content from existing title and description
-        prompt = `Generate comprehensive additional content for this existing startup:
+        // Generate a full markdown pitch in the requested format
+        prompt = `Generate a startup pitch in detailed markdown format, using headings, bullet points, and emojis. Follow this structure:
 
+- Title and tagline
+- Problem section
+- Solution section (with tech stack if relevant)
+- Differentiators
+- Market opportunity
+- Monetization strategy
+- Call to action
+
+Example:
+# *DailyPay: Revolutionizing Personal Banking*
+> "Banking shouldn't be complicated—it should be effortless."
+In a world where traditional banking feels outdated and disconnected, *users struggle with fragmented financial experiences* while *banks fail to provide modern, unified solutions*. **DailyPay** is here to change that.
+---
+## *🚩 The Problem*
+- Traditional banking apps are clunky and disconnected.  
+- Users juggle multiple accounts across different platforms.  
+- Real-time financial insights are buried in complex interfaces.  
+- Money transfers remain slow and expensive.
+---
+## *✅ The Solution*
+*DailyPay* is a modern, unified banking platform, built with:  
+- ⚡ *Next.js 14* for lightning-fast performance  
+- 🔗 *Plaid integration* for seamless bank connections  
+- 💸 *Dwolla* for instant money transfers  
+- 🧠 *Appwrite* for secure user management  
+- 📊 *Real-time transaction tracking & analytics*
+Users can connect multiple bank accounts, view unified transaction history, and transfer money instantly—all from one beautiful, intuitive interface.
+---
+## *🎯 What Makes Daily Pay Different*
+- *Unified banking experience* — connect all your accounts in one place  
+- *Real-time transaction sync* — see your money move instantly  
+- *Instant transfers* — send money between accounts in seconds  
+- *Modern UI/UX* — built with Tailwind CSS and Radix UI components  
+- *Bank-grade security* — powered by Plaid and Appwrite authentication  
+- *Mobile-first design* — works seamlessly across all devices
+---
+## *📈 Market Opportunity*
+> "2.5B+ people worldwide lack access to modern banking. The global fintech market exceeds $300B."  
+The world doesn't need more banks—it needs better ways to manage money.  
+*DailyPay* is built to become the default personal banking experience.
+---
+## *💸 Monetization Strategy*
+- *Premium subscription tiers* for advanced features  
+- *Transaction fees* on instant transfers  
+- *Partnership revenue* from financial institutions  
+- *API licensing* for enterprise customers
+---
+## *🚀 Join the Movement*
+Whether you're a *consumer* tired of juggling multiple banking apps or a *business* looking for modern financial solutions—  
+*DailyPay* is your gateway to effortless banking.
+> Let's make banking invisible. Let's build the future of finance.
+
+Startup:
 Title: ${existingTitle}
 Description: ${existingDescription}
 Category: ${category}
 
-Based on the existing title and description, please provide:
-1. A pitch summary in Markdown format (1-2 sentences, max 100 words) - use **bold** for key terms and *italics* for emphasis
-2. 5-7 relevant tags
-3. A brief market analysis
-4. Key features and benefits
-5. Target audience
-
-Format the response as JSON with these fields: title, description, pitch, tags, marketAnalysis, features, targetAudience.
-
-Important: 
-- Use the existing title and description as provided
-- The pitch field should use Markdown formatting with **bold** and *italic* text for emphasis
-- Generate additional content that complements the existing title and description`;
+Format the response as JSON with these fields: title, description, pitch, tags, marketAnalysis, features, targetAudience. The pitch field should contain the full markdown pitch.`;
       } else {
         // Generate complete content from idea
         prompt = `Generate comprehensive content for a startup with the following details:

@@ -21,7 +21,13 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
   banLoading: boolean; 
 }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [pitch, setPitch] = useState("");
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
@@ -75,6 +81,7 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
         imageFile: selectedFile,
         buyMeACoffeeUsername: formData.get("buyMeACoffeeUsername") as string,
       };
+      console.log("[StartupForm] Submitting form with values:", formValues);
 
       await formSchema.parseAsync(formValues);
 
@@ -90,7 +97,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
       finalFormData.append("pitch", pitch);
       finalFormData.append("buyMeACoffeeUsername", formValues.buyMeACoffeeUsername || "");
 
+      console.log("[StartupForm] Final FormData for submission:", Object.fromEntries(finalFormData.entries()));
       const result = await createPitch(prevState, finalFormData, pitch);
+      console.log("[StartupForm] Submission result:", result);
 
       if (result.status == "SUCCESS") {
         toast({
@@ -103,6 +112,7 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
 
       return result;
     } catch (error) {
+      console.error("[StartupForm] Submission error:", error);
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
@@ -152,8 +162,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           required
           placeholder="Startup Title"
           disabled={banLoading}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
         />
-
         {errors.title && <p className="startup-form_error">{errors.title}</p>}
       </div>
 
@@ -168,8 +179,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           required
           placeholder="Startup Description"
           disabled={banLoading}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
         />
-
         {errors.description && (
           <p className="startup-form_error">{errors.description}</p>
         )}
@@ -186,8 +198,9 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
           required
           placeholder="Startup Category (Tech, Health, Education...)"
           disabled={banLoading}
+          value={category}
+          onChange={e => setCategory(e.target.value)}
         />
-
         {errors.category && (
           <p className="startup-form_error">{errors.category}</p>
         )}
@@ -263,6 +276,45 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
       </div>
 
       <div data-color-mode="light">
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              setAiLoading(true);
+              setAiError(null);
+              try {
+                console.log("[StartupForm] AI Pitch Generation Triggered", { title, description, category });
+                if (!title || !description) {
+                  setAiError("Please fill in both title and description fields.");
+                  setAiLoading(false);
+                  return;
+                }
+                const response = await fetch("/api/ai/generate-content", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ title, description, category }),
+                });
+                const data = await response.json();
+                console.log("[StartupForm] AI Response:", data);
+                if (!response.ok || !data.success) throw new Error(data.message || "AI generation failed");
+                setPitch(data.content.pitch || "");
+                toast({ title: "AI Pitch Generated", description: "You can edit or submit this pitch." });
+              } catch (err: any) {
+                console.error("[StartupForm] AI Pitch Generation Error:", err);
+                setAiError(err.message || "Failed to generate pitch");
+              } finally {
+                setAiLoading(false);
+              }
+            }}
+            disabled={aiLoading || banLoading}
+          >
+            {aiLoading ? "Generating..." : "Generate Pitch with AI"}
+          </Button>
+          <span className="text-xs text-gray-500">or write your own pitch below</span>
+        </div>
+        {aiError && <p className="startup-form_error">{aiError}</p>}
         <label htmlFor="pitch" className="startup-form_label">
           Pitch
         </label>
