@@ -56,10 +56,6 @@ const Navbar = () => {
                                     <Award className='size-6 sm:hidden' />
                                 </Link>
 
-                                <Link href="/ai-features" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
-                                    <span className="max-sm:hidden">AI Features</span>
-                                    <Brain className='size-6 sm:hidden' />
-                                </Link>
 
                         <NotificationBell />
 

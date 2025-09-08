@@ -151,7 +151,19 @@ export const deletePitch = async (startupId: string) => {
     });
 
   try {
+    // Remove all references to this startup in other documents
+    const referencingDocs = await writeClient.fetch(`*[_type != "startup" && references($startupId)]{ _id }`, { startupId });
+    for (const doc of referencingDocs) {
+      // Remove reference from arrays or fields
+      await writeClient.patch(doc._id)
+        .unset([`category`, `startup`, `startups`]) // Adjust field names as needed
+        .commit();
+    }
+
     await writeClient.delete(startupId);
+    // Also delete from Pinecone
+    const { AIVectorSync } = await import("@/lib/ai-vector-sync");
+    await AIVectorSync.deleteStartup(startupId);
 
     return parseServerActionResponse({
       error: "",
