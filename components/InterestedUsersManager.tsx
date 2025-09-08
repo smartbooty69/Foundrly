@@ -31,16 +31,73 @@ interface InterestedUsersManagerProps {
 }
 
 const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId }) => {
+
   const [submissions, setSubmissions] = useState<InterestedSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<InterestedSubmission | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState('');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openFilterDropdown, setOpenFilterDropdown] = useState(false);
+
+  // AI Matching State
+  const [aiMatches, setAiMatches] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [topMatchedIds, setTopMatchedIds] = useState<string[]>([]);
+
+  // AI Matching Handler
+  const handleAIMatch = async () => {
+    setAiLoading(true);
+    setAiError(null);
+  setAiMatches(null);
+  setTopMatchedIds([]);
+    try {
+      // Prepare profiles for matching (simplified)
+      const profiles = filteredSubmissions.map(sub => ({
+        name: sub.name,
+        email: sub.email,
+        company: sub.company,
+        startupTitle: sub.startupTitle,
+        investmentAmount: sub.investmentAmount,
+        role: sub.role,
+        status: sub.status,
+        notes: sub.notes,
+      }));
+      const response = await fetch('/api/match-cofounder-investor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profiles }),
+      });
+      const data = await response.json();
+      setAiMatches(data.matches);
+      // Try to parse top matches from AI response (assume JSON array of IDs or objects with _id)
+      try {
+        let parsed;
+        if (typeof data.matches === 'string') {
+          parsed = JSON.parse(data.matches);
+        } else {
+          parsed = data.matches;
+        }
+        // If array of objects with _id, extract _id; if array of strings, use directly
+        if (Array.isArray(parsed)) {
+          const ids = parsed.map(m => typeof m === 'string' ? m : m._id).filter(Boolean);
+          setTopMatchedIds(ids);
+        }
+      } catch (e) {
+        // If parsing fails, fallback to showing all
+        setTopMatchedIds([]);
+      }
+    } catch (err) {
+      setAiError('Failed to get matches.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Fetch submissions on component mount
   useEffect(() => {
@@ -78,20 +135,25 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
     };
   }, [openDropdown, openFilterDropdown]);
 
+  // ...existing code...
   // Filter and search submissions
   const filteredSubmissions = useMemo(() => {
-    return submissions.filter(submission => {
+    let filtered = submissions.filter(submission => {
       const matchesSearch = 
-        submission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.startupTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (submission.company && submission.company.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+        (submission.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (submission.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (submission.startupTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        (submission.company?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
       const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
+      const matchesRole = selectedRole === 'all' || submission.role === selectedRole;
+      return matchesSearch && matchesStatus && matchesRole;
     });
-  }, [submissions, searchTerm, statusFilter]);
+    // If topMatchedIds is set, filter to only those
+    if (topMatchedIds && topMatchedIds.length > 0) {
+      filtered = filtered.filter(sub => topMatchedIds.includes(sub._id));
+    }
+    return filtered;
+  }, [submissions, searchTerm, statusFilter, topMatchedIds, selectedRole]);
 
   // Status statistics
   const statusStats = useMemo(() => {
@@ -181,15 +243,15 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
     const csvContent = [
       ['Name', 'Email', 'Phone', 'Company', 'Role', 'Startup', 'Investment Amount', 'Status', 'Submitted Date'].join(','),
       ...filteredSubmissions.map(sub => [
-        sub.name,
-        sub.email,
-        sub.phone || '',
-        sub.company || '',
-        sub.role || '',
-        sub.startupTitle,
-        sub.investmentAmount || '',
-        sub.status || '',
-        new Date(sub.submittedAt).toLocaleDateString()
+        sub.name ?? '',
+        sub.email ?? '',
+        sub.phone ?? '',
+        sub.company ?? '',
+        sub.role ?? '',
+        sub.startupTitle ?? '',
+        sub.investmentAmount ?? '',
+        sub.status ?? '',
+        sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : ''
       ].map(field => `"${field}"`).join(','))
     ].join('\n');
 
@@ -230,6 +292,20 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
   const getFilterConfig = (filter: string) => {
     return filterOptions.find(option => option.value === filter) || filterOptions[0];
   };
+
+  const roleOptions = [
+    { value: 'investor', label: 'Investor', icon: Filter, color: 'bg-blue-100 text-blue-800 border-blue-200' },
+    { value: 'angel-investor', label: 'Angel Investor', icon: Filter, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+    { value: 'vc', label: 'Venture Capitalist', icon: Filter, color: 'bg-purple-100 text-purple-800 border-purple-200' },
+    { value: 'founder', label: 'Startup Founder', icon: Filter, color: 'bg-green-100 text-green-800 border-green-200' },
+    { value: 'entrepreneur', label: 'Entrepreneur', icon: Filter, color: 'bg-red-100 text-red-800 border-red-200' },
+    { value: 'advisor', label: 'Advisor', icon: Filter, color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'mentor', label: 'Mentor', icon: Filter, color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'employee', label: 'Employee', icon: Filter, color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'student', label: 'Student', icon: Filter, color: 'bg-gray-100 text-gray-800 border-gray-200' },
+    { value: 'other', label: 'Other', icon: Filter, color: 'bg-gray-100 text-gray-800 border-gray-200' },
+  ];
+  const [openRoleFilterDropdown, setOpenRoleFilterDropdown] = useState(false);
 
   if (loading) {
     return (
@@ -321,6 +397,59 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                         <span className="flex-1 text-left">{option.label}</span>
                         <span className="text-xs text-gray-500">({option.count})</span>
                         {statusFilter === option.value && (
+                          <CheckCircle className="h-4 w-4 ml-auto text-green-600" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="relative filter-dropdown">
+              <button
+                onClick={() => setOpenRoleFilterDropdown(!openRoleFilterDropdown)}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                disabled={aiLoading}
+              >
+                <Filter className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {selectedRole === 'all'
+                    ? 'All Roles (AI)'
+                    : (roleOptions.find(opt => opt.value === selectedRole)?.label || selectedRole)
+                  }
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              {openRoleFilterDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                  <button
+                    key="all"
+                    onClick={() => {
+                      setSelectedRole('all');
+                      setOpenRoleFilterDropdown(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${selectedRole === 'all' ? 'bg-gray-100' : ''}`}
+                  >
+                    <Filter className="h-4 w-4" />
+                    <span className="flex-1 text-left">All Roles (AI)</span>
+                    {selectedRole === 'all' && <CheckCircle className="h-4 w-4 text-green-600" />}
+                  </button>
+                  {roleOptions.map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSelectedRole(option.value);
+                          setOpenRoleFilterDropdown(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                          selectedRole === option.value ? 'bg-gray-100' : ''
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="flex-1 text-left">{option.label}</span>
+                        {selectedRole === option.value && (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         )}
                       </button>
@@ -343,6 +472,16 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
       </div>
 
       {/* Submissions Table */}
+      {/* AI Matching Results */}
+      {aiMatches && (
+        <div className="my-4 p-4 bg-purple-50 border border-purple-200 rounded">
+          <h3 className="text-lg font-semibold mb-2 text-purple-700">AI Matching Results</h3>
+          <pre className="whitespace-pre-wrap text-sm text-gray-800">{aiMatches}</pre>
+        </div>
+      )}
+      {aiError && (
+        <div className="my-4 p-4 bg-red-50 border border-red-200 rounded text-red-700">{aiError}</div>
+      )}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto scrollbar-hide" style={{ overflowY: 'visible' }}>
           <table className="min-w-full divide-y divide-gray-200">
@@ -391,9 +530,10 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                       <div className="text-sm font-medium text-gray-900">
                         {submission.startupTitle}
                       </div>
-                      {submission.startup?.author && (
+                      {/* Handle startup.author if available and is object */}
+                      {submission.startup && typeof submission.startup === 'object' && 'author' in submission.startup && (submission.startup as any).author?.name && (
                         <div className="text-xs text-gray-500">
-                          by {submission.startup.author.name}
+                          by {(submission.startup as any).author.name}
                         </div>
                       )}
                     </div>
@@ -455,7 +595,7 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(submission.submittedAt).toLocaleDateString()}
+                    {submission.submittedAt ? new Date(submission.submittedAt).toLocaleDateString() : ''}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -591,7 +731,7 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                   <h3 className="text-lg font-semibold text-gray-900">Discovery</h3>
                   <div className="space-y-2">
                     {selectedSubmission.howDidYouHear && <div><strong>How they heard:</strong> {selectedSubmission.howDidYouHear.replace('-', ' ')}</div>}
-                    <div><strong>Submitted:</strong> {new Date(selectedSubmission.submittedAt).toLocaleString()}</div>
+                    <div><strong>Submitted:</strong> {selectedSubmission.submittedAt ? new Date(selectedSubmission.submittedAt).toLocaleString() : ''}</div>
                     <div><strong>Consent:</strong> {selectedSubmission.consentToContact ? 'Yes' : 'No'}</div>
                   </div>
                 </div>
@@ -636,19 +776,22 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                         onClick={() => handleNotesUpdate(selectedSubmission._id, notes)}
                         className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                       >
-                        Save Notes
+                        Save
                       </button>
                       <button
-                        onClick={() => setEditingNotes(false)}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                        onClick={() => {
+                          setEditingNotes(false);
+                          setNotes(selectedSubmission.notes || '');
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-md min-h-[100px]">
-                    {selectedSubmission.notes || 'No notes added yet. Click the edit button to add notes.'}
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-md">
+                    {selectedSubmission.notes || "No internal notes yet."}
                   </p>
                 )}
               </div>
