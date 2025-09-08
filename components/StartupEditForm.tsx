@@ -30,12 +30,20 @@ const StartupEditFormContent = ({
   banMessage: string; 
   banLoading: boolean; 
 }) => {
+  const [pitchAnalysis, setPitchAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [title, setTitle] = useState(startup.title || "");
+  const [description, setDescription] = useState(startup.description || "");
+  const [category, setCategory] = useState(startup.category || "");
   const [pitch, setPitch] = useState(startup.pitch || "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [imageInputType, setImageInputType] = useState<"url" | "upload">("url");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -152,86 +160,66 @@ const StartupEditFormContent = ({
   return (
     <form action={formAction} className="startup-form">
       <div>
-        <label htmlFor="title" className="startup-form_label">
-          Title
-        </label>
+        <label htmlFor="title" className="startup-form_label">Title</label>
         <Input
           id="title"
           name="title"
           className="startup-form_input"
           required
           placeholder="Startup Title"
-          defaultValue={startup.title}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
           disabled={banLoading}
         />
-
         {errors.title && <p className="startup-form_error">{errors.title}</p>}
       </div>
 
       <div>
-        <label htmlFor="description" className="startup-form_label">
-          Description
-        </label>
+        <label htmlFor="description" className="startup-form_label">Description</label>
         <Textarea
           id="description"
           name="description"
           className="startup-form_textarea"
           required
           placeholder="Startup Description"
-          defaultValue={startup.description}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
           disabled={banLoading}
         />
-
-        {errors.description && (
-          <p className="startup-form_error">{errors.description}</p>
-        )}
+        {errors.description && <p className="startup-form_error">{errors.description}</p>}
       </div>
 
       <div>
-        <label htmlFor="category" className="startup-form_label">
-          Category
-        </label>
+        <label htmlFor="category" className="startup-form_label">Category</label>
         <Input
           id="category"
           name="category"
           className="startup-form_input"
           required
           placeholder="Startup Category (Tech, Health, Education...)"
-          defaultValue={startup.category}
+          value={category}
+          onChange={e => setCategory(e.target.value)}
           disabled={banLoading}
         />
-
-        {errors.category && (
-          <p className="startup-form_error">{errors.category}</p>
-        )}
+        {errors.category && <p className="startup-form_error">{errors.category}</p>}
       </div>
 
       <div>
-        <label htmlFor="buyMeACoffeeUsername" className="startup-form_label">
-          Buy me a coffee username (optional)
-        </label>
+        <label htmlFor="buyMeACoffeeUsername" className="startup-form_label">Buy me a coffee username (optional)</label>
         <Input
           id="buyMeACoffeeUsername"
           name="buyMeACoffeeUsername"
           className="startup-form_input"
           placeholder="Your Buy me a coffee username"
-          defaultValue={startup.buyMeACoffeeUsername || ""}
+          value={startup.buyMeACoffeeUsername || ""}
           disabled={banLoading}
         />
-        <p className="text-sm text-gray-500 mt-1">
-          If you have a Buy me a coffee account, enter your username to receive support
-        </p>
-
-        {errors.buyMeACoffeeUsername && (
-          <p className="startup-form_error">{errors.buyMeACoffeeUsername}</p>
-        )}
+        <p className="text-sm text-gray-500 mt-1">If you have a Buy me a coffee account, enter your username to receive support</p>
+        {errors.buyMeACoffeeUsername && <p className="startup-form_error">{errors.buyMeACoffeeUsername}</p>}
       </div>
 
       <div>
-        <label className="startup-form_label">
-          Startup Image
-        </label>
-        
+        <label className="startup-form_label">Startup Image</label>
         <div className="flex gap-2 mb-4">
           <Button
             type="button"
@@ -256,14 +244,13 @@ const StartupEditFormContent = ({
             Upload Image
           </Button>
         </div>
-
         {imageInputType === "url" ? (
           <Input
             id="link"
             name="link"
             className="startup-form_input"
             placeholder="Startup Image URL"
-            defaultValue={startup.image}
+            value={startup.image}
             disabled={banLoading}
           />
         ) : (
@@ -273,15 +260,111 @@ const StartupEditFormContent = ({
             maxSize={5}
           />
         )}
-
         {errors.link && <p className="startup-form_error">{errors.link}</p>}
       </div>
 
-      <div>
-        <label htmlFor="pitch" className="startup-form_label">
-          Pitch
-        </label>
-
+      <div data-color-mode="light">
+        {aiError && <p className="startup-form_error">{aiError}</p>}
+        {analysisError && <p className="startup-form_error">{analysisError}</p>}
+        <label htmlFor="pitch" className="startup-form_label">Pitch</label>
+        <div className="flex gap-2 mb-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={async () => {
+                setAiLoading(true);
+                setAiError(null);
+                try {
+                  if (!title || !description) {
+                    toast({ title: "Notice", description: "Please fill in both title and description fields." });
+                    setAiLoading(false);
+                    return;
+                  }
+                  const response = await fetch("/api/ai/generate-content", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, description, category }),
+                  });
+                  const data = await response.json();
+                  if (!response.ok || !data.success) throw new Error(data.message || "AI generation failed");
+                  let generatedPitch = "";
+                  if (data.content?.pitch) {
+                    generatedPitch = data.content.pitch;
+                  } else if (data.pitch) {
+                    generatedPitch = data.pitch;
+                  } else if (typeof data.content === "string") {
+                    generatedPitch = data.content;
+                  }
+                  if (!generatedPitch && data.content?.description) {
+                    try {
+                      const match = data.content.description.match(/```json\n([\s\S]*?)\n```/);
+                      if (match && match[1]) {
+                        let jsonStr = match[1];
+                        jsonStr = jsonStr.replace(/\\([\"'])/g, '$1');
+                        try {
+                          const parsed = JSON.parse(jsonStr);
+                          if (parsed.pitch) {
+                            generatedPitch = parsed.pitch;
+                          }
+                        } catch (jsonErr) {
+                          const pitchMatch = jsonStr.match(/"pitch"\s*:\s*"([\s\S]*?)"\s*,/);
+                          if (pitchMatch && pitchMatch[1]) {
+                            generatedPitch = pitchMatch[1].replace(/\\n/g, '\n');
+                          }
+                        }
+                      }
+                    } catch (err) {}
+                  }
+                  setPitch(generatedPitch);
+                  toast({ title: "AI Pitch Generated", description: "You can edit or submit this pitch." });
+                } catch (err) {
+                  setAiError(err.message || "Failed to generate pitch");
+                } finally {
+                  setAiLoading(false);
+                }
+            }}
+            disabled={aiLoading || banLoading}
+          >
+            <Send className="h-4 w-4" />
+            {aiLoading ? "Generating..." : "Generate Pitch"}
+          </Button>
+          <Button
+            type="button"
+            variant={isAnalyzing ? "default" : "outline"}
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={async () => {
+              setIsAnalyzing(true);
+              setAnalysisError(null);
+              try {
+                if (!pitch.trim() || !title.trim()) {
+                  setAnalysisError("Please provide both title and pitch content.");
+                  setIsAnalyzing(false);
+                  return;
+                }
+                const response = await fetch("/api/ai/pitch-analysis", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ pitch, title, category }),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || "AI analysis failed");
+                setPitchAnalysis(data.analysis);
+                toast({ title: "Pitch Analysis Complete", description: "See feedback below." });
+              } catch (err) {
+                setAnalysisError(err.message || "Failed to analyze pitch");
+              } finally {
+                setIsAnalyzing(false);
+              }
+            }}
+            disabled={isAnalyzing || banLoading || !pitch.trim() || !title.trim()}
+          >
+            <AlertTriangle className="h-4 w-4" />
+            {isAnalyzing ? "Analyzing..." : "Analyze Pitch"}
+          </Button>
+        </div>
         <MDEditor
           value={pitch}
           onChange={(value) => setPitch(value as string)}
@@ -290,16 +373,88 @@ const StartupEditFormContent = ({
           height={300}
           style={{ borderRadius: 20, overflow: "hidden" }}
           textareaProps={{
-            placeholder:
-              "Briefly describe your idea and what problem it solves",
+            placeholder: "Briefly describe your idea and what problem it solves",
             disabled: banLoading,
           }}
-          previewOptions={{
-            disallowedElements: ["style"],
-          }}
+          previewOptions={{ disallowedElements: ["style"] }}
         />
-
-        {errors.pitch && <p className="startup-form_error">{errors.pitch}</p>}
+        {pitchAnalysis && (
+          <div className="mt-6 p-6 rounded-2xl bg-white shadow border border-gray-200 font-sans">
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-bold text-2xl text-gray-900 tracking-tight">AI Pitch Analysis</span>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-semibold">
+                Score: <span className="text-blue-700 font-bold">{pitchAnalysis.overallScore ? pitchAnalysis.overallScore : "-"}/10</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Column 1 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-green-700 text-base mb-2">Strengths</span>
+                  {pitchAnalysis.strengths?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-red-600 text-base mb-2">Areas for Improvement</span>
+                  {pitchAnalysis.weaknesses?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+              </div>
+              {/* Column 2 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-blue-700 text-base mb-2">AI Suggestions</span>
+                  {pitchAnalysis.suggestions?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-orange-600 text-base mb-2">Missing Elements</span>
+                  {pitchAnalysis.missingElements?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.missingElements.map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+              </div>
+              {/* Column 3 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-purple-700 text-base mb-2">Market Insights</span>
+                  {(pitchAnalysis.marketInsights?.marketSize || pitchAnalysis.marketInsights?.competition || pitchAnalysis.marketInsights?.trends) ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.marketInsights.marketSize && <li><span className="font-medium">Market Size:</span> {pitchAnalysis.marketInsights.marketSize}</li>}
+                      {pitchAnalysis.marketInsights.competition && <li><span className="font-medium">Competition:</span> {pitchAnalysis.marketInsights.competition}</li>}
+                      {pitchAnalysis.marketInsights.trends && <li><span className="font-medium">Trends:</span> {pitchAnalysis.marketInsights.trends}</li>}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-black text-base mb-2">Suggested Category</span>
+                  <span className="font-medium text-gray-500 text-sm">{pitchAnalysis.category ? pitchAnalysis.category : "None"}</span>
+                </div>
+                <div>
+                  <span className="block font-semibold text-black text-base mb-2">Suggested Tags</span>
+                  {pitchAnalysis.tags?.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {pitchAnalysis.tags.map((tag, i) => (
+                        <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">{tag}</span>
+                      ))}
+                    </div>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <Button

@@ -412,66 +412,78 @@ const StartupFormContent = ({ isBanned, banMessage, banLoading }: {
         />
 
         {pitchAnalysis && (
-          <div className="mt-6 p-5 rounded-xl bg-white shadow border border-gray-200 max-w-lg" style={{fontFamily:'inherit'}}>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-extrabold text-2xl text-black">AI Pitch Analysis</span>
-                <span className="ml-2 text-xs text-gray-500">Score: <span className="font-bold">{pitchAnalysis.overallScore ? pitchAnalysis.overallScore : "-"}/10</span></span>
+          <div className="mt-6 p-6 rounded-2xl bg-white shadow border border-gray-200 font-sans">
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-bold text-2xl text-gray-900 tracking-tight">AI Pitch Analysis</span>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-semibold">
+                Score: <span className="text-blue-700 font-bold">{pitchAnalysis.overallScore ? pitchAnalysis.overallScore : "-"}/10</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Column 1 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-green-700 text-base mb-2">Strengths</span>
+                  {pitchAnalysis.strengths?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-red-600 text-base mb-2">Areas for Improvement</span>
+                  {pitchAnalysis.weaknesses?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
               </div>
-              {/* Score fallback: show N/A/10 if missing */}
-              {/* ...existing code... */}
-              <div className="mb-2">
-                <span className="font-bold text-green-700">Strengths:</span>
-                {pitchAnalysis.strengths?.length > 0 ? (
-                  <ul className="ml-4 list-disc text-black">
-                    {pitchAnalysis.strengths.map((s, i) => <li key={i}>{s}</li>)}
-                  </ul>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              {/* Column 2 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-blue-700 text-base mb-2">AI Suggestions</span>
+                  {pitchAnalysis.suggestions?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-orange-600 text-base mb-2">Missing Elements</span>
+                  {pitchAnalysis.missingElements?.length > 0 ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.missingElements.map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
               </div>
-              <div className="mb-2">
-                <span className="font-bold text-red-600">Areas for Improvement:</span>
-                {pitchAnalysis.weaknesses?.length > 0 ? (
-                  <ul className="ml-4 list-disc text-black">
-                    {pitchAnalysis.weaknesses.map((w, i) => <li key={i}>{w}</li>)}
-                  </ul>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
-              </div>
-              <div className="mb-2">
-                <span className="font-bold text-blue-700">AI Suggestions:</span>
-                {pitchAnalysis.suggestions?.length > 0 ? (
-                  <ul className="ml-4 list-disc text-black">
-                    {pitchAnalysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                  </ul>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
-              </div>
-              <div className="mb-2">
-                <span className="font-bold text-orange-600">Missing Elements:</span>
-                {pitchAnalysis.missingElements?.length > 0 ? (
-                  <ul className="ml-4 list-disc text-gray-800">
-                    {pitchAnalysis.missingElements.map((m, i) => <li key={i}>{m}</li>)}
-                  </ul>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
-              </div>
-              <div className="mb-2">
-                <span className="font-bold text-purple-700">Market Insights:</span>
-                {(pitchAnalysis.marketInsights?.marketSize || pitchAnalysis.marketInsights?.competition || pitchAnalysis.marketInsights?.trends) ? (
-                  <ul className="ml-4 list-disc text-black">
-                    {pitchAnalysis.marketInsights.marketSize && <li>Market Size: {pitchAnalysis.marketInsights.marketSize}</li>}
-                    {pitchAnalysis.marketInsights.competition && <li>Competition: {pitchAnalysis.marketInsights.competition}</li>}
-                    {pitchAnalysis.marketInsights.trends && <li>Trends: {pitchAnalysis.marketInsights.trends}</li>}
-                  </ul>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
-              </div>
-              <div className="mb-2">
-                <span className="font-bold text-black">Suggested Category:</span> <span className="font-medium text-gray-400">{pitchAnalysis.category ? pitchAnalysis.category : "None"}</span>
-              </div>
-              <div className="mb-2">
-                <span className="font-bold text-black">Suggested Tags:</span>
-                {pitchAnalysis.tags?.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {pitchAnalysis.tags.map((tag, i) => <span key={i} className="bg-gray-200 px-2 py-1 rounded text-xs font-medium">{tag}</span>)}
-                  </div>
-                ) : <span className="ml-2 text-gray-400">None listed</span>}
+              {/* Column 3 */}
+              <div className="space-y-5 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div>
+                  <span className="block font-semibold text-purple-700 text-base mb-2">Market Insights</span>
+                  {(pitchAnalysis.marketInsights?.marketSize || pitchAnalysis.marketInsights?.competition || pitchAnalysis.marketInsights?.trends) ? (
+                    <ul className="ml-3 list-disc text-gray-800 text-sm">
+                      {pitchAnalysis.marketInsights.marketSize && <li><span className="font-medium">Market Size:</span> {pitchAnalysis.marketInsights.marketSize}</li>}
+                      {pitchAnalysis.marketInsights.competition && <li><span className="font-medium">Competition:</span> {pitchAnalysis.marketInsights.competition}</li>}
+                      {pitchAnalysis.marketInsights.trends && <li><span className="font-medium">Trends:</span> {pitchAnalysis.marketInsights.trends}</li>}
+                    </ul>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
+                <div>
+                  <span className="block font-semibold text-black text-base mb-2">Suggested Category</span>
+                  <span className="font-medium text-gray-500 text-sm">{pitchAnalysis.category ? pitchAnalysis.category : "None"}</span>
+                </div>
+                <div>
+                  <span className="block font-semibold text-black text-base mb-2">Suggested Tags</span>
+                  {pitchAnalysis.tags?.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {pitchAnalysis.tags.map((tag, i) => (
+                        <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">{tag}</span>
+                      ))}
+                    </div>
+                  ) : <span className="ml-2 text-gray-400 text-sm">None listed</span>}
+                </div>
               </div>
             </div>
           </div>
