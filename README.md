@@ -16,52 +16,16 @@ For comprehensive documentation, visit our **[Documentation Hub](./docs/README.m
 ## 🚀 **Quick Start**
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/foundrly.git
-cd foundrly
-
-# Install dependencies
-npm install
-
 # Set up environment variables
 cp .env.example .env.local
-
-# Start development server
-npm run dev
-```
-
-Visit **[Getting Started Guide](./docs/getting-started.md)** for detailed setup instructions.
-
 ## Overview
 
-The startup ecosystem is growing fast—but discovery is still broken. Founders struggle for visibility, and investors waste time sorting through noise. **Foundrly** solves that by offering a centralized, searchable, real-time platform for discovering startup ideas.
 
-This project is designed to scale, both in architecture and vision. It combines static generation with dynamic rendering, integrates with a headless CMS for flexibility, and supports real-time data updates for an interactive user experience.
-
-## Features
-
-### 🚀 **Core Platform Features**
 - **Startup Pitch Creation**: Create detailed startup pitches with markdown support
-- **Image Upload**: Upload startup images with drag-and-drop functionality
-- **Advanced Search**: Search across title, username, and category
-- **Real-Time Updates**: Using Sanity's live content API
-- **Responsive Design**: Works seamlessly across all devices
-- **Dynamic User Profiles**: User profiles with startup listings
 - **Startup Submission Forms**: Forms with validation and image support
 
-### 👥 **Social & Engagement Features**
-- **GitHub Authentication**: Secure login via NextAuth
-- **Comment System**: Reddit-style threaded comments with likes/dislikes
-- **Like/Dislike System**: Vote on startups and comments
-- **Follow/Unfollow**: Follow other users and see their activity
 - **Messaging System**: Direct messaging between users
 - **Suggested Users**: Discover new users to follow
-- **Followers/Following**: View user connections and counts
-
-### 🛡️ **Administrative & Moderation Features**
-- **Reporting System**: Report startups, comments, and users
-- **Ban Management**: Temporary and permanent user bans
-- **Moderation Dashboard**: Admin panel for content moderation
 - **Sentry Integration**: Performance and error tracking
 - **Content Moderation**: Review and manage reported content
 - **Strike System**: Progressive discipline for rule violations
@@ -256,3 +220,11 @@ For large-scale ideas, please open an issue first to discuss it.
 This project is licensed under the MIT License. See the `LICENSE` file for full details.
 
 -----
+
+### 🤖 **AI Features**
+- **Pitch Generator** (AI-powered): Instantly generate full startup pitches from your idea or description
+- **Semantic search** (vector similarity, natural language)
+- **Pitch analysis** (scoring, strengths/weaknesses, market insights)
+- **Personalized recommendations** (user behavior, vector matching)
+- **Enhanced content moderation** (AI-powered analysis)
+- **Vector database integration** (Pinecone)
