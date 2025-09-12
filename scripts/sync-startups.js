@@ -69,10 +69,46 @@ async function syncStartups() {
         // Create text for embedding
         const text = `${startup.title} ${startup.description || ''} ${startup.category || ''}`;
         
-        // Generate embedding
-        const model = genAI.getGenerativeModel({ model: 'embedding-001' });
-        const result = await model.embedContent(text);
-        const embedding = result.embedding.values;
+        // Generate embedding with fallback
+        let embedding;
+        try {
+          const model = genAI.getGenerativeModel({ model: 'embedding-001' });
+          const result = await model.embedContent(text);
+          embedding = result.embedding.values;
+        } catch (error) {
+          console.log(`  ⚠️  Gemini failed for ${startup.title}, trying OpenAI...`);
+          
+          // Try OpenAI fallback
+          if (process.env.OPENAI_API_KEY) {
+            try {
+              const response = await fetch('https://api.openai.com/v1/embeddings', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'text-embedding-3-small',
+                  input: text,
+                }),
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                embedding = data.data[0].embedding;
+                console.log(`  ✅ OpenAI fallback successful for ${startup.title}`);
+              } else {
+                throw new Error(`OpenAI API error: ${response.status}`);
+              }
+            } catch (openaiError) {
+              console.error(`  ❌ OpenAI also failed for ${startup.title}:`, openaiError.message);
+              continue; // Skip this startup
+            }
+          } else {
+            console.error(`  ❌ No OpenAI API key configured, skipping ${startup.title}`);
+            continue; // Skip this startup
+          }
+        }
 
         // Store in Pinecone
         await index.upsert([{

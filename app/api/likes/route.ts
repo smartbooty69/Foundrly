@@ -68,20 +68,24 @@ export async function POST(req: Request) {
     const userHasDisliked = dislikedBy.includes(userId);
 
     // Calculate the new state based on the user's action
+    let analyticsAction: 'like' | 'unlike' | null = null;
     if (userHasLiked) {
       // User is un-liking
       likes--;
       likedBy = likedBy.filter((id: any) => id !== userId);
+      analyticsAction = 'unlike';
     } else if (userHasDisliked) {
       // User is switching from dislike to like
       dislikes--;
       likes++;
       dislikedBy = dislikedBy.filter((id: any) => id !== userId);
       likedBy.push(userId);
+      analyticsAction = 'like';
     } else {
       // User is adding a new like
       likes++;
       likedBy.push(userId);
+      analyticsAction = 'like';
     }
 
     // Atomically set the new state
@@ -94,6 +98,21 @@ export async function POST(req: Request) {
         dislikedBy: dislikedBy,
       })
       .commit();
+
+    // Record analytics event (non-blocking)
+    try {
+      if (analyticsAction) {
+        await writeClient.create({
+          _type: 'startupLikeEvent',
+          startupId: id,
+          userId,
+          action: analyticsAction,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.error('Failed to log like analytics event', e);
+    }
 
     // Create notification for new like (only if it's a new like, not un-liking)
     if (!userHasLiked && likes > doc.likes) {

@@ -193,7 +193,7 @@ export async function POST(req: Request) {
         })
         .commit();
       return NextResponse.json({ success: true });
-    } else {
+    } else if (action === 'create') {
       // New top-level comment
       if (!text || !startupId) {
         return NextResponse.json({ success: false, message: 'Missing fields' }, { status: 400 });
@@ -252,6 +252,18 @@ export async function POST(req: Request) {
         // Don't fail the entire request if notification creation fails
       }
 
+      // After successful create, record analytics event (non-blocking)
+      try {
+        await writeClient.create({
+          _type: 'startupCommentEvent',
+          startupId: startupId,
+          userId,
+          action: 'comment',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('Failed to log comment analytics event', e);
+      }
       return NextResponse.json({ success: true, comment });
     }
   } catch (error) {

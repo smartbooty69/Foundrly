@@ -1,11 +1,11 @@
 'use client';
 
-import {
-  Heart,
+import { 
+  BarChart3,
   Users,
 } from 'lucide-react';
 
-interface InterestedSidebarProps {
+interface AnalyticsSidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   heading?: string;
@@ -13,20 +13,20 @@ interface InterestedSidebarProps {
 
 const navItems = [
   {
-    id: 'interested-startups',
-    icon: Heart,
-    title: 'Interested Startups',
-    description: 'See which startups you\'ve shown interest in.',
+    id: 'startup-analytics',
+    icon: BarChart3,
+    title: 'Startup Analytics',
+    description: 'Performance metrics for your startups.'
   },
   {
-    id: 'manage-interested-users',
+    id: 'engagement-audience',
     icon: Users,
-    title: 'Manage Interested Users',
-    description: 'View and manage users who have shown interest in your startups only.',
+    title: 'Engagement & Network',
+    description: 'Likes, dislikes, comments, views, followers and following.'
   },
 ];
 
-const InterestedSidebar = ({ activeSection, onSectionChange, heading }: InterestedSidebarProps) => {
+const AnalyticsSidebar = ({ activeSection, onSectionChange, heading }: AnalyticsSidebarProps) => {
   const handleSectionChange = (sectionId: string) => {
     if (typeof onSectionChange === 'function') {
       onSectionChange(sectionId);
@@ -35,7 +35,7 @@ const InterestedSidebar = ({ activeSection, onSectionChange, heading }: Interest
 
   return (
     <aside className="hidden md:flex flex-col w-96 bg-white p-8 border-r border-gray-200 h-full overflow-y-auto scrollbar-hide flex-shrink-0">
-      <h1 className="text-2xl font-bold mb-10">{heading || 'Your Interested Items'}</h1>
+      <h1 className="text-2xl font-bold mb-10">{heading || 'Your Analytics'}</h1>
       <nav>
         <ul>
           {navItems.map((item) => (
@@ -66,4 +66,4 @@ const InterestedSidebar = ({ activeSection, onSectionChange, heading }: Interest
   );
 };
 
-export default InterestedSidebar;
+export default AnalyticsSidebar;

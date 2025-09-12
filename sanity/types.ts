@@ -13,6 +13,42 @@
  */
 
 // Source: schema.json
+export type StartupCommentEvent = {
+  _id: string;
+  _type: "startupCommentEvent";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  startupId?: string;
+  userId?: string;
+  action?: "comment";
+  timestamp?: string;
+};
+
+export type StartupDislikeEvent = {
+  _id: string;
+  _type: "startupDislikeEvent";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  startupId?: string;
+  userId?: string;
+  action?: "dislike" | "undislike";
+  timestamp?: string;
+};
+
+export type StartupLikeEvent = {
+  _id: string;
+  _type: "startupLikeEvent";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  startupId?: string;
+  userId?: string;
+  action?: "like" | "unlike";
+  timestamp?: string;
+};
+
 export type InterestedSubmission = {
   _id: string;
   _type: "interestedSubmission";
@@ -511,5 +547,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = InterestedSubmission | AccountHistory | UserBadge | Badge | PushSubscription | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = StartupCommentEvent | StartupDislikeEvent | StartupLikeEvent | InterestedSubmission | AccountHistory | UserBadge | Badge | PushSubscription | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;

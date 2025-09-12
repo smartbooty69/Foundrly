@@ -81,12 +81,17 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
         };
         setResults(searchResults);
         saveToHistory(searchQuery);
-        toast.success(`Found ${apiResults?.startups?.length || 0} results`);
+        
+        // Show detailed toast with error information if fallback was used
+        if (apiResults?.fallbackUsed && apiResults?.toastMessage) {
+          toast.success(`Found ${apiResults?.startups?.length || 0} results (${apiResults.toastMessage})`);
+        } else {
+          toast.success(`Found ${apiResults?.startups?.length || 0} results`);
+        }
       } else {
         throw new Error(data.message || 'Search failed');
       }
     } catch (error) {
-      console.error('Error performing semantic search:', error);
       setError(error instanceof Error ? error.message : 'Search failed');
       toast.error('Search failed');
     } finally {

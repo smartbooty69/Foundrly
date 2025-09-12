@@ -31,15 +31,61 @@ const index = pinecone.index('foundrly-startups');
 
 // AI Service class with all required methods
 export class AIService {
-  // Generate embeddings using Gemini
+  // Generate embeddings using Gemini with OpenAI fallback
   private async generateEmbedding(text: string): Promise<number[]> {
     try {
       const model = genAI.getGenerativeModel({ model: 'embedding-001' });
       const result = await model.embedContent(text);
       return result.embedding.values;
     } catch (error) {
-      console.error('Error generating embedding:', error);
+      // Check if it's a quota/API error and try OpenAI fallback
+      if (error instanceof Error && (
+        error.message.includes('quota') || 
+        error.message.includes('429') || 
+        error.message.includes('rate limit') ||
+        error.message.includes('Too Many Requests')
+      )) {
+        try {
+          return await this.generateOpenAIEmbedding(text);
+        } catch (openaiError) {
+          // Re-throw the original error so the main catch block can handle text search fallback
+          throw new Error('Both AI services failed');
+        }
+      }
+      
       throw new Error('Failed to generate embedding');
+    }
+  }
+
+  // Generate embeddings using OpenAI as fallback
+  private async generateOpenAIEmbedding(text: string): Promise<number[]> {
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OpenAI API key not configured');
+      }
+
+      const response = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-3-small',
+          input: text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      return data.data[0].embedding;
+    } catch (error) {
+      // Don't throw here - let the main semanticSearch catch block handle the fallback
+      throw new Error('OpenAI embedding failed');
     }
   }
 
@@ -208,7 +254,7 @@ export class AIService {
     }
   }
 
-  // Semantic search using vector similarity
+  // Semantic search using vector similarity with fallback
   async semanticSearch(query: string, limit: number = 10): Promise<any> {
     try {
       // Clean and preprocess the query
@@ -293,8 +339,67 @@ export class AIService {
         confidence: searchResults.matches?.[0]?.score || 0,
       };
     } catch (error) {
-      console.error('Error in semantic search:', error);
-      throw new Error('Semantic search failed');
+      // Check if it's the "Both AI services failed" error or any other error
+      if (error instanceof Error && (
+        error.message.includes('Both AI services failed') ||
+        error.message.includes('Both Gemini and OpenAI embedding failed') ||
+        error.message.includes('Failed to generate embedding')
+      )) {
+        const fallbackResult = await this.fallbackTextSearch(query, limit);
+        // Add error context to toast message only
+        fallbackResult.toastMessage = "⚠️ AI services unavailable: Both Gemini and OpenAI quota limits exceeded";
+        return fallbackResult;
+      }
+      
+      // For any other errors, also fall back to text search
+      const fallbackResult = await this.fallbackTextSearch(query, limit);
+      // Add error context to toast message only
+      fallbackResult.toastMessage = `⚠️ AI services error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      return fallbackResult;
+    }
+  }
+
+  // Fallback text search when AI services are unavailable
+  async fallbackTextSearch(query: string, limit: number = 10): Promise<any> {
+    try {
+      // Use Sanity's text search capabilities
+      const startups = await client.fetch(`
+        *[_type == "startup" && (
+          title match $query || 
+          description match $query || 
+          category match $query ||
+          pitch match $query
+        )] | order(_createdAt desc) [0...$limit] {
+          _id,
+          title,
+          description,
+          category,
+          pitch,
+          author->{name, username},
+          _createdAt,
+          views,
+          likes,
+          dislikes,
+          "imageUrl": image.asset->url
+        }
+      `, { 
+        query: `*${query}*`,
+        limit: limit 
+      });
+
+      return {
+        startups: startups || [],
+        reasons: [`Found ${startups?.length || 0} startups using text search for "${query}"`],
+        confidence: 0.7, // Lower confidence for text search
+        fallbackUsed: true, // Flag to indicate fallback was used
+        toastMessage: "Note: AI search unavailable due to API quota limits. Using text search instead."
+      };
+    } catch (error) {
+      return {
+        startups: [],
+        reasons: ['Search temporarily unavailable. Please try again later.'],
+        confidence: 0,
+      };
     }
   }
 

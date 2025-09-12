@@ -12,6 +12,9 @@ import { badge } from './badge'
 import { userBadge } from './userBadge'
 import { accountHistory } from './accountHistory'
 import { interestedSubmission } from './interestedSubmission'
+import { startupLikeEvent } from './startupLikeEvent';
+import { startupDislikeEvent } from './startupDislikeEvent';
+import { startupCommentEvent } from './startupCommentEvent';
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -28,5 +31,8 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     userBadge,
     accountHistory,
     interestedSubmission,
+    startupLikeEvent,
+    startupDislikeEvent,
+    startupCommentEvent,
   ],
 }

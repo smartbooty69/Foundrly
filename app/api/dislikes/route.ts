@@ -67,20 +67,24 @@ export async function POST(req: Request) {
     const userHasLiked = likedBy.includes(userId);
 
     // Calculate the new state based on the user's action
+    let analyticsAction: 'dislike' | 'undislike' | null = null;
     if (userHasDisliked) {
       // User is un-disliking
       dislikes--;
       dislikedBy = dislikedBy.filter((id: any) => id !== userId);
+      analyticsAction = 'undislike';
     } else if (userHasLiked) {
       // User is switching from like to dislike
       likes--;
       dislikes++;
       likedBy = likedBy.filter((id: any) => id !== userId);
       dislikedBy.push(userId);
+      analyticsAction = 'dislike';
     } else {
       // User is adding a new dislike
       dislikes++;
       dislikedBy.push(userId);
+      analyticsAction = 'dislike';
     }
 
     // Atomically set the new state
@@ -93,6 +97,21 @@ export async function POST(req: Request) {
         likedBy: likedBy,
       })
       .commit();
+
+    // Record analytics event (non-blocking)
+    try {
+      if (analyticsAction) {
+        await writeClient.create({
+          _type: 'startupDislikeEvent',
+          startupId: id,
+          userId,
+          action: analyticsAction,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.error('Failed to log dislike analytics event', e);
+    }
 
     return NextResponse.json({ success: true, ...result });
   } catch (error) {

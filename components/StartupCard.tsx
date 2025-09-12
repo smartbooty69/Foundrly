@@ -25,9 +25,13 @@ interface StartupCardProps {
   showComment?: boolean;
   commentType?: 'comment' | 'reply' | 'report';
   showLikesDislikes?: boolean;
+  analyticsContent?: React.ReactNode;
+  hideActions?: boolean;
+  hideImage?: boolean;
+  hideViews?: boolean;
 }
 
-const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true }: StartupCardProps) => {
+const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true, analyticsContent, hideActions = false, hideImage = false, hideViews = false }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -234,18 +238,30 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   };
 
   return (
-  <li className="startup-card group hover:bg-blue-50 transition-colors duration-200" style={{ listStyle: 'none', marginBottom: '0.5rem' }}>
-      <div className="flex-between">
+  <li className="startup-card group hover:bg-blue-50 transition-colors duration-200 relative overflow-hidden" style={{ listStyle: 'none', marginBottom: '0.5rem' }}>
+      {(analyticsContent || hideImage) && image && (
+        <>
+          <div
+            className="absolute inset-0 -z-10 bg-center bg-cover blur-lg opacity-30"
+            style={{ backgroundImage: `url(${image})` }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 -z-10 bg-white/40" aria-hidden />
+        </>
+      )}
+      <div className="relative z-10 flex-between">
         <div className="flex items-center gap-2">
           <span className="startup_card_date">{formatDate(_createdAt)}</span>
         </div>
+        {!hideViews && (
         <div className="flex gap-1.5">
           <EyeIcon className="size-6 text-primary" />
           <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
         </div>
+        )}
       </div>
 
-      <div className="flex-between mt-5 gap-5">
+      <div className="relative z-10 flex-between mt-5 gap-5">
         <div className="flex-1">
           <Link href={author?._id ? `/user/${author._id}` : "#"}>
             <p className="text-16-medium line-clamp-1">{author?.name != null ? author.name : "Unknown"}</p>
@@ -273,146 +289,162 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
 
       <Link href={`/startup/${_id}`}>
         {showDescription && (
-          <p className="startup-card_desc">{description}</p>
+          <p className="startup-card_desc relative z-10">{description}</p>
         )}
 
-        <img src={image} alt="placeholder" className="startup-card_img" />
+        {!hideImage && (
+          <img src={image} alt="placeholder" className="startup-card_img relative z-10" />
+        )}
         
-                {/* Likes and Dislikes after image */}
-        {showLikesDislikes && (
-          <div className="flex items-center justify-between mt-4 mb-2">
-            {initialLoading ? (
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-full">
-                  <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">Loading...</span>
+        {/* Likes/Dislikes/Interested/Save controls (only when no analyticsContent) */}
+        {!analyticsContent && (!hideActions && showLikesDislikes) && (
+            <div className="flex items-center justify-between mt-4 mb-2 relative z-10">
+              {initialLoading ? (
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-full">
+                    <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-full">
+                    <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-full">
-                  <svg className="animate-spin h-4 w-4 text-gray-400" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  <span className="text-sm text-gray-500">Loading...</span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between w-full">
-                {/* Left side - Like and Dislike buttons */}
-                <div className="flex items-center gap-3">
-                  <button
-                    aria-label="Like"
-                    onClick={(e) => handleLike(e)}
-                    disabled={!isLoggedIn || likeLoading}
-                    title={!isLoggedIn ? 'Log in to like' : ''}
-                    className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  {/* Left side - Like and Dislike buttons */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      aria-label="Like"
+                      onClick={(e) => handleLike(e)}
+                      disabled={!isLoggedIn || likeLoading}
+                      title={!isLoggedIn ? 'Log in to like' : ''}
+                      className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
                       ${liked 
                         ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' 
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-600'
                       } 
                       ${!isLoggedIn || likeLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                    type="button"
-                  >
-                    {likeLoading ? (
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                    ) : (
-                      <ThumbsUp className={`size-5 transition-transform duration-200 ${liked ? 'text-white' : 'text-gray-500 group-hover:text-green-600'}`} />
-                    )}
-                    <span className="text-sm font-medium">{likes}</span>
-                  </button>
-                  
-                  <button
-                    aria-label="Dislike"
-                    onClick={(e) => handleDislike(e)}
-                    disabled={!isLoggedIn || dislikeLoading}
-                    title={!isLoggedIn ? 'Log in to dislike' : ''}
-                    className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+                      type="button"
+                    >
+                      {likeLoading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <ThumbsUp className={`size-5 transition-transform duration-200 ${liked ? 'text-white' : 'text-gray-500 group-hover:text-green-600'}`} />
+                      )}
+                      <span className="text-sm font-medium">{likes}</span>
+                    </button>
+                    
+                    <button
+                      aria-label="Dislike"
+                      onClick={(e) => handleDislike(e)}
+                      disabled={!isLoggedIn || dislikeLoading}
+                      title={!isLoggedIn ? 'Log in to dislike' : ''}
+                      className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
                       ${disliked 
                         ? 'bg-red-500 text-white shadow-red-200 hover:bg-red-600' 
                         : 'bg-white text-gray-600 border border-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600'
                       } 
                       ${!isLoggedIn || dislikeLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                    type="button"
-                  >
-                    {dislikeLoading ? (
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                    ) : (
-                      <ThumbsDown className={`size-5 transition-transform duration-200 ${disliked ? 'text-white' : 'text-gray-500 group-hover:text-red-600'}`} />
-                    )}
-                    <span className="text-sm font-medium">{dislikes}</span>
-                  </button>
-                </div>
+                      type="button"
+                    >
+                      {dislikeLoading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <ThumbsDown className={`size-5 transition-transform duration-200 ${disliked ? 'text-white' : 'text-gray-500 group-hover:text-red-600'}`} />
+                      )}
+                      <span className="text-sm font-medium">{dislikes}</span>
+                    </button>
+                  </div>
 
-                {/* Right side - Interested and Save buttons */}
-                <div className="flex items-center gap-3">
-                  <button
-                    aria-label="Interested"
-                    onClick={(e) => handleInterested(e)}
-                    disabled={!isLoggedIn || interestedLoading || (post.author && post.author._id === userId)}
-                    title={
-                      !isLoggedIn 
-                        ? 'Log in to show interest' 
-                        : (post.author && post.author._id === userId)
-                        ? 'You cannot show interest in your own startup'
-                        : ''
-                    }
-                    className={`group flex items-center justify-center p-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
-                      ${interested 
-                        ? 'bg-purple-500 text-white shadow-purple-200 hover:bg-purple-600' 
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600'
-                      } 
-                      ${!isLoggedIn || interestedLoading || (post.author && post.author._id === userId) ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                    type="button"
-                  >
-                    {interestedLoading ? (
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                    ) : (
-                      <Heart className={`size-5 transition-transform duration-200 ${interested ? 'text-white' : 'text-gray-500 group-hover:text-purple-600'}`} />
-                    )}
-                  </button>
-                  
-                  <button
-                    aria-label="Save"
-                    onClick={(e) => handleSave(e)}
-                    disabled={!isLoggedIn || saveLoading}
-                    title={!isLoggedIn ? 'Log in to save' : ''}
-                    className={`group flex items-center justify-center p-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
-                      ${saved 
-                        ? 'bg-blue-500 text-white shadow-blue-200 hover:bg-blue-600' 
-                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600'
-                      } 
-                      ${!isLoggedIn || saveLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                    type="button"
-                  >
-                    {saveLoading ? (
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                    ) : (
-                      <Bookmark className={`size-5 transition-transform duration-200 ${saved ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
-                    )}
-                  </button>
+                  {/* Right side - Interested and Save buttons */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      aria-label="Interested"
+                      onClick={(e) => handleInterested(e)}
+                      disabled={!isLoggedIn || interestedLoading || (post.author && post.author._id === userId)}
+                      title={
+                        !isLoggedIn 
+                          ? 'Log in to show interest' 
+                          : (post.author && post.author._id === userId)
+                          ? 'You cannot show interest in your own startup'
+                          : ''
+                      }
+                      className={`group flex items-center justify-center p-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+                        ${interested 
+                          ? 'bg-purple-500 text-white shadow-purple-200 hover:bg-purple-600' 
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600'
+                        } 
+                        ${!isLoggedIn || interestedLoading || (post.author && post.author._id === userId) ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                      type="button"
+                    >
+                      {interestedLoading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <Heart className={`size-5 transition-transform duration-200 ${interested ? 'text-white' : 'text-gray-500 group-hover:text-purple-600'}`} />
+                      )}
+                    </button>
+                    
+                    <button
+                      aria-label="Save"
+                      onClick={(e) => handleSave(e)}
+                      disabled={!isLoggedIn || saveLoading}
+                      title={!isLoggedIn ? 'Log in to save' : ''}
+                      className={`group flex items-center justify-center p-2 rounded-full transition-all duration-200 shadow-sm hover:shadow-md
+                        ${saved 
+                          ? 'bg-blue-500 text-white shadow-blue-200 hover:bg-blue-600' 
+                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600'
+                        } 
+                        ${!isLoggedIn || saveLoading ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                      type="button"
+                    >
+                      {saveLoading ? (
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      ) : (
+                        <Bookmark className={`size-5 transition-transform duration-200 ${saved ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Comment display with icon */}
-        {showComment && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              )}
+            </div>
+          )}
+      </Link>
+
+      {/* Analytics slot moved outside Link to prevent navigation on interaction */}
+      {analyticsContent && (
+        <div 
+          className="mt-3 relative z-10"
+          onClick={(e) => { e.stopPropagation(); }}
+          onMouseDown={(e) => { e.stopPropagation(); }}
+          onPointerDown={(e) => { e.stopPropagation(); }}
+          onKeyDown={(e) => { e.stopPropagation(); }}
+        >
+          {analyticsContent}
+        </div>
+      )}
+
+      {/* Comment display with icon */}
+      {showComment && (
+        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               {commentType === 'reply' ? (
                 <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -434,8 +466,6 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
             <p className="text-sm text-gray-800 line-clamp-3">{description}</p>
             </div>
           )}
-      </Link>
-
       <div className="flex-between gap-3 mt-3">
         {showCategory && (
         <Link href={`/?query=${category?.toLowerCase()}`}>

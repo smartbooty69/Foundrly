@@ -5,6 +5,8 @@ import ActivityGridItem from './ActivityGridItem';
 import StartupCard from './StartupCard';
 import { client } from '@/sanity/lib/client';
 import { USER_ACTIVITY_QUERY, TEST_REPORTS_QUERY, ALL_REPORTS_QUERY, STARTUP_IDS_FROM_REPORTS_QUERY, STARTUPS_BY_IDS_QUERY, USER_REPORTED_CONTENT_QUERY } from '@/sanity/lib/activity-queries';
+import InlineSparkline from './InlineSparkline';
+import AnalyticsPeriodSparkline from './AnalyticsPeriodSparkline';
 
 interface StartupData {
   _id: string;
@@ -94,9 +96,12 @@ interface ActivityContentGridProps {
       year: string;
     };
   };
+  onlyOwnStartups?: boolean;
+  onStartupSelect?: (startupId: string) => void;
+  selectedCategory?: string;
 }
 
-const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentGridProps) => {
+const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, onStartupSelect, selectedCategory }: ActivityContentGridProps) => {
   const [startups, setStartups] = useState<StartupData[]>([]);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,43 +140,70 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
         if (activityType === 'reviews') {
           // Use the new query for reports that handles both startups and comments
           data = await client.fetch(USER_REPORTED_CONTENT_QUERY, { userId });
-        } else if (activityType === 'comments') {
-          // Use a specific query for comments to get individual comments
-          data = await client.fetch(`
-            *[_type == "comment" && author._ref == $userId] {
-              _id,
-              text,
-              createdAt,
-              likes,
-              dislikes,
-              parentComment -> {
-                _id,
-                text,
-                author -> {
-                  _id,
-                  name
-                }
-              },
-              startup -> {
-                _id,
-                title,
-                slug,
-                image
-              },
-              author -> {
-                _id,
-                name,
-                image
-              }
-            }
-          `, { userId });
-          
-
         } else if (activityType === 'dislikes') {
           // Use the existing query for dislikes (same as likes but for disliked content)
           const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
           const params = { userId, startDate, endDate };
           data = await client.fetch(query, params);
+        } else if (activityType === 'views') {
+          // Fetch startups authored by the user, ordered by views desc
+          data = await client.fetch(`
+            *[_type == "startup" && author._ref == $userId] | order(views desc) {
+              _id,
+              title,
+              slug,
+              _createdAt,
+              author -> { _id, name, image, bio },
+              views,
+              description,
+              category,
+              image,
+              likes,
+              dislikes,
+              "commentsCount": count(comments),
+              "activityType": "views"
+            }
+          `, { userId });
+        } else if (activityType === 'likes' && onlyOwnStartups) {
+          // Fetch startups authored by the user when showing analytics for own startups
+          data = await client.fetch(`
+            *[_type == "startup" && author._ref == $userId] | order(_createdAt desc) {
+              _id,
+              title,
+              slug,
+              _createdAt,
+              author -> { _id, name, image, bio },
+              views,
+              description,
+              category,
+              image,
+              likes,
+              dislikes,
+              "commentsCount": count(comments)
+            }
+          `, { userId });
+        } else if (activityType === 'startup-selection') {
+          // Explicit selection list: only show startups authored by the user
+          const categoryFilter = selectedCategory && selectedCategory !== 'all' 
+            ? `&& category == "${selectedCategory}"` 
+            : '';
+          
+          data = await client.fetch(`
+            *[_type == "startup" && author._ref == $userId ${categoryFilter}] | order(_createdAt desc) {
+              _id,
+              title,
+              slug,
+              _createdAt,
+              author -> { _id, name, image, bio },
+              views,
+              description,
+              category,
+              image,
+              likes,
+              dislikes,
+              "commentsCount": count(comments)
+            }
+          `, { userId });
         } else {
           // Use the existing query for likes
           const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
@@ -206,17 +238,6 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
           
           setStartups(sortedStartups);
           setComments(sortedComments);
-        } else if (activityType === 'comments') {
-          // For comments, we have individual comments
-          let sortedComments = [...data];
-          if (filters?.sortBy === 'oldest') {
-            sortedComments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-          } else {
-            sortedComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          }
-          
-          setStartups([]);
-          setComments(sortedComments);
         } else if (activityType === 'dislikes') {
           // For dislikes, we only have startups
           let sortedData = [...data];
@@ -226,6 +247,39 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
             sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
           }
           
+          setStartups(sortedData);
+          setComments([]);
+        } else if (activityType === 'views') {
+          // For views, we only have startups
+          let sortedData = [...data];
+          if (filters?.sortBy === 'oldest') {
+            sortedData.sort((a, b) => new Date(a._createdAt).getTime() - new Date(b._createdAt).getTime());
+          } else {
+            sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
+          }
+          
+          setStartups(sortedData);
+          setComments([]);
+        } else if (activityType === 'likes' && onlyOwnStartups) {
+          // For likes, we only have startups
+          let sortedData = [...data];
+          if (filters?.sortBy === 'oldest') {
+            sortedData.sort((a, b) => new Date(a._createdAt).getTime() - new Date(b._createdAt).getTime());
+          } else {
+            sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
+          }
+          
+          setStartups(sortedData);
+          setComments([]);
+        } else if (activityType === 'startup-selection') {
+          // For selection, show user's own startups
+          let sortedData = [...data];
+          if (filters?.sortBy === 'oldest') {
+            sortedData.sort((a, b) => new Date(a._createdAt).getTime() - new Date(b._createdAt).getTime());
+          } else {
+            sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
+          }
+
           setStartups(sortedData);
           setComments([]);
         } else {
@@ -248,11 +302,11 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
     };
 
     fetchStartups();
-  }, [activityType, userId, filters]);
+  }, [activityType, userId, filters, onlyOwnStartups, selectedCategory]);
 
   if (loading) {
     return (
-      <div className="pr-20">
+      <div className="pr-80">
         <ul className="card_grid-compact">
           {Array.from({ length: 6 }).map((_, index) => (
             <li key={index}>
@@ -285,21 +339,30 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
         </div>
       );
     }
-  } else if (activityType === 'comments') {
-    // For comments, check only comments
-    if (comments.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No comments found</p>
-        </div>
-      );
-    }
   } else if (activityType === 'dislikes') {
     // For dislikes, check only startups
     if (startups.length === 0) {
       return (
         <div className="text-center py-8">
           <p className="text-gray-500">No disliked content found</p>
+        </div>
+      );
+    }
+  } else if (activityType === 'views') {
+    // For views, check only startups
+    if (startups.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No startups found</p>
+        </div>
+      );
+    }
+  } else if (activityType === 'likes' && onlyOwnStartups) {
+    // For likes, check only startups
+    if (startups.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No {activityType} found</p>
         </div>
       );
     }
@@ -315,13 +378,13 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
   }
 
   return (
-    <div className="pr-20">
+    <div className="pr-80">
       {/* Render startups (for likes and reported startups) */}
       {startups.length > 0 && (
-        <ul className="card_grid-compact">
-      {startups.map((startup) => (
+        <ul className={(activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views') ? 'grid grid-cols-1 gap-8' : 'card_grid-compact'}>
+          {startups.map((startup) => (
             <StartupCard 
-          key={startup._id} 
+              key={startup._id}
               post={{
                 ...startup,
                 _createdAt: typeof startup._createdAt === 'string' ? startup._createdAt.replace(/^\s*[•.]+\s*/, "") : startup._createdAt
@@ -329,55 +392,36 @@ const ActivityContentGrid = ({ activityType, userId, filters }: ActivityContentG
               isOwner={false}
               isLoggedIn={!!userId}
               userId={userId}
-              showDescription={false}
-              showCategory={false}
-              showDetailsButton={false}
-        />
-      ))}
+              showDescription={activityType === 'startup-selection'}
+              showCategory={activityType === 'startup-selection'}
+              showDetailsButton={activityType === 'startup-selection'}
+              analyticsContent={activityType === 'likes' ? (
+                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.likes || 0} apiPath={'/api/analytics/likes'} />
+              ) : activityType === 'dislikes' ? (
+                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.dislikes || 0} apiPath={'/api/analytics/dislikes'} />
+              ) : activityType === 'comments' ? (
+                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.commentsCount || 0} apiPath={'/api/analytics/comments'} />
+              ) : activityType === 'views' ? (
+                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.views || 0} apiPath={'/api/analytics/views'} />
+              ) : activityType === 'startup-selection' ? (
+                <div className="mt-3">
+                  <button
+                    onClick={() => onStartupSelect?.(startup._id)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Analyze This Startup
+                  </button>
+                </div>
+              ) : undefined}
+              hideActions={activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views'}
+              hideImage={activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views'}
+              hideViews={activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views'}
+            />
+          ))}
         </ul>
       )}
       
-      {/* Render comments (for comments section and reported comments) */}
-      {comments.length > 0 && (
-        <div className="mt-6">
-          <ul className="card_grid-compact">
-            {comments.map((comment) => {
-              // Convert comment data to startup data format for StartupCard
-              const startupData = {
-                _id: comment.startup._id,
-                title: comment.startup.title,
-                slug: comment.startup.slug,
-                _createdAt: typeof comment.createdAt === 'string' ? comment.createdAt.replace(/^\s*[•.]+\s*/, "") : comment.createdAt,
-                author: comment.author,
-                views: 0,
-                description: comment.text,
-                category: '',
-                image: comment.startup.image,
-                likes: comment.likes,
-                dislikes: comment.dislikes,
-                commentsCount: 0,
-                activityType: 'comment'
-              };
-              
-              return (
-                <StartupCard 
-                  key={comment._id} 
-                  post={startupData}
-                  isOwner={false}
-                  isLoggedIn={!!userId}
-                  userId={userId}
-                  showDescription={false}
-                  showCategory={false}
-                  showDetailsButton={false}
-                  showComment={true}
-                  commentType={activityType === 'reviews' ? 'report' : (comment.parentComment ? 'reply' : 'comment')}
-                  showLikesDislikes={false}
-                />
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      {/* Comments rendering removed */}
     </div>
   );
 };
