@@ -50,7 +50,10 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
   };
 
   const performSearch = async (searchQuery: string) => {
+    console.log('🔍 [FRONTEND SEARCH] Starting search:', { searchQuery });
+    
     if (!searchQuery.trim()) {
+      console.log('❌ [FRONTEND SEARCH] Empty search query provided');
       toast.error('Please enter a search query');
       return;
     }
@@ -59,10 +62,24 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
     setError(null);
 
     try {
+      console.log('🌐 [FRONTEND SEARCH] Making API request to semantic search...');
       const response = await fetch(`/api/ai/semantic-search?q=${encodeURIComponent(searchQuery)}&limit=12`);
       const data = await response.json();
 
+      console.log('🌐 [FRONTEND SEARCH] API response received:', {
+        status: response.status,
+        ok: response.ok,
+        success: data.success,
+        resultsCount: data.results?.startups?.length || 0,
+        fallbackUsed: data.results?.fallbackUsed || false,
+        confidence: data.results?.confidence || 0
+      });
+
       if (!response.ok) {
+        console.error('❌ [FRONTEND SEARCH] API request failed:', {
+          status: response.status,
+          message: data.message
+        });
         throw new Error(data.message || 'Search failed');
       }
 
@@ -79,23 +96,38 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
           ],
           relatedCategories: Array.from(new Set((apiResults?.startups || []).map((startup: any) => startup.category).filter(Boolean)))
         };
+        
+        console.log('✅ [FRONTEND SEARCH] Search results processed:', {
+          startupsCount: searchResults.startups.length,
+          confidence: searchResults.confidence,
+          relatedCategories: searchResults.relatedCategories
+        });
+        
         setResults(searchResults);
         saveToHistory(searchQuery);
         
         // Show detailed toast with error information if fallback was used
         if (apiResults?.fallbackUsed && apiResults?.toastMessage) {
+          console.log('⚠️ [FRONTEND SEARCH] Fallback was used:', apiResults.toastMessage);
           toast.success(`Found ${apiResults?.startups?.length || 0} results (${apiResults.toastMessage})`);
         } else {
+          console.log('✅ [FRONTEND SEARCH] Normal AI search completed successfully');
           toast.success(`Found ${apiResults?.startups?.length || 0} results`);
         }
       } else {
+        console.error('❌ [FRONTEND SEARCH] API returned success: false:', data.message);
         throw new Error(data.message || 'Search failed');
       }
     } catch (error) {
+      console.error('❌ [FRONTEND SEARCH] Search error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
       setError(error instanceof Error ? error.message : 'Search failed');
       toast.error('Search failed');
     } finally {
       setIsSearching(false);
+      console.log('🔍 [FRONTEND SEARCH] Search completed, isSearching set to false');
     }
   };
 

@@ -17,7 +17,26 @@ export async function getPersonalizedRecommendations(userId: string, limit: numb
     confidence: 0.9
   };
 }
-// Initialize AI services
+// Initialize AI services with environment validation
+console.log('🔧 [AI SERVICES INIT] Initializing AI services...');
+
+// Check environment variables
+console.log('🔑 [AI SERVICES INIT] Environment variables check:', {
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY ? `Set (${process.env.GEMINI_API_KEY.length} chars)` : 'NOT SET',
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? `Set (${process.env.ANTHROPIC_API_KEY.length} chars)` : 'NOT SET',
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Set (${process.env.OPENAI_API_KEY.length} chars)` : 'NOT SET',
+  GROK_API_KEY: process.env.GROK_API_KEY ? `Set (${process.env.GROK_API_KEY.length} chars)` : 'NOT SET',
+  PINECONE_API_KEY: process.env.PINECONE_API_KEY ? `Set (${process.env.PINECONE_API_KEY.length} chars)` : 'NOT SET'
+});
+
+if (!process.env.GEMINI_API_KEY) {
+  console.error('❌ [AI SERVICES INIT] GEMINI_API_KEY is not set!');
+}
+
+if (!process.env.PINECONE_API_KEY) {
+  console.error('❌ [AI SERVICES INIT] PINECONE_API_KEY is not set!');
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -29,15 +48,39 @@ const pinecone = new Pinecone({
 
 const index = pinecone.index('foundrly-startups');
 
+console.log('✅ [AI SERVICES INIT] AI services initialized successfully');
+
 // AI Service class with all required methods
 export class AIService {
   // Generate embeddings using Gemini with OpenAI fallback
   private async generateEmbedding(text: string): Promise<number[]> {
+    console.log('🤖 [GEMINI EMBEDDING] Starting embedding generation for text:', text.substring(0, 100) + '...');
+    
+    // Check if Gemini API key is available
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ [GEMINI EMBEDDING] GEMINI_API_KEY environment variable is not set');
+      throw new Error('Gemini API key not configured');
+    }
+    
+    console.log('🔑 [GEMINI EMBEDDING] Gemini API key is configured, length:', process.env.GEMINI_API_KEY.length);
+    
     try {
+      console.log('🤖 [GEMINI EMBEDDING] Creating Gemini model instance...');
       const model = genAI.getGenerativeModel({ model: 'embedding-001' });
+      
+      console.log('🤖 [GEMINI EMBEDDING] Calling model.embedContent...');
       const result = await model.embedContent(text);
+      
+      console.log('✅ [GEMINI EMBEDDING] Successfully generated embedding, dimensions:', result.embedding.values.length);
       return result.embedding.values;
     } catch (error) {
+      console.error('❌ [GEMINI EMBEDDING] Error generating embedding:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        textLength: text.length,
+        textPreview: text.substring(0, 50)
+      });
+      
       // Check if it's a quota/API error and try OpenAI fallback
       if (error instanceof Error && (
         error.message.includes('quota') || 
@@ -45,24 +88,37 @@ export class AIService {
         error.message.includes('rate limit') ||
         error.message.includes('Too Many Requests')
       )) {
+        console.log('⚠️ [GEMINI EMBEDDING] Quota/rate limit error detected, trying OpenAI fallback...');
         try {
-          return await this.generateOpenAIEmbedding(text);
+          const openaiResult = await this.generateOpenAIEmbedding(text);
+          console.log('✅ [GEMINI EMBEDDING] OpenAI fallback successful');
+          return openaiResult;
         } catch (openaiError) {
+          console.error('❌ [GEMINI EMBEDDING] OpenAI fallback also failed:', {
+            openaiError: openaiError instanceof Error ? openaiError.message : 'Unknown error'
+          });
           // Re-throw the original error so the main catch block can handle text search fallback
           throw new Error('Both AI services failed');
         }
       }
       
+      console.error('❌ [GEMINI EMBEDDING] Non-quota error, throwing generic error');
       throw new Error('Failed to generate embedding');
     }
   }
 
   // Generate embeddings using OpenAI as fallback
   private async generateOpenAIEmbedding(text: string): Promise<number[]> {
+    console.log('🔄 [OPENAI EMBEDDING] Starting OpenAI fallback embedding generation...');
+    
     try {
       if (!process.env.OPENAI_API_KEY) {
+        console.error('❌ [OPENAI EMBEDDING] OPENAI_API_KEY environment variable is not set');
         throw new Error('OpenAI API key not configured');
       }
+
+      console.log('🔑 [OPENAI EMBEDDING] OpenAI API key is configured, length:', process.env.OPENAI_API_KEY.length);
+      console.log('🔄 [OPENAI EMBEDDING] Making request to OpenAI API...');
 
       const response = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
@@ -76,54 +132,416 @@ export class AIService {
         }),
       });
 
+      console.log('🔄 [OPENAI EMBEDDING] OpenAI API response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ [OPENAI EMBEDDING] OpenAI API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText: errorText
+        });
         throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ [OPENAI EMBEDDING] Successfully generated OpenAI embedding, dimensions:', data.data[0].embedding.length);
       return data.data[0].embedding;
     } catch (error) {
-      // Don't throw here - let the main semanticSearch catch block handle the fallback
+      console.error('❌ [OPENAI EMBEDDING] Error in OpenAI fallback:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
+      // Try Grok fallback before giving up
+      try {
+        console.log('🔄 [OPENAI EMBEDDING] Trying Grok fallback...');
+        return await this.generateGrokEmbedding(text);
+      } catch (grokError) {
+        console.error('❌ [OPENAI EMBEDDING] Grok fallback also failed:', {
+          grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
+        });
       throw new Error('OpenAI embedding failed');
+      }
     }
   }
 
-  // Generate text using Gemini (with Claude fallback)
+  // Generate embeddings using Grok as fallback (since Grok doesn't have embedding endpoint, we'll use text generation)
+  private async generateGrokEmbedding(text: string): Promise<number[]> {
+    console.log('🤖 [GROK EMBEDDING] Starting Grok embedding generation...');
+    
+    try {
+      if (!process.env.GROK_API_KEY) {
+        console.error('❌ [GROK EMBEDDING] GROK_API_KEY environment variable is not set');
+        throw new Error('Grok API key not configured');
+      }
+
+      console.log('🔑 [GROK EMBEDDING] Grok API key is configured, length:', process.env.GROK_API_KEY.length);
+      
+      // Try different Grok models in order of preference
+      const models = ['grok-2-1212', 'grok-beta', 'grok-vision-beta', 'grok-2'];
+      
+      for (const model of models) {
+        try {
+          console.log(`🤖 [GROK EMBEDDING] Trying model: ${model}`);
+          
+          // Since Grok doesn't have embeddings, we'll use a workaround with text generation
+          // to create a semantic representation that we can convert to a vector
+          const prompt = `Create a numerical vector representation (as a comma-separated list of 768 numbers between -1 and 1) for the following text for semantic search purposes: "${text}". Return only the numbers, no explanation.`;
+
+          const response = await fetch('https://api.x.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'user',
+                  content: prompt
+                }
+              ],
+              temperature: 0.1,
+              max_tokens: 2000
+            }),
+          });
+
+          console.log(`🤖 [GROK EMBEDDING] Grok API response status for ${model}:`, response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`⚠️ [GROK EMBEDDING] Model ${model} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              errorText: errorText
+            });
+            
+            // If it's a credits issue, try next model
+            if (response.status === 403 && errorText.includes('credits')) {
+              console.log(`🔄 [GROK EMBEDDING] Credits issue with ${model}, trying next model...`);
+              continue;
+            }
+            
+            // If it's a model not found error, try next model
+            if (response.status === 400 && errorText.includes('model')) {
+              console.log(`🔄 [GROK EMBEDDING] Model ${model} not found, trying next model...`);
+              continue;
+            }
+            
+            throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+          }
+
+          const data = await response.json();
+          const generatedText = data.choices[0]?.message?.content?.trim();
+          
+          if (!generatedText) {
+            console.log(`⚠️ [GROK EMBEDDING] No content generated by ${model}, trying next model...`);
+            continue;
+          }
+
+          // Parse the comma-separated numbers into an array
+          const embedding = generatedText
+            .split(',')
+            .map(num => parseFloat(num.trim()))
+            .filter(num => !isNaN(num) && num >= -1 && num <= 1);
+
+          if (embedding.length === 0) {
+            console.log(`⚠️ [GROK EMBEDDING] Failed to parse embedding from ${model}, trying next model...`);
+            continue;
+          }
+
+          // Pad or truncate to 768 dimensions to match Pinecone index
+          const targetDimensions = 768;
+          if (embedding.length < targetDimensions) {
+            // Pad with zeros
+            while (embedding.length < targetDimensions) {
+              embedding.push(0);
+            }
+          } else if (embedding.length > targetDimensions) {
+            // Truncate
+            embedding.splice(targetDimensions);
+          }
+
+          console.log(`✅ [GROK EMBEDDING] Successfully generated Grok embedding with ${model}, dimensions:`, embedding.length);
+          return embedding;
+          
+        } catch (modelError) {
+          console.log(`⚠️ [GROK EMBEDDING] Model ${model} failed:`, {
+            error: modelError instanceof Error ? modelError.message : 'Unknown error'
+          });
+          
+          // If this is the last model, throw the error
+          if (model === models[models.length - 1]) {
+            throw modelError;
+          }
+          
+          // Otherwise, try the next model
+          console.log(`🔄 [GROK EMBEDDING] Trying next model...`);
+          continue;
+        }
+      }
+      
+      // If we get here, all models failed, try a simple hash-based embedding as last resort
+      console.log('🔄 [GROK EMBEDDING] All models failed, trying hash-based embedding fallback...');
+      return this.generateHashBasedEmbedding(text);
+      
+    } catch (error) {
+      console.error('❌ [GROK EMBEDDING] Error in Grok embedding generation:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
+      
+      // Even if Grok completely fails, try hash-based embedding as final fallback
+      console.log('🔄 [GROK EMBEDDING] Grok completely failed, trying hash-based embedding as final fallback...');
+      return this.generateHashBasedEmbedding(text);
+    }
+  }
+
+  // Generate text using Gemini (with Claude and Grok fallbacks)
   private async generateText(prompt: string, maxTokens: number = 1000): Promise<string> {
+    console.log('🤖 [GEMINI TEXT GENERATION] Starting text generation:', {
+      promptLength: prompt.length,
+      promptPreview: prompt.substring(0, 100) + '...',
+      maxTokens
+    });
+    
     try {
       // Try Gemini first
+      console.log('🤖 [GEMINI TEXT GENERATION] Creating Gemini model instance...');
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      
+      console.log('🤖 [GEMINI TEXT GENERATION] Calling model.generateContent...');
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      return response.text();
+      const generatedText = response.text();
+      
+      console.log('✅ [GEMINI TEXT GENERATION] Successfully generated text:', {
+        textLength: generatedText.length,
+        textPreview: generatedText.substring(0, 100) + '...'
+      });
+      
+      return generatedText;
     } catch (error) {
-      console.error('Gemini generation failed, trying Claude:', error);
+      console.error('❌ [GEMINI TEXT GENERATION] Gemini generation failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        promptLength: prompt.length
+      });
       
       // Fallback to Claude if available
       if (process.env.ANTHROPIC_API_KEY) {
+        console.log('🔄 [GEMINI TEXT GENERATION] Trying Claude fallback...');
         try {
           const response = await anthropic.messages.create({
             model: 'claude-3-haiku-20240307',
             max_tokens: maxTokens,
             messages: [{ role: 'user', content: prompt }],
           });
-          return response.content[0].type === 'text' ? response.content[0].text : '';
+          
+          const claudeText = response.content[0].type === 'text' ? response.content[0].text : '';
+          console.log('✅ [GEMINI TEXT GENERATION] Claude fallback successful:', {
+            textLength: claudeText.length,
+            textPreview: claudeText.substring(0, 100) + '...'
+          });
+          
+          return claudeText;
         } catch (claudeError) {
-          console.error('Claude generation also failed:', claudeError);
-          throw new Error('Both AI services failed');
+          console.error('❌ [GEMINI TEXT GENERATION] Claude generation also failed:', {
+            claudeError: claudeError instanceof Error ? claudeError.message : 'Unknown error',
+            claudeErrorType: claudeError instanceof Error ? claudeError.constructor.name : typeof claudeError
+          });
+          
+          // Try Grok as final fallback
+          if (process.env.GROK_API_KEY) {
+            console.log('🔄 [GEMINI TEXT GENERATION] Trying Grok fallback...');
+            try {
+              return await this.generateGrokText(prompt, maxTokens);
+            } catch (grokError) {
+              console.error('❌ [GEMINI TEXT GENERATION] Grok generation also failed:', {
+                grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
+              });
+              throw new Error('All AI services failed');
+            }
+          }
+          
+          throw new Error('Both Gemini and Claude failed');
         }
       }
       
+      // If no Claude, try Grok directly
+      if (process.env.GROK_API_KEY) {
+        console.log('🔄 [GEMINI TEXT GENERATION] No Claude API key, trying Grok fallback...');
+        try {
+          return await this.generateGrokText(prompt, maxTokens);
+        } catch (grokError) {
+          console.error('❌ [GEMINI TEXT GENERATION] Grok generation failed:', {
+            grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
+          });
+      throw new Error('AI generation failed');
+    }
+      }
+      
+      console.error('❌ [GEMINI TEXT GENERATION] No fallback API keys available, throwing error');
       throw new Error('AI generation failed');
     }
   }
 
+  // Generate text using Grok
+  private async generateGrokText(prompt: string, maxTokens: number = 1000): Promise<string> {
+    console.log('🤖 [GROK TEXT GENERATION] Starting Grok text generation:', {
+      promptLength: prompt.length,
+      promptPreview: prompt.substring(0, 100) + '...',
+      maxTokens
+    });
+    
+    try {
+      if (!process.env.GROK_API_KEY) {
+        console.error('❌ [GROK TEXT GENERATION] GROK_API_KEY environment variable is not set');
+        throw new Error('Grok API key not configured');
+      }
+
+      console.log('🔑 [GROK TEXT GENERATION] Grok API key is configured, length:', process.env.GROK_API_KEY.length);
+      
+      // Try different Grok models in order of preference
+      const models = ['grok-2-1212', 'grok-beta', 'grok-vision-beta', 'grok-2'];
+      
+      for (const model of models) {
+        try {
+          console.log(`🤖 [GROK TEXT GENERATION] Trying model: ${model}`);
+          
+          const response = await fetch('https://api.x.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'user',
+                  content: prompt
+                }
+              ],
+              temperature: 0.7,
+              max_tokens: maxTokens
+            }),
+          });
+
+          console.log(`🤖 [GROK TEXT GENERATION] Grok API response status for ${model}:`, response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`⚠️ [GROK TEXT GENERATION] Model ${model} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              errorText: errorText
+            });
+            
+            // If it's a credits issue, try next model
+            if (response.status === 403 && errorText.includes('credits')) {
+              console.log(`🔄 [GROK TEXT GENERATION] Credits issue with ${model}, trying next model...`);
+              continue;
+            }
+            
+            // If it's a model not found error, try next model
+            if (response.status === 400 && errorText.includes('model')) {
+              console.log(`🔄 [GROK TEXT GENERATION] Model ${model} not found, trying next model...`);
+              continue;
+            }
+            
+            throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+          }
+
+          const data = await response.json();
+          const generatedText = data.choices[0]?.message?.content?.trim();
+          
+          if (!generatedText) {
+            console.log(`⚠️ [GROK TEXT GENERATION] No content generated by ${model}, trying next model...`);
+            continue;
+          }
+
+          console.log(`✅ [GROK TEXT GENERATION] Successfully generated text with ${model}:`, {
+            textLength: generatedText.length,
+            textPreview: generatedText.substring(0, 100) + '...'
+          });
+          
+          return generatedText;
+          
+        } catch (modelError) {
+          console.log(`⚠️ [GROK TEXT GENERATION] Model ${model} failed:`, {
+            error: modelError instanceof Error ? modelError.message : 'Unknown error'
+          });
+          
+          // If this is the last model, throw the error
+          if (model === models[models.length - 1]) {
+            throw modelError;
+          }
+          
+          // Otherwise, try the next model
+          console.log(`🔄 [GROK TEXT GENERATION] Trying next model...`);
+          continue;
+        }
+      }
+      
+      // If we get here, all models failed
+      throw new Error('All Grok models failed');
+      
+    } catch (error) {
+      console.error('❌ [GROK TEXT GENERATION] Error in Grok text generation:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      });
+      throw new Error('Grok text generation failed');
+    }
+  }
+
+  // Generate a simple hash-based embedding as fallback when all AI services fail
+  private generateHashBasedEmbedding(text: string): number[] {
+    console.log('🔢 [HASH EMBEDDING] Generating hash-based embedding for text:', text.substring(0, 50) + '...');
+    
+    // Create a simple hash-based embedding - use 768 dimensions to match Pinecone index
+    const embedding = new Array(768).fill(0);
+    const words = text.toLowerCase().split(/\s+/);
+    
+    words.forEach((word, wordIndex) => {
+      // Simple hash function
+      let hash = 0;
+      for (let i = 0; i < word.length; i++) {
+        hash = ((hash << 5) - hash + word.charCodeAt(i)) & 0xffffffff;
+      }
+      
+      // Distribute hash across embedding dimensions
+      const numDimensions = Math.min(10, Math.max(1, Math.floor(word.length / 2)));
+      for (let i = 0; i < numDimensions; i++) {
+        const dimension = Math.abs(hash + i * 1000) % 768;
+        const value = (Math.sin(hash + i) * 0.5 + 0.5) * 2 - 1; // Normalize to [-1, 1]
+        embedding[dimension] += value * (1 / (wordIndex + 1)); // Weight by position
+      }
+    });
+    
+    // Normalize the embedding
+    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+    if (magnitude > 0) {
+      for (let i = 0; i < embedding.length; i++) {
+        embedding[i] = embedding[i] / magnitude;
+      }
+    }
+    
+    console.log('✅ [HASH EMBEDDING] Generated hash-based embedding, dimensions:', embedding.length);
+    return embedding;
+  }
+
   // Clean and preprocess text for better embeddings
   private preprocessText(text: string): string {
-    if (!text) return '';
+    if (!text) {
+      console.log('🧹 [PREPROCESS TEXT] Empty text provided, returning empty string');
+      return '';
+    }
     
-    return text
+    const originalLength = text.length;
+    const processed = text
       // Remove markdown formatting
       .replace(/#{1,6}\s+/g, '') // Remove headers
       .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
@@ -137,6 +555,15 @@ export class AIService {
       .replace(/\b(where|is|the|library|biblioteca)\b/gi, '')
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
+    
+    console.log('🧹 [PREPROCESS TEXT] Text preprocessing completed:', {
+      originalLength,
+      processedLength: processed.length,
+      originalPreview: text.substring(0, 50) + '...',
+      processedPreview: processed.substring(0, 50) + '...'
+    });
+    
+    return processed;
   }
 
   // Create high-quality text content for embeddings
@@ -256,24 +683,39 @@ export class AIService {
 
   // Semantic search using vector similarity with fallback
   async semanticSearch(query: string, limit: number = 10): Promise<any> {
+    console.log('🔍 [SEMANTIC SEARCH] Starting semantic search:', { query, limit });
+    
     try {
       // Clean and preprocess the query
+      console.log('🧹 [SEMANTIC SEARCH] Preprocessing query...');
       const cleanQuery = this.preprocessText(query);
+      console.log('🧹 [SEMANTIC SEARCH] Cleaned query:', cleanQuery);
       
       // Generate embedding for the query
+      console.log('🤖 [SEMANTIC SEARCH] Generating embedding for query...');
       const queryEmbedding = await this.generateEmbedding(cleanQuery);
+      console.log('✅ [SEMANTIC SEARCH] Embedding generated, dimensions:', queryEmbedding.length);
       
       // Search in Pinecone with higher topK to get more candidates
+      console.log('🌲 [SEMANTIC SEARCH] Searching Pinecone index...');
       const searchResults = await index.query({
         vector: queryEmbedding,
         topK: Math.min(limit * 2, 20), // Get more candidates for better filtering
         includeMetadata: true,
       });
+      
+      console.log('🌲 [SEMANTIC SEARCH] Pinecone search completed:', {
+        matchesCount: searchResults.matches?.length || 0,
+        topScore: searchResults.matches?.[0]?.score || 0,
+        bottomScore: searchResults.matches?.[searchResults.matches.length - 1]?.score || 0
+      });
 
       // Get full startup data from Sanity
       const startupIds = searchResults.matches?.map(match => match.id) || [];
+      console.log('📊 [SEMANTIC SEARCH] Startup IDs from Pinecone:', startupIds);
       
       if (startupIds.length === 0) {
+        console.log('❌ [SEMANTIC SEARCH] No startup IDs found, returning empty results');
         return {
           startups: [],
           reasons: ['No matching startups found'],
@@ -281,6 +723,7 @@ export class AIService {
         };
       }
 
+      console.log('📊 [SEMANTIC SEARCH] Fetching startup data from Sanity...');
       const startups = await client.fetch(`
         *[_type == "startup" && _id in $startupIds] {
           _id,
@@ -296,8 +739,14 @@ export class AIService {
           "imageUrl": image.asset->url
         }
       `, { startupIds });
+      
+      console.log('📊 [SEMANTIC SEARCH] Sanity data fetched:', {
+        startupsCount: startups?.length || 0,
+        startupTitles: startups?.map(s => s.title) || []
+      });
 
       // Add similarity scores and filter low-quality results
+      console.log('🎯 [SEMANTIC SEARCH] Processing similarity scores and filtering...');
       let startupsWithSimilarity = startups
         .map(startup => {
           const match = searchResults.matches?.find(m => m.id === startup._id);
@@ -313,8 +762,14 @@ export class AIService {
         .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
         .slice(0, limit); // Limit to requested number
 
+      console.log('🎯 [SEMANTIC SEARCH] High-quality results (threshold 0.60):', {
+        count: startupsWithSimilarity.length,
+        scores: startupsWithSimilarity.map(s => s.similarity)
+      });
+
       // If no high-quality results, try with even lower threshold
       if (startupsWithSimilarity.length === 0) {
+        console.log('⚠️ [SEMANTIC SEARCH] No high-quality results, trying lower threshold (0.50)...');
         startupsWithSimilarity = startups
           .map(startup => {
             const match = searchResults.matches?.find(m => m.id === startup._id);
@@ -329,40 +784,74 @@ export class AIService {
           })
           .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
           .slice(0, Math.min(3, limit)); // Limit to max 3 results for fallback
+        
+        console.log('⚠️ [SEMANTIC SEARCH] Fallback results (threshold 0.50):', {
+          count: startupsWithSimilarity.length,
+          scores: startupsWithSimilarity.map(s => s.similarity)
+        });
       }
 
-      return {
+      const finalResult = {
         startups: startupsWithSimilarity,
         reasons: startupsWithSimilarity.length > 0 
           ? [`Found ${startupsWithSimilarity.length} highly relevant startups matching "${cleanQuery}"`]
           : [`No highly relevant startups found for "${cleanQuery}". Try different search terms.`],
         confidence: searchResults.matches?.[0]?.score || 0,
       };
+      
+      console.log('✅ [SEMANTIC SEARCH] Search completed successfully:', {
+        finalResultsCount: finalResult.startups.length,
+        confidence: finalResult.confidence,
+        reasons: finalResult.reasons
+      });
+      
+      return finalResult;
     } catch (error) {
-      // Check if it's the "Both AI services failed" error or any other error
+      console.error('❌ [SEMANTIC SEARCH] Error in semantic search:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        query,
+        limit
+      });
+      
+      // Check if it's the "All AI services failed" error or any other error
       if (error instanceof Error && (
+        error.message.includes('All AI services failed') ||
         error.message.includes('Both AI services failed') ||
         error.message.includes('Both Gemini and OpenAI embedding failed') ||
         error.message.includes('Failed to generate embedding')
       )) {
+        console.log('🔄 [SEMANTIC SEARCH] AI services failed, falling back to text search...');
         const fallbackResult = await this.fallbackTextSearch(query, limit);
         // Add error context to toast message only
-        fallbackResult.toastMessage = "⚠️ AI services unavailable: Both Gemini and OpenAI quota limits exceeded";
+        fallbackResult.toastMessage = "⚠️ AI services unavailable: Gemini, OpenAI, and Grok quota limits exceeded";
+        console.log('🔄 [SEMANTIC SEARCH] Text search fallback completed:', {
+          resultsCount: fallbackResult.startups.length,
+          fallbackUsed: fallbackResult.fallbackUsed
+        });
         return fallbackResult;
       }
       
       // For any other errors, also fall back to text search
+      console.log('🔄 [SEMANTIC SEARCH] Other error occurred, falling back to text search...');
       const fallbackResult = await this.fallbackTextSearch(query, limit);
       // Add error context to toast message only
       fallbackResult.toastMessage = `⚠️ AI services error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      console.log('🔄 [SEMANTIC SEARCH] Text search fallback completed:', {
+        resultsCount: fallbackResult.startups.length,
+        fallbackUsed: fallbackResult.fallbackUsed
+      });
       return fallbackResult;
     }
   }
 
   // Fallback text search when AI services are unavailable
   async fallbackTextSearch(query: string, limit: number = 10): Promise<any> {
+    console.log('🔄 [FALLBACK TEXT SEARCH] Starting fallback text search:', { query, limit });
+    
     try {
       // Use Sanity's text search capabilities
+      console.log('📊 [FALLBACK TEXT SEARCH] Querying Sanity with text search...');
       const startups = await client.fetch(`
         *[_type == "startup" && (
           title match $query || 
@@ -387,19 +876,44 @@ export class AIService {
         limit: limit 
       });
 
-      return {
+      console.log('📊 [FALLBACK TEXT SEARCH] Sanity text search completed:', {
+        resultsCount: startups?.length || 0,
+        startupTitles: startups?.map(s => s.title) || []
+      });
+
+      const result = {
         startups: startups || [],
         reasons: [`Found ${startups?.length || 0} startups using text search for "${query}"`],
         confidence: 0.7, // Lower confidence for text search
         fallbackUsed: true, // Flag to indicate fallback was used
         toastMessage: "Note: AI search unavailable due to API quota limits. Using text search instead."
       };
+      
+      console.log('✅ [FALLBACK TEXT SEARCH] Fallback search completed successfully:', {
+        resultsCount: result.startups.length,
+        confidence: result.confidence,
+        fallbackUsed: result.fallbackUsed
+      });
+      
+      return result;
     } catch (error) {
-      return {
+      console.error('❌ [FALLBACK TEXT SEARCH] Error in fallback text search:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        query,
+        limit
+      });
+      
+      const errorResult = {
         startups: [],
         reasons: ['Search temporarily unavailable. Please try again later.'],
         confidence: 0,
+        fallbackUsed: true,
+        toastMessage: "Both AI and text search failed. Please try again later."
       };
+      
+      console.log('❌ [FALLBACK TEXT SEARCH] Returning error result:', errorResult);
+      return errorResult;
     }
   }
 

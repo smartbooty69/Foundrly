@@ -31,3 +31,4 @@ export default function SearchToast({ query, aiSearchReasons, postCount }: Searc
   return null; // This component only handles toast display
 }
 
+
