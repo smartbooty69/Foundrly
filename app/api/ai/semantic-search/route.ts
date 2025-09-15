@@ -38,12 +38,13 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [SEMANTIC SEARCH API] Error in semantic search API:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      query: searchParams.get('q'),
-      limit: parseInt(searchParams.get('limit') || '10')
-    });
+    console.error('❌ [SEMANTIC SEARCH API] Error in semantic search API:');
+    console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('  Query:', searchParams.get('q'));
+    console.error('  Limit:', parseInt(searchParams.get('limit') || '10'));
+    if (error instanceof Error && error.stack) {
+      console.error('  Stack trace:', error.stack);
+    }
     
     return NextResponse.json({ 
       success: false, 

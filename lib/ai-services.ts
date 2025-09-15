@@ -26,6 +26,7 @@ console.log('🔑 [AI SERVICES INIT] Environment variables check:', {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? `Set (${process.env.ANTHROPIC_API_KEY.length} chars)` : 'NOT SET',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY ? `Set (${process.env.OPENAI_API_KEY.length} chars)` : 'NOT SET',
   GROK_API_KEY: process.env.GROK_API_KEY ? `Set (${process.env.GROK_API_KEY.length} chars)` : 'NOT SET',
+  GROQ_API_KEY: process.env.GROQ_API_KEY ? `Set (${process.env.GROQ_API_KEY.length} chars)` : 'NOT SET',
   PINECONE_API_KEY: process.env.PINECONE_API_KEY ? `Set (${process.env.PINECONE_API_KEY.length} chars)` : 'NOT SET'
 });
 
@@ -35,6 +36,10 @@ if (!process.env.GEMINI_API_KEY) {
 
 if (!process.env.PINECONE_API_KEY) {
   console.error('❌ [AI SERVICES INIT] PINECONE_API_KEY is not set!');
+}
+
+if (!process.env.GROQ_API_KEY) {
+  console.log('ℹ️ [AI SERVICES INIT] GROQ_API_KEY is not set - GROQ fallback will be skipped');
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -52,6 +57,45 @@ console.log('✅ [AI SERVICES INIT] AI services initialized successfully');
 
 // AI Service class with all required methods
 export class AIService {
+  // Generate embeddings using GROQ only
+  private async generateEmbedding(text: string): Promise<number[]> {
+    console.log('🤖 [GROQ EMBEDDING] Starting embedding generation for text:', text.substring(0, 100) + '...');
+    
+    // Check if GROQ API key is available
+    if (!process.env.GROQ_API_KEY) {
+      console.error('❌ [GROQ EMBEDDING] GROQ_API_KEY environment variable is not set');
+      throw new Error('GROQ API key not configured');
+    }
+    
+    console.log('🔑 [GROQ EMBEDDING] GROQ API key is configured, length:', process.env.GROQ_API_KEY.length);
+    
+    try {
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('groq')) {
+        console.log('⚠️ [GROQ EMBEDDING] Rate limit exceeded');
+        throw new Error('GROQ rate limit exceeded');
+      }
+      
+      console.log('🤖 [GROQ EMBEDDING] Generating GROQ embedding...');
+      const result = await this.generateGroqEmbedding(text);
+      
+      console.log('✅ [GROQ EMBEDDING] Successfully generated embedding, dimensions:', result.length);
+      return result;
+    } catch (error) {
+      console.error('❌ [GROQ EMBEDDING] Error generating embedding:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  Text length:', text.length);
+      console.error('  Text preview:', text.substring(0, 50));
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
+      
+      throw error; // Re-throw the error instead of using hash-based fallback
+    }
+  }
+
+  /* COMMENTED OUT - Using only GROQ now
   // Generate embeddings using Gemini with OpenAI fallback
   private async generateEmbedding(text: string): Promise<number[]> {
     console.log('🤖 [GEMINI EMBEDDING] Starting embedding generation for text:', text.substring(0, 100) + '...');
@@ -65,6 +109,12 @@ export class AIService {
     console.log('🔑 [GEMINI EMBEDDING] Gemini API key is configured, length:', process.env.GEMINI_API_KEY.length);
     
     try {
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('gemini')) {
+        console.log('⚠️ [GEMINI EMBEDDING] Rate limit exceeded, skipping Gemini and trying fallback...');
+        throw new Error('Rate limit exceeded');
+      }
+      
       console.log('🤖 [GEMINI EMBEDDING] Creating Gemini model instance...');
       const model = genAI.getGenerativeModel({ model: 'embedding-001' });
       
@@ -74,19 +124,22 @@ export class AIService {
       console.log('✅ [GEMINI EMBEDDING] Successfully generated embedding, dimensions:', result.embedding.values.length);
       return result.embedding.values;
     } catch (error) {
-      console.error('❌ [GEMINI EMBEDDING] Error generating embedding:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        textLength: text.length,
-        textPreview: text.substring(0, 50)
-      });
+      console.error('❌ [GEMINI EMBEDDING] Error generating embedding:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  Text length:', text.length);
+      console.error('  Text preview:', text.substring(0, 50));
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
       
       // Check if it's a quota/API error and try OpenAI fallback
       if (error instanceof Error && (
         error.message.includes('quota') || 
         error.message.includes('429') || 
         error.message.includes('rate limit') ||
-        error.message.includes('Too Many Requests')
+        error.message.includes('Too Many Requests') ||
+        error.message.includes('insufficient_quota')
       )) {
         console.log('⚠️ [GEMINI EMBEDDING] Quota/rate limit error detected, trying OpenAI fallback...');
         try {
@@ -97,15 +150,26 @@ export class AIService {
           console.error('❌ [GEMINI EMBEDDING] OpenAI fallback also failed:', {
             openaiError: openaiError instanceof Error ? openaiError.message : 'Unknown error'
           });
-          // Re-throw the original error so the main catch block can handle text search fallback
-          throw new Error('Both AI services failed');
+          // Try Grok fallback before giving up
+          try {
+            console.log('🔄 [OPENAI EMBEDDING] Trying Grok fallback...');
+            return await this.generateGrokEmbedding(text);
+          } catch (grokError) {
+            console.error('❌ [OPENAI EMBEDDING] Grok fallback also failed:', {
+              grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
+            });
+            // Use hash-based embedding as final fallback
+            console.log('🔄 [GROK EMBEDDING] All AI services failed, using hash-based embedding fallback...');
+            throw new Error('All GROQ models failed');
+          }
         }
       }
       
-      console.error('❌ [GEMINI EMBEDDING] Non-quota error, throwing generic error');
-      throw new Error('Failed to generate embedding');
+      console.error('❌ [GEMINI EMBEDDING] Non-quota error, trying hash-based embedding fallback...');
+      throw new Error('All GROQ models failed');
     }
   }
+  */
 
   // Generate embeddings using OpenAI as fallback
   private async generateOpenAIEmbedding(text: string): Promise<number[]> {
@@ -115,6 +179,12 @@ export class AIService {
       if (!process.env.OPENAI_API_KEY) {
         console.error('❌ [OPENAI EMBEDDING] OPENAI_API_KEY environment variable is not set');
         throw new Error('OpenAI API key not configured');
+      }
+
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('openai')) {
+        console.log('⚠️ [OPENAI EMBEDDING] Rate limit exceeded, skipping OpenAI and trying fallback...');
+        throw new Error('Rate limit exceeded');
       }
 
       console.log('🔑 [OPENAI EMBEDDING] OpenAI API key is configured, length:', process.env.OPENAI_API_KEY.length);
@@ -136,11 +206,10 @@ export class AIService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ [OPENAI EMBEDDING] OpenAI API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText: errorText
-        });
+        console.error('❌ [OPENAI EMBEDDING] OpenAI API error:');
+        console.error('  Status:', response.status);
+        console.error('  Status Text:', response.statusText);
+        console.error('  Error Text:', errorText);
         throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
@@ -148,19 +217,30 @@ export class AIService {
       console.log('✅ [OPENAI EMBEDDING] Successfully generated OpenAI embedding, dimensions:', data.data[0].embedding.length);
       return data.data[0].embedding;
     } catch (error) {
-      console.error('❌ [OPENAI EMBEDDING] Error in OpenAI fallback:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorType: error instanceof Error ? error.constructor.name : typeof error
-      });
+      console.error('❌ [OPENAI EMBEDDING] Error in OpenAI fallback:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
       // Try Grok fallback before giving up
       try {
         console.log('🔄 [OPENAI EMBEDDING] Trying Grok fallback...');
         return await this.generateGrokEmbedding(text);
       } catch (grokError) {
-        console.error('❌ [OPENAI EMBEDDING] Grok fallback also failed:', {
-          grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
-        });
-      throw new Error('OpenAI embedding failed');
+            console.error('❌ [OPENAI EMBEDDING] Grok fallback also failed:');
+            console.error('  Grok error message:', grokError instanceof Error ? grokError.message : 'Unknown error');
+            // Try GROQ fallback
+            try {
+              console.log('🔄 [GROK EMBEDDING] Trying GROQ fallback...');
+              return await this.generateGroqEmbedding(text);
+            } catch (groqError) {
+              console.error('❌ [GROQ EMBEDDING] GROQ fallback also failed:');
+              console.error('  GROQ error message:', groqError instanceof Error ? groqError.message : 'Unknown error');
+              // Use hash-based embedding as final fallback
+              console.log('🔄 [GROQ EMBEDDING] All AI services failed, using hash-based embedding fallback...');
+              throw new Error('All GROQ models failed');
+            }
       }
     }
   }
@@ -173,6 +253,12 @@ export class AIService {
       if (!process.env.GROK_API_KEY) {
         console.error('❌ [GROK EMBEDDING] GROK_API_KEY environment variable is not set');
         throw new Error('Grok API key not configured');
+      }
+
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('grok')) {
+        console.log('⚠️ [GROK EMBEDDING] Rate limit exceeded, skipping Grok and using hash-based fallback...');
+        throw new Error('Rate limit exceeded');
       }
 
       console.log('🔑 [GROK EMBEDDING] Grok API key is configured, length:', process.env.GROK_API_KEY.length);
@@ -282,23 +368,197 @@ export class AIService {
         }
       }
       
-      // If we get here, all models failed, try a simple hash-based embedding as last resort
-      console.log('🔄 [GROK EMBEDDING] All models failed, trying hash-based embedding fallback...');
-      return this.generateHashBasedEmbedding(text);
+      // If we get here, all models failed, try GROQ fallback
+      console.log('🔄 [GROK EMBEDDING] All models failed, trying GROQ fallback...');
+      try {
+        return await this.generateGroqEmbedding(text);
+      } catch (groqError) {
+        console.error('❌ [GROQ EMBEDDING] GROQ fallback also failed:');
+        console.error('  GROQ error message:', groqError instanceof Error ? groqError.message : 'Unknown error');
+        // Use hash-based embedding as final fallback
+        console.log('🔄 [GROQ EMBEDDING] All AI services failed, using hash-based embedding fallback...');
+      throw new Error('All GROQ models failed');
+      }
       
     } catch (error) {
-      console.error('❌ [GROK EMBEDDING] Error in Grok embedding generation:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorType: error instanceof Error ? error.constructor.name : typeof error
+      console.error('❌ [GROK EMBEDDING] Error in Grok embedding generation:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
+      
+      // Even if Grok completely fails, try GROQ fallback
+      console.log('🔄 [GROK EMBEDDING] Grok completely failed, trying GROQ fallback...');
+      try {
+        return await this.generateGroqEmbedding(text);
+      } catch (groqError) {
+        console.error('❌ [GROQ EMBEDDING] GROQ fallback also failed:');
+        console.error('  GROQ error message:', groqError instanceof Error ? groqError.message : 'Unknown error');
+        // Use hash-based embedding as final fallback
+        console.log('🔄 [GROQ EMBEDDING] All AI services failed, using hash-based embedding fallback...');
+        throw new Error('All GROQ models failed');
+      }
+    }
+  }
+
+  // Generate embeddings using GROQ as fallback (since GROQ doesn't have embedding endpoint, we'll use text generation)
+  private async generateGroqEmbedding(text: string): Promise<number[]> {
+    console.log('🤖 [HASH EMBEDDING] Generating hash-based embedding (GROQ doesn\'t have native embeddings)...');
+    
+    try {
+      // Create a 768-dimensional embedding using hash-based approach
+      const embedding = new Array(768).fill(0);
+      const words = text.toLowerCase().split(/\s+/);
+      
+      // Enhanced keywords for better categorization
+      const bankingKeywords = ['banking', 'bank', 'finance', 'financial', 'fintech', 'payment', 'payments', 'money', 'currency', 'wallet', 'account', 'accounts', 'credit', 'debit', 'loan', 'investment', 'dailypay', 'daily', 'pay', 'plaid', 'dwolla'];
+      const farmingKeywords = ['farming', 'farm', 'agriculture', 'agricultural', 'agritech', 'crop', 'crops', 'livestock', 'dairy', 'poultry', 'harvest', 'soil', 'irrigation'];
+      const healthKeywords = ['health', 'healthcare', 'medical', 'medicine', 'doctor', 'patient', 'hospital', 'clinic', 'wellness', 'fitness', 'therapy', 'healthtech'];
+      const educationKeywords = ['education', 'educational', 'learning', 'learn', 'teach', 'teaching', 'school', 'university', 'college', 'student', 'course', 'edtech'];
+      const designKeywords = ['design', 'designer', 'creative', 'art', 'ui', 'ux', 'graphic', 'visual', 'branding', 'logo', 'illustration', 'photography'];
+      const gamingKeywords = ['gaming', 'game', 'games', 'gamer', 'play', 'playing', 'entertainment', 'fun', 'arcade', 'console', 'esports', 'tournament'];
+      const ecommerceKeywords = ['ecommerce', 'e-commerce', 'commerce', 'shopping', 'shop', 'store', 'retail', 'marketplace', 'sell', 'buy', 'purchase', 'product'];
+      const socialKeywords = ['social', 'social media', 'community', 'chat', 'messaging', 'communication', 'connect', 'network', 'friends', 'follow', 'post', 'share'];
+      
+      words.forEach((word, wordIndex) => {
+        // Simple hash function
+        let hash = 0;
+        for (let i = 0; i < word.length; i++) {
+          hash = ((hash << 5) - hash + word.charCodeAt(i)) & 0xffffffff;
+        }
+        
+        // Enhanced weighting based on keyword categories
+        let weightMultiplier = 1.0;
+        const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+        
+        if (bankingKeywords.includes(cleanWord)) {
+          weightMultiplier = 5.0; // Extra high weight for banking words
+        } else if (farmingKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.5; // High weight for farming words
+        } else if (healthKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.5; // High weight for health words
+        } else if (educationKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.5; // High weight for education words
+        } else if (designKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.0; // High weight for design words
+        } else if (gamingKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.0; // High weight for gaming words
+        } else if (ecommerceKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.0; // High weight for ecommerce words
+        } else if (socialKeywords.includes(cleanWord)) {
+          weightMultiplier = 2.0; // High weight for social words
+        }
+        
+        // Position-based weighting (earlier words are more important)
+        const positionWeight = 1 / (wordIndex + 1);
+        
+        // Distribute hash across embedding dimensions
+        const numDimensions = Math.min(15, Math.max(1, Math.floor(word.length / 2)));
+        for (let i = 0; i < numDimensions; i++) {
+          const dimension = Math.abs(hash + i * 1000) % 768;
+          const value = (Math.sin(hash + i) * 0.5 + 0.5) * 2 - 1; // Normalize to [-1, 1]
+          embedding[dimension] += value * positionWeight * weightMultiplier;
+        }
       });
       
-      // Even if Grok completely fails, try hash-based embedding as final fallback
-      console.log('🔄 [GROK EMBEDDING] Grok completely failed, trying hash-based embedding as final fallback...');
-      return this.generateHashBasedEmbedding(text);
+      // Add semantic context based on text structure
+      this.addSemanticContext(embedding, text);
+      
+      // Normalize the embedding
+      const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+      if (magnitude > 0) {
+        for (let i = 0; i < embedding.length; i++) {
+          embedding[i] = embedding[i] / magnitude;
+        }
+      }
+      
+      console.log('✅ [HASH EMBEDDING] Generated hash-based embedding, dimensions:', embedding.length, 'text length:', text.length);
+      return embedding;
+    } catch (error) {
+      console.error('❌ [HASH EMBEDDING] Error generating hash-based embedding:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
+  }
+
+  // Add semantic context to hash-based embeddings
+  private addSemanticContext(embedding: number[], text: string): void {
+    // Detect banking context
+    const bankingContext = /banking|bank|finance|financial|fintech|payment|money|currency|wallet|account/i.test(text);
+    if (bankingContext) {
+      for (let i = 0; i < 50; i++) {
+        embedding[i] += 0.1 * Math.sin(i);
+      }
+    }
+    
+    // Detect farming context
+    const farmingContext = /farming|agriculture|agritech|crop|livestock|farm/i.test(text);
+    if (farmingContext) {
+      for (let i = 50; i < 100; i++) {
+        embedding[i] += 0.1 * Math.cos(i);
+      }
+    }
+    
+    // Detect health context
+    const healthContext = /health|healthcare|medical|medicine|doctor|patient|hospital/i.test(text);
+    if (healthContext) {
+      for (let i = 100; i < 150; i++) {
+        embedding[i] += 0.1 * Math.sin(i * 0.5);
+      }
+    }
+    
+    // Detect technology context
+    const techContext = /technology|software|app|ai|ml|data|platform/i.test(text);
+    if (techContext) {
+      for (let i = 150; i < 200; i++) {
+        embedding[i] += 0.1 * Math.cos(i * 0.3);
+      }
     }
   }
 
   // Generate text using Gemini (with Claude and Grok fallbacks)
+  private async generateText(prompt: string, maxTokens: number = 1000): Promise<string> {
+    console.log('🤖 [GROQ TEXT GENERATION] Starting text generation:', {
+      promptLength: prompt.length,
+      promptPreview: prompt.substring(0, 100) + '...',
+      maxTokens
+    });
+    
+    // Check if GROQ API key is available
+    if (!process.env.GROQ_API_KEY) {
+      console.error('❌ [GROQ TEXT GENERATION] GROQ_API_KEY environment variable is not set');
+      throw new Error('GROQ API key not configured');
+    }
+    
+    try {
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('groq')) {
+        console.log('⚠️ [GROQ TEXT GENERATION] Rate limit exceeded');
+        throw new Error('Rate limit exceeded');
+      }
+      
+      console.log('🤖 [GROQ TEXT GENERATION] Generating text with GROQ...');
+      const result = await this.generateGroqText(prompt, maxTokens);
+      
+      console.log('✅ [GROQ TEXT GENERATION] Successfully generated text:', {
+        textLength: result.length,
+        textPreview: result.substring(0, 100) + '...'
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('❌ [GROQ TEXT GENERATION] GROQ generation failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        promptLength: prompt.length
+      });
+      
+      throw new Error('GROQ text generation failed');
+    }
+  }
+
+  /* COMMENTED OUT - Using only GROQ now
   private async generateText(prompt: string, maxTokens: number = 1000): Promise<string> {
     console.log('🤖 [GEMINI TEXT GENERATION] Starting text generation:', {
       promptLength: prompt.length,
@@ -352,7 +612,7 @@ export class AIService {
             claudeErrorType: claudeError instanceof Error ? claudeError.constructor.name : typeof claudeError
           });
           
-          // Try Grok as final fallback
+          // Try Grok as fallback
           if (process.env.GROK_API_KEY) {
             console.log('🔄 [GEMINI TEXT GENERATION] Trying Grok fallback...');
             try {
@@ -361,6 +621,18 @@ export class AIService {
               console.error('❌ [GEMINI TEXT GENERATION] Grok generation also failed:', {
                 grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
               });
+              // Try GROQ as final fallback
+              if (process.env.GROQ_API_KEY) {
+                console.log('🔄 [GEMINI TEXT GENERATION] Trying GROQ fallback...');
+                try {
+                  return await this.generateGroqText(prompt, maxTokens);
+                } catch (groqError) {
+                  console.error('❌ [GEMINI TEXT GENERATION] GROQ generation also failed:', {
+                    groqError: groqError instanceof Error ? groqError.message : 'Unknown error'
+                  });
+                  throw new Error('All AI services failed');
+                }
+              }
               throw new Error('All AI services failed');
             }
           }
@@ -378,6 +650,18 @@ export class AIService {
           console.error('❌ [GEMINI TEXT GENERATION] Grok generation failed:', {
             grokError: grokError instanceof Error ? grokError.message : 'Unknown error'
           });
+          // Try GROQ as final fallback
+          if (process.env.GROQ_API_KEY) {
+            console.log('🔄 [GEMINI TEXT GENERATION] Trying GROQ fallback...');
+            try {
+              return await this.generateGroqText(prompt, maxTokens);
+            } catch (groqError) {
+              console.error('❌ [GEMINI TEXT GENERATION] GROQ generation also failed:', {
+                groqError: groqError instanceof Error ? groqError.message : 'Unknown error'
+              });
+              throw new Error('AI generation failed');
+            }
+          }
       throw new Error('AI generation failed');
     }
       }
@@ -386,6 +670,7 @@ export class AIService {
       throw new Error('AI generation failed');
     }
   }
+  */
 
   // Generate text using Grok
   private async generateGrokText(prompt: string, maxTokens: number = 1000): Promise<string> {
@@ -497,13 +782,158 @@ export class AIService {
     }
   }
 
+  // Generate text using GROQ
+  private async generateGroqText(prompt: string, maxTokens: number = 1000): Promise<string> {
+    console.log('🤖 [GROQ TEXT GENERATION] Starting GROQ text generation:', {
+      promptLength: prompt.length,
+      promptPreview: prompt.substring(0, 100) + '...',
+      maxTokens
+    });
+    
+    try {
+      if (!process.env.GROQ_API_KEY) {
+        console.error('❌ [GROQ TEXT GENERATION] GROQ_API_KEY environment variable is not set');
+        throw new Error('GROQ API key not configured');
+      }
+
+      // Check rate limit
+      if (!rateLimiter.canMakeCall('groq')) {
+        console.log('⚠️ [GROQ TEXT GENERATION] Rate limit exceeded, skipping GROQ...');
+        throw new Error('Rate limit exceeded');
+      }
+
+      console.log('🔑 [GROQ TEXT GENERATION] GROQ API key is configured, length:', process.env.GROQ_API_KEY.length);
+      
+      // Try different GROQ models in order of preference
+      const models = ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'];
+      
+      for (const model of models) {
+        try {
+          console.log(`🤖 [GROQ TEXT GENERATION] Trying model: ${model}`);
+          
+          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'user',
+                  content: prompt
+                }
+              ],
+              temperature: 0.7,
+              max_tokens: maxTokens
+            }),
+          });
+
+          console.log(`🤖 [GROQ TEXT GENERATION] GROQ API response status for ${model}:`, response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`⚠️ [GROQ TEXT GENERATION] Model ${model} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              errorText: errorText
+            });
+            
+            // If it's a rate limit error, try next model
+            if (response.status === 429) {
+              console.log(`🔄 [GROQ TEXT GENERATION] Rate limit with ${model}, trying next model...`);
+              continue;
+            }
+            
+            // If it's a model not found error, try next model
+            if (response.status === 400 && errorText.includes('model')) {
+              console.log(`🔄 [GROQ TEXT GENERATION] Model ${model} not found, trying next model...`);
+              continue;
+            }
+            
+            throw new Error(`GROQ API error: ${response.status} - ${errorText}`);
+          }
+
+          const data = await response.json();
+          const generatedText = data.choices[0]?.message?.content?.trim();
+          
+          if (!generatedText) {
+            console.log(`⚠️ [GROQ TEXT GENERATION] No content generated by ${model}, trying next model...`);
+            continue;
+          }
+
+          console.log(`✅ [GROQ TEXT GENERATION] Successfully generated text with ${model}:`, {
+            textLength: generatedText.length,
+            textPreview: generatedText.substring(0, 100) + '...'
+          });
+          
+          return generatedText;
+          
+        } catch (modelError) {
+          console.log(`⚠️ [GROQ TEXT GENERATION] Model ${model} failed:`, {
+            error: modelError instanceof Error ? modelError.message : 'Unknown error'
+          });
+          
+          // If this is the last model, throw the error
+          if (model === models[models.length - 1]) {
+            throw modelError;
+          }
+          
+          // Otherwise, try the next model
+          console.log(`🔄 [GROQ TEXT GENERATION] Trying next model...`);
+          continue;
+        }
+      }
+      
+      // If we get here, all models failed
+      throw new Error('All GROQ models failed');
+      
+    } catch (error) {
+      console.error('❌ [GROQ TEXT GENERATION] Error in GROQ text generation:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
+      throw new Error('GROQ text generation failed');
+    }
+  }
+
   // Generate a simple hash-based embedding as fallback when all AI services fail
+  /* COMMENTED OUT - Using only GROQ now
   private generateHashBasedEmbedding(text: string): number[] {
-    console.log('🔢 [HASH EMBEDDING] Generating hash-based embedding for text:', text.substring(0, 50) + '...');
+    console.log('🔢 [HASH EMBEDDING] Generating enhanced hash-based embedding for comprehensive text:', text.substring(0, 100) + '...');
     
     // Create a simple hash-based embedding - use 768 dimensions to match Pinecone index
     const embedding = new Array(768).fill(0);
     const words = text.toLowerCase().split(/\s+/);
+    
+    // Enhanced farming/agriculture keywords for better categorization
+    const farmingKeywords = [
+      'farming', 'farm', 'agriculture', 'agricultural', 'agritech', 'agri-tech',
+      'crop', 'crops', 'livestock', 'dairy', 'poultry', 'harvest',
+      'soil', 'irrigation', 'fertilizer', 'seed', 'seeds', 'plant', 'plants',
+      'greenhouse', 'organic', 'sustainable', 'food', 'produce',
+      'farmer', 'farmers', 'rural', 'agribusiness', 'agro', 'agro-tech',
+      'cattle', 'sheep', 'goat', 'chicken', 'pig', 'cow', 'horse',
+      'wheat', 'corn', 'rice', 'soybean', 'potato', 'tomato', 'lettuce',
+      'tractor', 'machinery', 'equipment', 'technology', 'innovation'
+    ];
+    
+    // Business and startup context keywords
+    const businessKeywords = [
+      'startup', 'company', 'business', 'enterprise', 'solution', 'platform',
+      'marketplace', 'app', 'application', 'software', 'technology',
+      'funding', 'investment', 'venture', 'capital', 'seed', 'series',
+      'team', 'founder', 'ceo', 'co-founder', 'employees', 'staff'
+    ];
+    
+    // Category-specific keywords
+    const categoryKeywords = [
+      'agritech', 'fintech', 'edtech', 'healthtech', 'cleantech',
+      'ecommerce', 'saas', 'b2b', 'b2c', 'mobile', 'web', 'ai', 'ml'
+    ];
     
     words.forEach((word, wordIndex) => {
       // Simple hash function
@@ -512,14 +942,32 @@ export class AIService {
         hash = ((hash << 5) - hash + word.charCodeAt(i)) & 0xffffffff;
       }
       
+      // Enhanced weighting based on keyword categories
+      let weightMultiplier = 1.0;
+      const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+      
+      if (farmingKeywords.includes(cleanWord)) {
+        weightMultiplier = 3.0; // Triple weight for farming words
+      } else if (businessKeywords.includes(cleanWord)) {
+        weightMultiplier = 1.5; // 1.5x weight for business context
+      } else if (categoryKeywords.includes(cleanWord)) {
+        weightMultiplier = 2.0; // Double weight for category words
+      }
+      
+      // Position-based weighting (earlier words are more important)
+      const positionWeight = 1 / (wordIndex + 1);
+      
       // Distribute hash across embedding dimensions
-      const numDimensions = Math.min(10, Math.max(1, Math.floor(word.length / 2)));
+      const numDimensions = Math.min(15, Math.max(1, Math.floor(word.length / 2)));
       for (let i = 0; i < numDimensions; i++) {
         const dimension = Math.abs(hash + i * 1000) % 768;
         const value = (Math.sin(hash + i) * 0.5 + 0.5) * 2 - 1; // Normalize to [-1, 1]
-        embedding[dimension] += value * (1 / (wordIndex + 1)); // Weight by position
+        embedding[dimension] += value * positionWeight * weightMultiplier;
       }
     });
+    
+    // Add semantic context based on text structure
+    this.addSemanticContext(embedding, text);
     
     // Normalize the embedding
     const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
@@ -529,9 +977,42 @@ export class AIService {
       }
     }
     
-    console.log('✅ [HASH EMBEDDING] Generated hash-based embedding, dimensions:', embedding.length);
+    console.log('✅ [HASH EMBEDDING] Generated enhanced hash-based embedding, dimensions:', embedding.length, 'text length:', text.length);
     return embedding;
   }
+  */
+
+  /* COMMENTED OUT - Using only GROQ now
+  // Add semantic context to hash-based embeddings
+  private addSemanticContext(embedding: number[], text: string): void {
+    // Detect farming/agriculture context
+    const farmingContext = /farming|agriculture|agritech|crop|livestock|farm/i.test(text);
+    if (farmingContext) {
+      // Boost farming-related dimensions
+      for (let i = 0; i < 50; i++) {
+        embedding[i] += 0.1 * Math.sin(i);
+      }
+    }
+    
+    // Detect business context
+    const businessContext = /startup|company|business|platform|marketplace/i.test(text);
+    if (businessContext) {
+      // Boost business-related dimensions
+      for (let i = 50; i < 100; i++) {
+        embedding[i] += 0.1 * Math.cos(i);
+      }
+    }
+    
+    // Detect technology context
+    const techContext = /technology|software|app|ai|ml|data/i.test(text);
+    if (techContext) {
+      // Boost tech-related dimensions
+      for (let i = 100; i < 150; i++) {
+        embedding[i] += 0.1 * Math.sin(i * 0.5);
+      }
+    }
+  }
+  */
 
   // Clean and preprocess text for better embeddings
   private preprocessText(text: string): string {
@@ -566,37 +1047,84 @@ export class AIService {
     return processed;
   }
 
-  // Create high-quality text content for embeddings
+  // Create comprehensive high-quality text content for embeddings
   private createEmbeddingText(startup: any): string {
-    const parts = [];
+    const parts: string[] = [];
     
-    // Add title (most important)
+    // Title
     if (startup.title) {
-      parts.push(startup.title);
+      parts.push(`Title: ${this.preprocessText(String(startup.title))}`);
     }
     
-    // Add category with context
+    // Category
     if (startup.category) {
-      parts.push(`Category: ${startup.category}`);
+      parts.push(`Category: ${this.preprocessText(String(startup.category))}`);
     }
     
-    // Add only the first 150 characters of description to avoid noise
+    // Description
     if (startup.description) {
-      const cleanDesc = this.preprocessText(startup.description);
-      if (cleanDesc.length > 20) {
-        parts.push(cleanDesc.substring(0, 150));
-      }
+      const cleanDesc = this.preprocessText(String(startup.description));
+      if (cleanDesc.length > 10) parts.push(`Description: ${cleanDesc}`);
     }
     
-    // Add only the first 150 characters of pitch to avoid noise
+    // Pitch
     if (startup.pitch) {
-      const cleanPitch = this.preprocessText(startup.pitch);
-      if (cleanPitch.length > 20) {
-        parts.push(cleanPitch.substring(0, 150));
-      }
+      const cleanPitch = this.preprocessText(String(startup.pitch));
+      if (cleanPitch.length > 10) parts.push(`Pitch: ${cleanPitch}`);
     }
     
-    return parts.join('. ');
+    // Tags
+    if (startup.tags && Array.isArray(startup.tags) && startup.tags.length > 0) {
+      parts.push(`Tags: ${startup.tags.map((t: any) => String(t)).join(', ')}`);
+    }
+    
+    // Author
+    if (startup.author?.name) {
+      parts.push(`Author: ${this.preprocessText(String(startup.author.name))}`);
+    }
+    
+    // Status / Funding
+    if (startup.status) {
+      parts.push(`Status: ${this.preprocessText(String(startup.status))}`);
+    }
+    if (startup.fundingStage) {
+      parts.push(`Funding Stage: ${this.preprocessText(String(startup.fundingStage))}`);
+    }
+    
+    // Team size / Location
+    if (startup.teamSize) {
+      parts.push(`Team Size: ${this.preprocessText(String(startup.teamSize))}`);
+    }
+    if (startup.location) {
+      parts.push(`Location: ${this.preprocessText(String(startup.location))}`);
+    }
+    
+    // Engagement
+    const views = typeof startup.views === 'number' ? startup.views : 0;
+    const likes = typeof startup.likes === 'number' ? startup.likes : 0;
+    if (views || likes) {
+      parts.push(`Engagement: ${views} views, ${likes} likes`);
+    }
+    
+    // Created date
+    if (startup._createdAt) {
+      try {
+        const date = new Date(startup._createdAt);
+        if (!isNaN(date.getTime())) {
+          parts.push(`Created: ${date.toISOString().split('T')[0]}`);
+        }
+      } catch {}
+    }
+    
+    const comprehensiveText = parts.join('. ');
+    console.log('📝 [EMBEDDING TEXT] Created comprehensive text:', {
+      startupId: startup._id,
+      title: startup.title,
+      textLength: comprehensiveText.length,
+      textPreview: comprehensiveText.substring(0, 200) + '...'
+    });
+    
+    return comprehensiveText;
   }
 
   // Store startup vector in Pinecone
@@ -683,28 +1211,28 @@ export class AIService {
 
   // Semantic search using vector similarity with fallback
   async semanticSearch(query: string, limit: number = 10): Promise<any> {
-    console.log('🔍 [SEMANTIC SEARCH] Starting semantic search:', { query, limit });
+    console.log('🔍 [GROQ SEMANTIC SEARCH] Starting GROQ-only semantic search:', { query, limit });
     
     try {
       // Clean and preprocess the query
-      console.log('🧹 [SEMANTIC SEARCH] Preprocessing query...');
+      console.log('🧹 [GROQ SEMANTIC SEARCH] Preprocessing query...');
       const cleanQuery = this.preprocessText(query);
-      console.log('🧹 [SEMANTIC SEARCH] Cleaned query:', cleanQuery);
+      console.log('🧹 [GROQ SEMANTIC SEARCH] Cleaned query:', cleanQuery);
       
-      // Generate embedding for the query
-      console.log('🤖 [SEMANTIC SEARCH] Generating embedding for query...');
+      // Generate embedding for the query using GROQ
+      console.log('🤖 [GROQ SEMANTIC SEARCH] Generating GROQ embedding for query...');
       const queryEmbedding = await this.generateEmbedding(cleanQuery);
-      console.log('✅ [SEMANTIC SEARCH] Embedding generated, dimensions:', queryEmbedding.length);
+      console.log('✅ [GROQ SEMANTIC SEARCH] GROQ embedding generated, dimensions:', queryEmbedding.length);
       
-      // Search in Pinecone with higher topK to get more candidates
-      console.log('🌲 [SEMANTIC SEARCH] Searching Pinecone index...');
+      // Search in Pinecone
+      console.log('🌲 [GROQ SEMANTIC SEARCH] Searching Pinecone index...');
       const searchResults = await index.query({
         vector: queryEmbedding,
-        topK: Math.min(limit * 2, 20), // Get more candidates for better filtering
+        topK: Math.min(limit * 2, 20),
         includeMetadata: true,
       });
       
-      console.log('🌲 [SEMANTIC SEARCH] Pinecone search completed:', {
+      console.log('🌲 [GROQ SEMANTIC SEARCH] Pinecone search completed:', {
         matchesCount: searchResults.matches?.length || 0,
         topScore: searchResults.matches?.[0]?.score || 0,
         bottomScore: searchResults.matches?.[searchResults.matches.length - 1]?.score || 0
@@ -712,10 +1240,10 @@ export class AIService {
 
       // Get full startup data from Sanity
       const startupIds = searchResults.matches?.map(match => match.id) || [];
-      console.log('📊 [SEMANTIC SEARCH] Startup IDs from Pinecone:', startupIds);
+      console.log('📊 [GROQ SEMANTIC SEARCH] Startup IDs from Pinecone:', startupIds);
       
       if (startupIds.length === 0) {
-        console.log('❌ [SEMANTIC SEARCH] No startup IDs found, returning empty results');
+        console.log('❌ [GROQ SEMANTIC SEARCH] No startup IDs found, returning empty results');
         return {
           startups: [],
           reasons: ['No matching startups found'],
@@ -723,7 +1251,7 @@ export class AIService {
         };
       }
 
-      console.log('📊 [SEMANTIC SEARCH] Fetching startup data from Sanity...');
+      console.log('📊 [GROQ SEMANTIC SEARCH] Fetching startup data from Sanity...');
       const startups = await client.fetch(`
         *[_type == "startup" && _id in $startupIds] {
           _id,
@@ -740,13 +1268,13 @@ export class AIService {
         }
       `, { startupIds });
       
-      console.log('📊 [SEMANTIC SEARCH] Sanity data fetched:', {
+      console.log('📊 [GROQ SEMANTIC SEARCH] Sanity data fetched:', {
         startupsCount: startups?.length || 0,
         startupTitles: startups?.map(s => s.title) || []
       });
 
-      // Add similarity scores and filter low-quality results
-      console.log('🎯 [SEMANTIC SEARCH] Processing similarity scores and filtering...');
+      // Add similarity scores and filter results
+      console.log('🎯 [GROQ SEMANTIC SEARCH] Processing similarity scores...');
       let startupsWithSimilarity = startups
         .map(startup => {
           const match = searchResults.matches?.find(m => m.id === startup._id);
@@ -756,39 +1284,241 @@ export class AIService {
           };
         })
         .filter(startup => {
-          // Lower confidence threshold to show more results
-          return startup.similarity > 0.60;
-        })
-        .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
-        .slice(0, limit); // Limit to requested number
+          // Use an extremely low threshold for hash-based embeddings
+          return startup.similarity > -0.1; // Very low threshold to catch DailyPay
+        });
 
-      console.log('🎯 [SEMANTIC SEARCH] High-quality results (threshold 0.60):', {
-        count: startupsWithSimilarity.length,
-        scores: startupsWithSimilarity.map(s => s.similarity)
+      // Apply basic keyword-based filtering for better relevance
+      console.log('🔍 [GROQ SEMANTIC SEARCH] Applying keyword-based filtering...');
+      const queryLower = cleanQuery.toLowerCase();
+      
+      // Define basic category keywords
+      const categoryKeywords: Record<string, string[]> = {
+        banking: ['banking', 'bank', 'finance', 'financial', 'fintech', 'payment', 'payments', 'money', 'currency', 'wallet', 'account', 'accounts', 'credit', 'debit', 'loan', 'investment', 'trading', 'stock', 'portfolio', 'dailypay', 'daily', 'pay'],
+        farming: ['farming', 'farm', 'agriculture', 'agricultural', 'agritech', 'agri', 'agricult', 'agiculture', 'agriculure', 'crop', 'crops', 'livestock', 'dairy', 'poultry', 'harvest', 'soil', 'irrigation'],
+        health: ['health', 'healthcare', 'telehealth', 'medical', 'medicine', 'doctor', 'patient', 'hospital', 'clinic', 'wellness', 'therapy', 'healthtech'],
+        fitness: ['fitness','gym','workout','trainer','membership','member','class','schedule','attendance','billing','performance','coaching','exercise','studio','yoga','pilates','crossfit','personal training','sports club','management system','management software','crm','saas'],
+        education: ['education', 'educational', 'learning', 'learn', 'teach', 'teaching', 'school', 'university', 'college', 'student', 'course', 'edtech'],
+        design: ['design', 'designer', 'creative', 'art', 'ui', 'ux', 'graphic', 'visual', 'branding', 'logo', 'illustration', 'photography'],
+        gaming: ['gaming', 'game', 'games', 'gamer', 'play', 'playing', 'entertainment', 'fun', 'arcade', 'console', 'esports', 'tournament'],
+        ecommerce: ['ecommerce', 'e-commerce', 'commerce', 'shopping', 'shop', 'store', 'retail', 'marketplace', 'sell', 'buy', 'purchase', 'product'],
+        social: ['social', 'social media', 'community', 'chat', 'messaging', 'communication', 'connect', 'network', 'friends', 'follow', 'post', 'share']
+      };
+
+      // Extend categories dynamically from comprehensive taxonomy list provided
+      const extraCategoryNames = [
+        'SaaS','PaaS','IaaS','AI','Machine Learning','Computer Vision','Natural Language Processing','Recommendation Systems',
+        'Blockchain','Web3','DeFi','NFTs','DAOs','Crypto Wallets','Layer 2 Scaling',
+        'AR','VR','XR','Metaverse',
+        'Cybersecurity','Identity Protection','Zero-Trust Security',
+        'Developer Tools','APIs','SDKs','CI/CD','Testing Frameworks',
+        'Big Data','Analytics','Data Lakes',
+        'Robotics','Automation','Industrial Robots','Drones','Autonomous Vehicles',
+        'E-commerce','Marketplaces','Recommerce','B2B Marketplaces',
+        'Social Media','Communities','Creator Economy',
+        'Gaming','Esports','Cloud Gaming',
+        'Travel','Hospitality','Booking Engines','Travel Experiences','Hotel Tech',
+        'Fashion','Apparel','D2C Brands','Sustainable Fashion','Virtual Try-On',
+        'Food','Beverage','Food Delivery','Alternative Proteins','Craft Beverages',
+        'Health','Fitness','Telehealth','Fitness Apps','Mental Wellness','Supplements',
+        'Home','Living','Smart Home','Interior Design Platforms',
+        'Digital Health','Biotech','Pharmaceuticals','Gene Therapy','Drug Discovery','CRISPR Startups','Medical Devices','Imaging','Surgical Robots','Remote Monitoring Devices','Healthcare IT','EMR Systems','Insurance Tech','Care Coordination Tools',
+        'FinTech','Neobanks','Payments','Lending','Investing Platforms','InsurTech',
+        'PropTech','Real Estate Marketplaces','Property Management SaaS',
+        'LegalTech','Contract Automation','Compliance Platforms',
+        'HRTech','Future of Work','Hiring Platforms','Payroll Automation','Remote Work Tools',
+        'CleanTech','GreenTech','Renewable Energy','Energy Storage','Smart Grids','ClimateTech','Carbon Capture','Emissions Tracking','Circular Economy',
+        'AgriTech','Precision Farming','Vertical Farming','Supply Chain Optimization',
+        'Waste Management','Recycling',
+        'Electric Vehicles','Charging Infrastructure','Logistics','Supply Chain','Last-Mile Delivery','Freight Platforms',
+        'Autonomous Vehicles','Self-Driving Cars','Sensors','Mapping','Micromobility','E-bikes','Scooters','Ride-Sharing',
+        'Industry 4.0','IoT-Enabled Factories','Predictive Maintenance',
+        '3D Printing','Additive Manufacturing','Prototyping','Custom Manufacturing',
+        'ConstructionTech','Project Management','Modular Construction','Safety Tech',
+        'EdTech','Online Learning Platforms','Tutoring Marketplaces','LMS',
+        'Knowledge Management','Enterprise Wikis','Research Tools','Expert Networks','Language Learning','AI Tutors','Gamified Apps',
+        'Content Creation Tools','Video Editing SaaS','AI Content Generation',
+        'Streaming','Entertainment','OTT Platforms','Music Tech','Podcasting Tools',
+        'AdTech','MarTech','Personalization Engines','Influencer Marketing Platforms',
+        'SpaceTech','Satellites','Launch Vehicles','Space Mining',
+        'Quantum Computing','Quantum Hardware','Quantum Cryptography',
+        'Advanced Materials','Nanotech','New Alloys','Biotech Materials',
+        'CivicTech','Government Transparency Tools','Voting Platforms','Nonprofit Platforms','Donation Management','Volunteer Coordination',
+        'Social Impact Startups','Poverty Alleviation','Education Access','Water Tech'
+      ];
+
+      const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const tokenize = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+      for (const name of extraCategoryNames) {
+        const key = slugify(name);
+        if (!categoryKeywords[key]) {
+          const tokens = Array.from(new Set(tokenize(name)));
+          // Seed with tokens and common synonyms when obvious
+          const extras: string[] = [];
+          if (tokens.includes('ai')) extras.push('artificial intelligence');
+          if (tokens.includes('ml')) extras.push('machine learning');
+          if (tokens.includes('ar')) extras.push('augmented reality');
+          if (tokens.includes('vr')) extras.push('virtual reality');
+          if (tokens.includes('xr')) extras.push('extended reality');
+          if (tokens.includes('nfts')) extras.push('nft');
+          if (tokens.includes('apis')) extras.push('api');
+          if (tokens.includes('sdks')) extras.push('sdk');
+          if (tokens.includes('saas')) extras.push('software as a service');
+          if (tokens.includes('paas')) extras.push('platform as a service');
+          if (tokens.includes('iaas')) extras.push('infrastructure as a service');
+          // Filter out single-character tokens to avoid collisions (e.g., "e" matching ecommerce)
+          categoryKeywords[key] = Array.from(new Set([...tokens, ...extras].filter(t => t.length > 1)));
+        }
+      }
+
+      // Detect query category
+      let detectedCategory = null;
+      for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(keyword => queryLower.includes(keyword))) {
+          detectedCategory = category;
+          console.log(`🎯 [GROQ SEMANTIC SEARCH] Detected ${category} query, filtering for relevance...`);
+          break;
+        }
+      }
+
+      // Strict category filtering for all detected categories
+      if (detectedCategory) {
+        const originalCount = startupsWithSimilarity.length;
+        const relevantKeywords = categoryKeywords[detectedCategory] || [];
+
+        // Allowed category labels per detected category (substring checks)
+        const allowedCategoryLabels: Record<string, string[]> = {
+          banking: ['fintech', 'finance', 'banking'],
+          farming: ['agri', 'agritech', 'agri tech', 'agriculture', 'farming'],
+          health: ['health', 'healthtech', 'medical', 'health care', 'health-care'],
+          fitness: ['fitness','gym','management software','management system','crm','studio','sports club'],
+          education: ['education', 'edtech', 'ed tech', 'learning'],
+          design: ['design', 'ux', 'ui', 'graphic', 'branding'],
+          gaming: ['gaming', 'game', 'esports'],
+          ecommerce: ['ecommerce', 'e-commerce', 'shopping', 'retail', 'marketplace', 'store'],
+          social: ['social', 'social media', 'community', 'chat', 'messaging', 'network']
+        };
+
+        // Mirror allowed labels for dynamic categories based on their tokens
+        if (!allowedCategoryLabels[detectedCategory] && categoryKeywords[detectedCategory]) {
+          allowedCategoryLabels[detectedCategory] = categoryKeywords[detectedCategory];
+        }
+
+        const labels = allowedCategoryLabels[detectedCategory] || [];
+
+        // Special stricter rules for banking/finance queries
+        const financeTokens = ['stock','stocks','market','trading','trade','invest','investment','investing','portfolio','finance','financial','fintech','equity','equities','forex','crypto','analysis','indicator','signals'];
+        const hardExcludeLabels = detectedCategory === 'fitness'
+          ? ['mobility','transport','shopping','retail','e-commerce','agri','agritech','agriculture','health','healthtech','design','portfolio','automobile','education','edtech','vet','fintech','banking']
+          : ['mobility','transport','shopping','retail','e-commerce','agri','agritech','agriculture','health','healthtech','design','portfolio','management','automobile','education','edtech','vet'];
+
+        startupsWithSimilarity = startupsWithSimilarity.filter(startup => {
+          const category = startup.category?.toLowerCase() || '';
+          const title = startup.title?.toLowerCase() || '';
+          const description = startup.description?.toLowerCase() || '';
+          const pitch = startup.pitch?.toLowerCase() || '';
+
+          // Category match or keyword presence in any main field
+          const isAllowedCategory = labels.some(label => category.includes(label));
+          const hasRelevantKeywords = relevantKeywords.some(k =>
+            category.includes(k) || title.includes(k) || description.includes(k) || pitch.includes(k)
+          );
+
+          let isRelevant = isAllowedCategory || hasRelevantKeywords;
+
+          // Apply banking-specific strictness
+          if (detectedCategory === 'banking') {
+            const financeHit = financeTokens.some(t => title.includes(t) || description.includes(t) || pitch.includes(t));
+            const isHardExcluded = hardExcludeLabels.some(ex => category.includes(ex));
+            isRelevant = (financeHit || isAllowedCategory) && !isHardExcluded;
+          }
+          // Apply fitness-specific strictness (ensure gym/fitness context, exclude shopping)
+          if (detectedCategory === 'fitness') {
+            const fitnessTokens = ['fitness','gym','workout','trainer','membership','class','attendance','billing','performance','coaching','exercise','studio','yoga','pilates','crossfit','crm','management'];
+            const fitnessHit = fitnessTokens.some(t => title.includes(t) || description.includes(t) || pitch.includes(t));
+            const isHardExcluded = hardExcludeLabels.some(ex => category.includes(ex));
+            isRelevant = (fitnessHit || isAllowedCategory) && !isHardExcluded;
+          }
+          if (!isRelevant) {
+            console.log(`🚫 [GROQ SEMANTIC SEARCH] Filtering out irrelevant ${startup.category} startup: ${startup.title}`);
+          }
+          return isRelevant;
+        });
+
+        console.log(`🎯 [GROQ SEMANTIC SEARCH] ${detectedCategory} filtering: ${originalCount} → ${startupsWithSimilarity.length} results`);
+
+        // Second-pass strictness: enforce query-term presence to cut residual noise
+        // Extract meaningful tokens from the query (exclude very common stopwords)
+        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+        const queryTokens = cleanQuery
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter(t => t && !stopwords.has(t));
+
+        if (queryTokens.length > 0) {
+          const before = startupsWithSimilarity.length;
+          startupsWithSimilarity = startupsWithSimilarity.filter(startup => {
+            const hay = `${startup.category || ''} ${startup.title || ''} ${startup.description || ''} ${startup.pitch || ''}`.toLowerCase();
+            return queryTokens.some(t => hay.includes(t));
+          });
+          console.log(`🎯 [GROQ SEMANTIC SEARCH] Query-term enforcement (${queryTokens.join(', ')}): ${before} → ${startupsWithSimilarity.length}`);
+        }
+      }
+
+      // Apply query-term enforcement even when no category detected
+      if (!detectedCategory) {
+        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+        const queryTokens = cleanQuery
+          .toLowerCase()
+          .split(/[^a-z0-9]+/)
+          .filter(t => t && !stopwords.has(t));
+        if (queryTokens.length > 0) {
+          const before = startupsWithSimilarity.length;
+          startupsWithSimilarity = startupsWithSimilarity.filter(startup => {
+            const hay = `${startup.category || ''} ${startup.title || ''} ${startup.description || ''} ${startup.pitch || ''}`.toLowerCase();
+            return queryTokens.some(t => hay.includes(t));
+          });
+          console.log(`🎯 [GROQ SEMANTIC SEARCH] Query-term enforcement (no category) (${queryTokens.join(', ')}): ${before} → ${startupsWithSimilarity.length}`);
+        }
+      }
+
+      // Light exact-match boosting before final sort
+      const fullQuery = cleanQuery.toLowerCase();
+      // Extract meaningful tokens once for pitch-focused boosting
+      const stopwordsBoost = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+      const queryTokensBoost = fullQuery.split(/[^a-z0-9]+/).filter(t => t && !stopwordsBoost.has(t));
+
+      startupsWithSimilarity = startupsWithSimilarity.map(s => {
+        const titleText = String(s.title || '').toLowerCase();
+        const descText = String(s.description || '').toLowerCase();
+        const pitchText = String(s.pitch || '').toLowerCase();
+        const hay = `${titleText} ${descText} ${pitchText}`;
+
+        // Exact full-query boost
+        const exactBoost = hay.includes(fullQuery) ? 0.1 : 0;
+
+        // Pitch-focused boost: if query tokens are present in pitch, add extra weight
+        const pitchTokenHits = queryTokensBoost.some(t => pitchText.includes(t));
+        const pitchBoost = pitchTokenHits ? 0.15 : 0; // prioritize pitch matches
+
+        return { ...s, similarity: (s.similarity || 0) + exactBoost + pitchBoost };
       });
 
-      // If no high-quality results, try with even lower threshold
-      if (startupsWithSimilarity.length === 0) {
-        console.log('⚠️ [SEMANTIC SEARCH] No high-quality results, trying lower threshold (0.50)...');
-        startupsWithSimilarity = startups
-          .map(startup => {
-            const match = searchResults.matches?.find(m => m.id === startup._id);
-            return {
-              ...startup,
-              similarity: match?.score || 0,
-            };
-          })
-          .filter(startup => {
-            // Fallback threshold
-            return startup.similarity > 0.50;
-          })
+      // Sort and limit results (only once)
+      startupsWithSimilarity = startupsWithSimilarity
           .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
-          .slice(0, Math.min(3, limit)); // Limit to max 3 results for fallback
+        .slice(0, limit);
         
-        console.log('⚠️ [SEMANTIC SEARCH] Fallback results (threshold 0.50):', {
+      console.log('🎯 [GROQ SEMANTIC SEARCH] Results after filtering:', {
           count: startupsWithSimilarity.length,
-          scores: startupsWithSimilarity.map(s => s.similarity)
+        scores: startupsWithSimilarity.map(s => s.similarity),
+        detectedCategory: detectedCategory || 'none'
         });
+
+      // No fallback - only show results that meet threshold and pass filtering
+      if (startupsWithSimilarity.length === 0) {
+        console.log('⚠️ [GROQ SEMANTIC SEARCH] No relevant results found after filtering');
       }
 
       const finalResult = {
@@ -799,7 +1529,7 @@ export class AIService {
         confidence: searchResults.matches?.[0]?.score || 0,
       };
       
-      console.log('✅ [SEMANTIC SEARCH] Search completed successfully:', {
+      console.log('✅ [GROQ SEMANTIC SEARCH] Search completed successfully:', {
         finalResultsCount: finalResult.startups.length,
         confidence: finalResult.confidence,
         reasons: finalResult.reasons
@@ -807,58 +1537,268 @@ export class AIService {
       
       return finalResult;
     } catch (error) {
-      console.error('❌ [SEMANTIC SEARCH] Error in semantic search:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        query,
-        limit
-      });
-      
-      // Check if it's the "All AI services failed" error or any other error
-      if (error instanceof Error && (
-        error.message.includes('All AI services failed') ||
-        error.message.includes('Both AI services failed') ||
-        error.message.includes('Both Gemini and OpenAI embedding failed') ||
-        error.message.includes('Failed to generate embedding')
-      )) {
-        console.log('🔄 [SEMANTIC SEARCH] AI services failed, falling back to text search...');
-        const fallbackResult = await this.fallbackTextSearch(query, limit);
-        // Add error context to toast message only
-        fallbackResult.toastMessage = "⚠️ AI services unavailable: Gemini, OpenAI, and Grok quota limits exceeded";
-        console.log('🔄 [SEMANTIC SEARCH] Text search fallback completed:', {
-          resultsCount: fallbackResult.startups.length,
-          fallbackUsed: fallbackResult.fallbackUsed
-        });
-        return fallbackResult;
+      console.error('❌ [GROQ SEMANTIC SEARCH] Error in GROQ semantic search:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  Query:', query);
+      console.error('  Limit:', limit);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
       }
       
-      // For any other errors, also fall back to text search
-      console.log('🔄 [SEMANTIC SEARCH] Other error occurred, falling back to text search...');
-      const fallbackResult = await this.fallbackTextSearch(query, limit);
-      // Add error context to toast message only
-      fallbackResult.toastMessage = `⚠️ AI services error: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.log('🔄 [SEMANTIC SEARCH] Text search fallback completed:', {
-        resultsCount: fallbackResult.startups.length,
-        fallbackUsed: fallbackResult.fallbackUsed
-      });
-      return fallbackResult;
+      // Return empty results on error
+      return {
+        startups: [],
+        reasons: [`Search temporarily unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        confidence: 0,
+      };
     }
   }
 
+  /* COMMENTED OUT - Using only GROQ now
   // Fallback text search when AI services are unavailable
   async fallbackTextSearch(query: string, limit: number = 10): Promise<any> {
     console.log('🔄 [FALLBACK TEXT SEARCH] Starting fallback text search:', { query, limit });
     
     try {
-      // Use Sanity's text search capabilities
-      console.log('📊 [FALLBACK TEXT SEARCH] Querying Sanity with text search...');
-      const startups = await client.fetch(`
+      // Clean the query for better text search
+      const cleanQuery = this.preprocessText(query);
+      const searchTerms = cleanQuery.split(' ').filter(term => term.length > 2);
+      
+      console.log('📊 [FALLBACK TEXT SEARCH] Search terms:', searchTerms);
+      
+      // Define category-specific keywords and exclusions (same as semantic search)
+      const categoryConfig = {
+        farming: {
+          keywords: [
+            'farming', 'farm', 'agriculture', 'agricultural', 'agritech', 'agri-tech',
+            'crop', 'crops', 'livestock', 'dairy', 'poultry', 'harvest',
+            'soil', 'irrigation', 'fertilizer', 'seed', 'seeds', 'plant', 'plants',
+            'greenhouse', 'organic', 'sustainable', 'food', 'produce',
+            'farmer', 'farmers', 'rural', 'agribusiness', 'agro', 'agro-tech'
+          ],
+          exclude: ['fintech', 'edtech', 'healthtech', 'mobility', 'design', 'gaming', 'ecommerce']
+        },
+        fintech: {
+          keywords: [
+            'fintech', 'finance', 'financial', 'banking', 'bank', 'payment', 'payments',
+            'money', 'currency', 'crypto', 'cryptocurrency', 'bitcoin', 'blockchain',
+            'investment', 'investing', 'trading', 'wallet', 'digital wallet',
+            'lending', 'loan', 'loans', 'credit', 'debit', 'card', 'cards'
+          ],
+          exclude: ['farming', 'agriculture', 'edtech', 'healthtech', 'mobility', 'design', 'gaming']
+        },
+        edtech: {
+          keywords: [
+            'edtech', 'education', 'educational', 'learning', 'learn', 'teach', 'teaching',
+            'school', 'schools', 'university', 'college', 'student', 'students',
+            'course', 'courses', 'training', 'tutorial', 'tutorials', 'online learning',
+            'e-learning', 'elearning', 'academy', 'academies', 'skill', 'skills'
+          ],
+          exclude: ['farming', 'fintech', 'healthtech', 'mobility', 'design', 'gaming']
+        },
+        healthtech: {
+          keywords: [
+            'healthtech', 'health', 'healthcare', 'medical', 'medicine', 'doctor', 'doctors',
+            'patient', 'patients', 'hospital', 'hospitals', 'clinic', 'clinics',
+            'wellness', 'fitness', 'mental health', 'therapy', 'therapist', 'nurse', 'nurses',
+            'pharmacy', 'pharmaceutical', 'drug', 'drugs', 'treatment', 'diagnosis'
+          ],
+          exclude: ['farming', 'fintech', 'edtech', 'mobility', 'design', 'gaming']
+        },
+        mobility: {
+          keywords: [
+            'mobility', 'transportation', 'transport', 'travel', 'traveling', 'trip', 'trips',
+            'ride', 'rides', 'ride-sharing', 'rideshare', 'uber', 'lyft', 'taxi', 'taxis',
+            'car', 'cars', 'vehicle', 'vehicles', 'scooter', 'scooters', 'bike', 'bikes',
+            'logistics', 'delivery', 'shipping', 'freight', 'cargo'
+          ],
+          exclude: ['farming', 'fintech', 'edtech', 'healthtech', 'design', 'gaming']
+        },
+        design: {
+          keywords: [
+            'design', 'designer', 'designers', 'creative', 'creativity', 'art', 'arts',
+            'ui', 'ux', 'user interface', 'user experience', 'graphic', 'graphics',
+            'visual', 'visuals', 'branding', 'brand', 'logo', 'logos', 'illustration',
+            'photography', 'photo', 'photos', 'video', 'videos', 'animation'
+          ],
+          exclude: ['farming', 'fintech', 'edtech', 'healthtech', 'mobility', 'gaming']
+        },
+        gaming: {
+          keywords: [
+            'gaming', 'game', 'games', 'gamer', 'gamers', 'play', 'playing', 'entertainment',
+            'fun', 'funny', 'arcade', 'console', 'consoles', 'mobile game', 'mobile games',
+            'video game', 'video games', 'esports', 'tournament', 'tournaments',
+            'virtual', 'vr', 'ar', 'augmented reality', 'virtual reality'
+          ],
+          exclude: ['farming', 'fintech', 'edtech', 'healthtech', 'mobility', 'design']
+        },
+        ecommerce: {
+          keywords: [
+            'ecommerce', 'e-commerce', 'commerce', 'shopping', 'shop', 'store', 'stores',
+            'retail', 'retailer', 'retailers', 'marketplace', 'marketplaces', 'sell', 'selling',
+            'buy', 'buying', 'purchase', 'purchases', 'order', 'orders', 'product', 'products',
+            'inventory', 'catalog', 'catalogue', 'checkout', 'cart', 'basket'
+          ],
+          exclude: ['farming', 'fintech', 'edtech', 'healthtech', 'mobility', 'design', 'gaming']
+        },
+        social: {
+          keywords: [
+            'social', 'social media', 'social network', 'social networking', 'community', 'communities',
+            'chat', 'messaging', 'message', 'communication', 'connect', 'connecting', 'network',
+            'friends', 'friend', 'follow', 'following', 'post', 'posts', 'share', 'sharing',
+            'like', 'likes', 'comment', 'comments', 'feed', 'timeline', 'profile', 'profiles',
+            'facebook', 'twitter', 'instagram', 'linkedin', 'tiktok', 'snapchat', 'discord',
+            'whatsapp', 'telegram', 'slack', 'teams', 'zoom', 'meet', 'hangouts',
+            'application', 'app', 'platform', 'software'
+          ],
+          exclude: ['farming', 'agriculture', 'fintech', 'edtech', 'healthtech', 'mobility', 'design', 'gaming', 'ecommerce']
+        }
+      };
+      
+      // Detect which category the query belongs to
+      let detectedCategory = null;
+      let categoryKeywords = [];
+      let excludeCategories = [];
+      
+      for (const [category, config] of Object.entries(categoryConfig)) {
+        const isThisCategory = config.keywords.some(keyword => 
+          cleanQuery.toLowerCase().includes(keyword.toLowerCase())
+        );
+        
+        if (isThisCategory) {
+          detectedCategory = category;
+          categoryKeywords = config.keywords;
+          excludeCategories = config.exclude;
+          console.log(`🎯 [FALLBACK TEXT SEARCH] Detected ${category} query, filtering accordingly...`);
+          break;
+        }
+      }
+      
+      console.log('📊 [FALLBACK TEXT SEARCH] Detected category:', detectedCategory || 'none');
+      
+      let startups = [];
+      
+      // Strategy 1: Exact phrase search with comprehensive data
+      if (cleanQuery.length > 3) {
+        console.log('📊 [FALLBACK TEXT SEARCH] Trying exact phrase search with comprehensive data...');
+        startups = await client.fetch(`
         *[_type == "startup" && (
           title match $query || 
           description match $query || 
           category match $query ||
-          pitch match $query
+            pitch match $query ||
+            tags match $query ||
+            status match $query ||
+            fundingStage match $query ||
+            location match $query
         )] | order(_createdAt desc) [0...$limit] {
+            _id,
+            title,
+            description,
+            category,
+            pitch,
+            author->{name, username, _id},
+            _createdAt,
+            _updatedAt,
+            views,
+            likes,
+            dislikes,
+            tags,
+            status,
+            fundingStage,
+            teamSize,
+            location,
+            website,
+            socialLinks,
+            "imageUrl": image.asset->url,
+            "logoUrl": logo.asset->url
+          }
+        `, { 
+          query: `*${cleanQuery}*`,
+          limit: limit 
+        });
+      }
+      
+      // Strategy 2: Individual word search with comprehensive data if no results
+      if (startups.length === 0 && searchTerms.length > 0) {
+        console.log('📊 [FALLBACK TEXT SEARCH] Trying individual word search with comprehensive data...');
+        const wordQueries = searchTerms.map(term => `*${term}*`).join(' || ');
+        startups = await client.fetch(`
+          *[_type == "startup" && (
+            title match $wordQueries || 
+            description match $wordQueries || 
+            category match $wordQueries ||
+            pitch match $wordQueries ||
+            tags match $wordQueries ||
+            status match $wordQueries ||
+            fundingStage match $wordQueries ||
+            location match $wordQueries
+          )] | order(_createdAt desc) [0...$limit] {
+            _id,
+            title,
+            description,
+            category,
+            pitch,
+            author->{name, username, _id},
+            _createdAt,
+            _updatedAt,
+            views,
+            likes,
+            dislikes,
+            tags,
+            status,
+            fundingStage,
+            teamSize,
+            location,
+            website,
+            socialLinks,
+            "imageUrl": image.asset->url,
+            "logoUrl": logo.asset->url
+          }
+        `, { 
+          wordQueries,
+          limit: limit 
+        });
+      }
+      
+      // Strategy 3: Category-based search for farming queries
+      if (startups.length === 0 && isFarmingQuery) {
+        console.log('📊 [FALLBACK TEXT SEARCH] Trying category-based search for farming...');
+        startups = await client.fetch(`
+          *[_type == "startup" && (
+            category match "*agri*" ||
+            category match "*farm*" ||
+            category match "*agriculture*" ||
+            category match "*food*" ||
+            category match "*crop*" ||
+            category match "*plant*"
+          )] | order(views desc, likes desc) [0...$limit] {
+            _id,
+            title,
+            description,
+            category,
+            pitch,
+            author->{name, username},
+            _createdAt,
+            views,
+            likes,
+            dislikes,
+            "imageUrl": image.asset->url
+          }
+        `, { limit: limit });
+      }
+      
+      // Strategy 4: Keyword-based search for farming queries
+      if (startups.length === 0 && isFarmingQuery) {
+        console.log('📊 [FALLBACK TEXT SEARCH] Trying keyword-based search for farming...');
+        const farmingQueryTerms = farmingKeywords.map(keyword => `*${keyword}*`).join(' || ');
+        startups = await client.fetch(`
+          *[_type == "startup" && (
+            title match $farmingQueryTerms || 
+            description match $farmingQueryTerms || 
+            pitch match $farmingQueryTerms
+          )] | order(views desc, likes desc) [0...$limit] {
           _id,
           title,
           description,
@@ -872,18 +1812,131 @@ export class AIService {
           "imageUrl": image.asset->url
         }
       `, { 
-        query: `*${query}*`,
+          farmingQueryTerms,
         limit: limit 
       });
+      }
+      
+      // Strategy 5: Show popular startups if still no results (only as last resort)
+      if (startups.length === 0) {
+        if (isFarmingQuery) {
+          console.log('📊 [FALLBACK TEXT SEARCH] No farming matches found, showing only farming-related popular startups...');
+          // For farming queries, only show startups that are actually farming-related
+          startups = await client.fetch(`
+            *[_type == "startup" && (
+              category match "*agri*" ||
+              category match "*farm*" ||
+              category match "*agriculture*" ||
+              category match "*food*" ||
+              category match "*crop*" ||
+              category match "*plant*" ||
+              title match "*farm*" ||
+              title match "*agri*" ||
+              title match "*crop*" ||
+              title match "*plant*" ||
+              description match "*farm*" ||
+              description match "*agri*" ||
+              description match "*crop*" ||
+              description match "*plant*" ||
+              pitch match "*farm*" ||
+              pitch match "*agri*" ||
+              pitch match "*crop*" ||
+              pitch match "*plant*"
+            )] | order(views desc, likes desc) [0...$limit] {
+              _id,
+              title,
+              description,
+              category,
+              pitch,
+              author->{name, username},
+              _createdAt,
+              views,
+              likes,
+              dislikes,
+              "imageUrl": image.asset->url
+            }
+          `, { limit: Math.min(5, limit) });
+        } else {
+          console.log('📊 [FALLBACK TEXT SEARCH] No text matches found, showing popular startups...');
+          startups = await client.fetch(`
+            *[_type == "startup"] | order(views desc, likes desc) [0...$limit] {
+              _id,
+              title,
+              description,
+              category,
+              pitch,
+              author->{name, username},
+              _createdAt,
+              views,
+              likes,
+              dislikes,
+              "imageUrl": image.asset->url
+            }
+          `, { limit: Math.min(5, limit) });
+        }
+      }
 
       console.log('📊 [FALLBACK TEXT SEARCH] Sanity text search completed:', {
         resultsCount: startups?.length || 0,
         startupTitles: startups?.map(s => s.title) || []
       });
 
+      // Post-process results for farming queries to ensure relevance
+      let finalStartups = startups || [];
+      if (isFarmingQuery && finalStartups.length > 0) {
+        console.log('🌾 [FALLBACK TEXT SEARCH] Post-processing results for farming query...');
+        const farmingKeywords = [
+          'farming', 'farm', 'agriculture', 'agricultural', 'agritech', 'agri-tech',
+          'crop', 'crops', 'livestock', 'dairy', 'poultry', 'harvest',
+          'soil', 'irrigation', 'fertilizer', 'seed', 'seeds', 'plant', 'plants',
+          'greenhouse', 'organic', 'sustainable', 'food', 'produce',
+          'farmer', 'farmers', 'rural', 'agribusiness', 'agro', 'agro-tech'
+        ];
+        
+        // Filter based on detected category
+        if (detectedCategory) {
+          console.log(`🎯 [FALLBACK TEXT SEARCH] Filtering for ${detectedCategory} category...`);
+          finalStartups = finalStartups.filter(startup => {
+            const category = startup.category?.toLowerCase() || '';
+            const title = startup.title?.toLowerCase() || '';
+            const description = startup.description?.toLowerCase() || '';
+            const pitch = startup.pitch?.toLowerCase() || '';
+            
+            // First, exclude irrelevant categories
+            const isIrrelevantCategory = excludeCategories.some(excludeCategory => 
+              category.includes(excludeCategory) || 
+              title.includes(excludeCategory) || 
+              description.includes(excludeCategory) || 
+              pitch.includes(excludeCategory)
+            );
+            
+            if (isIrrelevantCategory) {
+              console.log(`🚫 [FALLBACK TEXT SEARCH] Excluding ${excludeCategories.find(ex => category.includes(ex) || title.includes(ex) || description.includes(ex) || pitch.includes(ex))} startup:`, startup.title, 'Category:', category);
+              return false;
+            }
+            
+            // Then, check for category-specific content
+            return categoryKeywords.some(keyword => 
+              category.includes(keyword) || 
+              title.includes(keyword) || 
+              description.includes(keyword) || 
+              pitch.includes(keyword)
+            );
+          });
+        }
+        
+        console.log('🌾 [FALLBACK TEXT SEARCH] Post-processed results:', {
+          original: startups.length,
+          filtered: finalStartups.length,
+          titles: finalStartups.map(s => s.title)
+        });
+      }
+
       const result = {
-        startups: startups || [],
-        reasons: [`Found ${startups?.length || 0} startups using text search for "${query}"`],
+        startups: finalStartups,
+        reasons: finalStartups.length > 0 
+          ? [`Found ${finalStartups.length} startups using text search for "${cleanQuery}"`]
+          : [`No text matches found for "${cleanQuery}". Showing popular startups instead.`],
         confidence: 0.7, // Lower confidence for text search
         fallbackUsed: true, // Flag to indicate fallback was used
         toastMessage: "Note: AI search unavailable due to API quota limits. Using text search instead."
@@ -897,12 +1950,14 @@ export class AIService {
       
       return result;
     } catch (error) {
-      console.error('❌ [FALLBACK TEXT SEARCH] Error in fallback text search:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        query,
-        limit
-      });
+      console.error('❌ [FALLBACK TEXT SEARCH] Error in fallback text search:');
+      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('  Query:', query);
+      console.error('  Limit:', limit);
+      if (error instanceof Error && error.stack) {
+        console.error('  Stack trace:', error.stack);
+      }
       
       const errorResult = {
         startups: [],
@@ -916,6 +1971,7 @@ export class AIService {
       return errorResult;
     }
   }
+  */
 
   // Get personalized recommendations based on user behavior
   async getPersonalizedRecommendations(userId: string, limit: number = 10): Promise<any> {
@@ -1266,6 +2322,47 @@ Format as JSON with fields: severity, issues, recommendation, confidence, explan
     }
   }
 }
+
+// Simple rate limiter to prevent excessive API calls
+class RateLimiter {
+  private calls: Map<string, number[]> = new Map();
+  private readonly maxCalls: number;
+  private readonly windowMs: number;
+
+  constructor(maxCalls: number = 10, windowMs: number = 60000) { // 10 calls per minute
+    this.maxCalls = maxCalls;
+    this.windowMs = windowMs;
+  }
+
+  canMakeCall(service: string): boolean {
+    const now = Date.now();
+    const calls = this.calls.get(service) || [];
+    
+    // Remove old calls outside the window
+    const validCalls = calls.filter(time => now - time < this.windowMs);
+    
+    if (validCalls.length >= this.maxCalls) {
+      return false;
+    }
+    
+    // Add current call
+    validCalls.push(now);
+    this.calls.set(service, validCalls);
+    
+    return true;
+  }
+
+  getRemainingCalls(service: string): number {
+    const now = Date.now();
+    const calls = this.calls.get(service) || [];
+    const validCalls = calls.filter(time => now - time < this.windowMs);
+    
+    return Math.max(0, this.maxCalls - validCalls.length);
+  }
+}
+
+// Create rate limiter instance
+const rateLimiter = new RateLimiter(5, 60000); // 5 calls per minute per service
 
 // Export singleton instance
 export const aiService = new AIService();

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import  localFont  from "next/font/local";
 import "./globals.css";
 import 'easymde/dist/easymde.min.css';
@@ -79,13 +79,6 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  themeColor: "#5409DA",
-  colorScheme: "light",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-  },
   robots: {
     index: true,
     follow: true,
@@ -141,6 +134,14 @@ export const metadata: Metadata = {
       // Add more languages as needed
     },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#5409DA",
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

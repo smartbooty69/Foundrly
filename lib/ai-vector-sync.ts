@@ -7,7 +7,7 @@ export class AIVectorSync {
   // Store a new startup in the vector database
   static async storeStartup(startupId: string): Promise<void> {
     try {
-      // Fetch startup data from Sanity
+      // Fetch comprehensive startup data from Sanity
       const startup = await client.fetch(`
         *[_type == "startup" && _id == $startupId][0] {
           _id,
@@ -15,11 +15,21 @@ export class AIVectorSync {
           description,
           category,
           pitch,
-          author->{name, username},
+          author->{name, username, _id},
           _createdAt,
+          _updatedAt,
           views,
           likes,
-          dislikes
+          dislikes,
+          tags,
+          status,
+          fundingStage,
+          teamSize,
+          location,
+          website,
+          socialLinks,
+          "imageUrl": image.asset->url,
+          "logoUrl": logo.asset->url
         }
       `, { startupId });
 
@@ -39,7 +49,7 @@ export class AIVectorSync {
   // Update an existing startup in the vector database
   static async updateStartup(startupId: string): Promise<void> {
     try {
-      // Fetch updated startup data from Sanity
+      // Fetch comprehensive updated startup data from Sanity
       const startup = await client.fetch(`
         *[_type == "startup" && _id == $startupId][0] {
           _id,
@@ -47,11 +57,21 @@ export class AIVectorSync {
           description,
           category,
           pitch,
-          author->{name, username},
+          author->{name, username, _id},
           _createdAt,
+          _updatedAt,
           views,
           likes,
-          dislikes
+          dislikes,
+          tags,
+          status,
+          fundingStage,
+          teamSize,
+          location,
+          website,
+          socialLinks,
+          "imageUrl": image.asset->url,
+          "logoUrl": logo.asset->url
         }
       `, { startupId });
 
@@ -81,9 +101,9 @@ export class AIVectorSync {
   // Bulk sync all startups to Pinecone (useful for initial setup)
   static async syncAllStartups(): Promise<void> {
     try {
-      console.log('Starting bulk sync of all startups...');
+      console.log('🚀 Starting comprehensive bulk sync of all startups...');
       
-      // Fetch all startups
+      // Fetch comprehensive startup data
       const startups = await client.fetch(`
         *[_type == "startup"] {
           _id,
@@ -91,27 +111,79 @@ export class AIVectorSync {
           description,
           category,
           pitch,
-          author->{name, username},
+          author->{name, username, _id},
           _createdAt,
+          _updatedAt,
           views,
           likes,
-          dislikes
+          dislikes,
+          tags,
+          status,
+          fundingStage,
+          teamSize,
+          location,
+          website,
+          socialLinks,
+          "imageUrl": image.asset->url,
+          "logoUrl": logo.asset->url
         }
       `);
 
-      console.log(`Found ${startups.length} startups to sync`);
+      console.log(`📊 Found ${startups.length} startups to sync with comprehensive data`);
 
-      // Store each startup
-      for (const startup of startups) {
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Store each startup with retry/backoff to avoid GROQ rate limits
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+      for (let i = 0; i < startups.length; i++) {
+        const startup = startups[i];
         try {
-          await aiService.storeStartupVector(startup);
-          console.log(`Synced startup: ${startup.title}`);
+          console.log(`🔄 Syncing startup ${i + 1}/${startups.length}: ${startup.title}`);
+          let attempt = 0;
+          let lastError: unknown = null;
+          while (attempt < 5) {
+            attempt++;
+            try {
+              await aiService.storeStartupVector(startup);
+              successCount++;
+              console.log(`✅ Successfully synced: ${startup.title} (attempt ${attempt})`);
+              break;
+            } catch (err) {
+              lastError = err;
+              const message = err instanceof Error ? err.message : String(err);
+              const isRateLimit = /rate limit/i.test(message);
+              console.warn(`⚠️ Sync attempt ${attempt} failed for ${startup.title}: ${message}`);
+              if (isRateLimit && attempt < 5) {
+                const backoffMs = 1500 * attempt; // linear backoff
+                console.log(`⏳ Backing off for ${backoffMs}ms due to rate limit...`);
+                await delay(backoffMs);
+                continue;
+              }
+              // Non-rate-limit or max retries reached
+              throw err;
+            }
+          }
+          if (successCount + errorCount < i + 1) {
+            // If we exited loop without success, count as error
+            errorCount++;
+            console.error(`❌ Failed to sync after retries: ${startup.title}`, lastError);
+          }
+          // Pace calls to respect GROQ limits
+          await delay(1200);
         } catch (error) {
-          console.error(`Error syncing startup ${startup._id}:`, error);
+          errorCount++;
+          console.error(`❌ Error syncing startup ${startup._id} (${startup.title}):`, error);
+          // Extra pause after a hard failure to be gentle on the API
+          await delay(1500);
         }
       }
 
-      console.log('Bulk sync completed');
+      console.log(`🎉 Comprehensive bulk sync completed!`);
+      console.log(`✅ Successfully synced: ${successCount} startups`);
+      console.log(`❌ Failed to sync: ${errorCount} startups`);
+      console.log(`📈 Success rate: ${((successCount / startups.length) * 100).toFixed(1)}%`);
     } catch (error) {
       console.error('Error in bulk sync:', error);
     }
@@ -126,7 +198,7 @@ export class AIVectorSync {
       let hasMore = true;
 
       while (hasMore) {
-        // Fetch batch of startups
+        // Fetch comprehensive batch of startups
         const startups = await client.fetch(`
           *[_type == "startup"] | order(_createdAt desc) [$offset...$end] {
             _id,
@@ -134,11 +206,21 @@ export class AIVectorSync {
             description,
             category,
             pitch,
-            author->{name, username},
+            author->{name, username, _id},
             _createdAt,
+            _updatedAt,
             views,
             likes,
-            dislikes
+            dislikes,
+            tags,
+            status,
+            fundingStage,
+            teamSize,
+            location,
+            website,
+            socialLinks,
+            "imageUrl": image.asset->url,
+            "logoUrl": logo.asset->url
           }
         `, { 
           offset, 
