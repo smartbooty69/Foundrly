@@ -4,6 +4,23 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { client } from '@/sanity/lib/client';
 import { STARTUPS_QUERY } from '../sanity/lib/queries';
 
+// Optional: suppress noisy logs/errors from this module when desired
+(() => {
+  try {
+    const QUIET_AI_LOGS = process.env.QUIET_AI_LOGS === 'true';
+    const SUPPRESS_AI_ERRORS = process.env.SUPPRESS_AI_ERRORS === 'true';
+    if (QUIET_AI_LOGS) {
+      console.log = (() => {}) as unknown as typeof console.log;
+      console.info = (() => {}) as unknown as typeof console.info;
+      console.warn = (() => {}) as unknown as typeof console.warn;
+      console.debug = (() => {}) as unknown as typeof console.debug;
+    }
+    if (SUPPRESS_AI_ERRORS) {
+      console.error = (() => {}) as unknown as typeof console.error;
+    }
+  } catch {}
+})();
+
 /**
  * Fetch recommended startups for a user from Sanity.
  * For now, returns latest startups as 'recommended'.
@@ -1302,7 +1319,31 @@ export class AIService {
         design: ['design', 'designer', 'creative', 'art', 'ui', 'ux', 'graphic', 'visual', 'branding', 'logo', 'illustration', 'photography'],
         gaming: ['gaming', 'game', 'games', 'gamer', 'play', 'playing', 'entertainment', 'fun', 'arcade', 'console', 'esports', 'tournament'],
         ecommerce: ['ecommerce', 'e-commerce', 'commerce', 'shopping', 'shop', 'store', 'retail', 'marketplace', 'sell', 'buy', 'purchase', 'product'],
-        social: ['social', 'social media', 'community', 'chat', 'messaging', 'communication', 'connect', 'network', 'friends', 'follow', 'post', 'share']
+        social: ['social', 'social media', 'community', 'chat', 'messaging', 'communication', 'connect', 'network', 'friends', 'follow', 'post', 'share'],
+        // User-defined taxonomy groups
+        'ai-ml': ['ai', 'artificial intelligence', 'ml', 'machine learning', 'data science', 'computer vision', 'nlp', 'natural language processing', 'neural network', 'deep learning', 'recommendation system'],
+        'saas': ['saas', 'software as a service', 'b2b software', 'enterprise software', 'crm', 'erp'],
+        'dev-tools': ['developer tools', 'api', 'sdk', 'ci/cd', 'testing framework', 'devops', 'paas', 'iaas', 'platform as a service', 'infrastructure as a service', 'cloud', 'serverless'],
+        'cybersecurity': ['cybersecurity', 'infosec', 'identity protection', 'zero-trust', 'encryption', 'threat detection'],
+        'data-analytics': ['big data', 'analytics', 'data lake', 'business intelligence', 'data visualization', 'data pipeline'],
+        'blockchain': ['blockchain', 'web3', 'defi', 'nft', 'dao', 'crypto', 'cryptocurrency', 'smart contract', 'wallet', 'layer 2'],
+        'fintech': ['fintech', 'finance', 'financial', 'banking', 'bank', 'payment', 'insurtech', 'neobank', 'lending', 'investing', 'trading', 'stock', 'portfolio', 'wealthtech', 'accounting'],
+        'hr-tech': ['hrtech', 'human resources', 'hiring', 'payroll', 'recruiting', 'talent management', 'future of work', 'remote work'],
+        'legal-tech': ['legaltech', 'legal', 'contract automation', 'compliance', 'regulatory'],
+        'ad-mar-tech': ['adtech', 'martech', 'advertising', 'marketing', 'personalization engine', 'influencer marketing', 'seo', 'analytics'],
+        'social-community': ['social media', 'community', 'creator economy', 'networking', 'messaging', 'forum', 'collaboration'],
+        'gaming-metaverse': ['gaming', 'game', 'esports', 'cloud gaming', 'gamefi', 'metaverse', 'ar', 'vr', 'xr', 'augmented reality', 'virtual reality'],
+        'media-entertainment': ['streaming', 'entertainment', 'ott', 'music tech', 'podcasting', 'video editing', 'content creation'],
+        'health-tech': ['healthtech', 'digital health', 'medical', 'healthcare', 'telehealth', 'telemedicine', 'biotech', 'pharma', 'emr', 'ehr', 'medical device', 'diagnostics'],
+        'fitness-wellness': ['fitness', 'wellness', 'gym', 'workout', 'wearables', 'health tracking', 'nutrition', 'mental health', 'meditation', 'therapy'],
+        'agritech': ['agritech', 'agtech', 'farming', 'farm', 'agriculture', 'foodtech', 'crop', 'livestock', 'supply chain', 'vertical farming', 'precision farming'],
+        'logistics-mobility': ['logistics', 'supply chain', 'mobility', 'last-mile delivery', 'freight', 'transportation', 'electric vehicle', 'ev', 'autonomous vehicle', 'ride-sharing', 'micromobility'],
+        'prop-con-tech': ['proptech', 'real estate', 'constructiontech', 'smart home', 'property management', 'modular construction'],
+        'cleantech': ['cleantech', 'greentech', 'renewable energy', 'sustainability', 'climate tech', 'carbon capture', 'circular economy', 'energy storage'],
+        'edtech': ['edtech', 'education', 'learning', 'lms', 'mooc', 'tutoring', 'corporate training', 'skill development'],
+        'automation-robotics': ['automation', 'robotics', 'rpa', 'robotic process automation', 'workflow', 'orchestration', 'iot', 'drone', 'industrial robot', 'bpa'],
+        'design-creative': ['design', 'creative', 'ui', 'ux', 'graphic design', 'prototyping', 'collaboration tool', 'figma', 'canva'],
+        'social-impact': ['social impact', 'civictech', 'nonprofit', 'govtech', 'donation', 'poverty alleviation', 'education access', 'sustainability']
       };
 
       // Extend categories dynamically from comprehensive taxonomy list provided
@@ -1397,7 +1438,30 @@ export class AIService {
           design: ['design', 'ux', 'ui', 'graphic', 'branding'],
           gaming: ['gaming', 'game', 'esports'],
           ecommerce: ['ecommerce', 'e-commerce', 'shopping', 'retail', 'marketplace', 'store'],
-          social: ['social', 'social media', 'community', 'chat', 'messaging', 'network']
+          social: ['social', 'social media', 'community', 'chat', 'messaging', 'network'],
+          'ai-ml': ['ai', 'artificial intelligence', 'ml', 'machine learning', 'nlp', 'computer vision'],
+          'saas': ['saas', 'b2b software', 'enterprise software'],
+          'dev-tools': ['developer tools', 'api', 'sdk', 'devops', 'ci/cd', 'platform as a service', 'infrastructure as a service', 'cloud'],
+          'cybersecurity': ['cybersecurity', 'infosec', 'identity', 'zero-trust', 'encryption'],
+          'data-analytics': ['analytics', 'data', 'bi', 'data pipeline'],
+          'blockchain': ['blockchain', 'web3', 'crypto', 'defi', 'nft', 'dao'],
+          'fintech': ['fintech', 'banking', 'payments', 'insurtech', 'neobank', 'lending', 'investing'],
+          'hr-tech': ['hrtech', 'human resources', 'payroll', 'recruiting', 'talent'],
+          'legal-tech': ['legaltech', 'legal', 'contract', 'compliance'],
+          'ad-mar-tech': ['adtech', 'martech', 'advertising', 'marketing'],
+          'social-community': ['social', 'community', 'creator', 'networking', 'messaging', 'collaboration'],
+          'gaming-metaverse': ['gaming', 'esports', 'metaverse', 'ar', 'vr', 'xr'],
+          'media-entertainment': ['streaming', 'entertainment', 'ott', 'music', 'podcasting', 'video'],
+          'health-tech': ['healthtech', 'healthcare', 'telehealth', 'biotech', 'pharma', 'medical'],
+          'fitness-wellness': ['fitness', 'wellness', 'gym', 'wearables', 'health tracking', 'nutrition', 'mental health'],
+          'agritech': ['agritech', 'agtech', 'farming', 'agriculture', 'foodtech', 'precision farming'],
+          'logistics-mobility': ['logistics', 'supply chain', 'mobility', 'delivery', 'freight', 'transportation', 'ev'],
+          'prop-con-tech': ['proptech', 'real estate', 'constructiontech', 'smart home', 'property management'],
+          'cleantech': ['cleantech', 'greentech', 'renewable', 'sustainability', 'climate tech'],
+          'edtech': ['edtech', 'education', 'learning', 'lms', 'mooc', 'tutoring'],
+          'automation-robotics': ['automation', 'robotics', 'rpa', 'workflow', 'orchestration', 'iot', 'drone', 'industrial robot', 'bpa'],
+          'design-creative': ['design', 'ui', 'ux', 'graphic design', 'prototyping', 'figma', 'canva'],
+          'social-impact': ['social impact', 'civictech', 'nonprofit', 'govtech', 'donation', 'sustainability']
         };
 
         // Mirror allowed labels for dynamic categories based on their tokens
@@ -1433,6 +1497,14 @@ export class AIService {
             const isHardExcluded = hardExcludeLabels.some(ex => category.includes(ex));
             isRelevant = (financeHit || isAllowedCategory) && !isHardExcluded;
           }
+          // Apply automation-specific strictness (avoid generic "automated" mentions and unrelated domains)
+          if (detectedCategory === 'automation') {
+            const automationTokens = ['automation','automate','rpa','workflow','workflows','orchestration','integration','bot','bots','script','scripting','macro','pipelines','airflow','dagster','prefect','selenium','playwright','zapier','ifttt','n8n','make.com'];
+            const automationHit = automationTokens.some(t => title.includes(t) || description.includes(t) || pitch.includes(t));
+            const automationHardExclude = ['fitness','gym','health','design','ecommerce','shopping','retail','portfolio','social'];
+            const isHardExcluded = automationHardExclude.some(ex => category.includes(ex));
+            isRelevant = (automationHit || isAllowedCategory) && !isHardExcluded;
+          }
           // Apply fitness-specific strictness (ensure gym/fitness context, exclude shopping)
           if (detectedCategory === 'fitness') {
             const fitnessTokens = ['fitness','gym','workout','trainer','membership','class','attendance','billing','performance','coaching','exercise','studio','yoga','pilates','crossfit','crm','management'];
@@ -1450,7 +1522,7 @@ export class AIService {
 
         // Second-pass strictness: enforce query-term presence to cut residual noise
         // Extract meaningful tokens from the query (exclude very common stopwords)
-        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','applications','platform','website','site','webstore','related']);
         const queryTokens = cleanQuery
           .toLowerCase()
           .split(/[^a-z0-9]+/)
@@ -1468,7 +1540,7 @@ export class AIService {
 
       // Apply query-term enforcement even when no category detected
       if (!detectedCategory) {
-        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+        const stopwords = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','applications','platform','website','site','webstore','related']);
         const queryTokens = cleanQuery
           .toLowerCase()
           .split(/[^a-z0-9]+/)
@@ -1486,7 +1558,7 @@ export class AIService {
       // Light exact-match boosting before final sort
       const fullQuery = cleanQuery.toLowerCase();
       // Extract meaningful tokens once for pitch-focused boosting
-      const stopwordsBoost = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','platform','website','site','webstore','related']);
+      const stopwordsBoost = new Set(['the','a','an','and','or','of','for','to','in','on','with','app','apps','application','applications','platform','website','site','webstore','related']);
       const queryTokensBoost = fullQuery.split(/[^a-z0-9]+/).filter(t => t && !stopwordsBoost.has(t));
 
       startupsWithSimilarity = startupsWithSimilarity.map(s => {
@@ -1516,9 +1588,42 @@ export class AIService {
         detectedCategory: detectedCategory || 'none'
         });
 
-      // No fallback - only show results that meet threshold and pass filtering
+      // If nothing survived filtering, do a lightweight text fallback to avoid empty results
       if (startupsWithSimilarity.length === 0) {
-        console.log('⚠️ [GROQ SEMANTIC SEARCH] No relevant results found after filtering');
+        console.log('⚠️ [GROQ SEMANTIC SEARCH] No relevant results after filtering. Running text fallback...');
+        const wordQueries = cleanQuery
+          .split(/[^a-z0-9]+/i)
+          .filter(Boolean)
+          .map(t => `*${t}*`) 
+          .join(' || ');
+
+        // Prefer exact phrase first, then fallback to word OR query
+        const fallback = await client.fetch(`
+          *[_type == "startup" && (
+            title match $phrase ||
+            description match $phrase ||
+            category match $phrase ||
+            pitch match $phrase ||
+            title match $words ||
+            description match $words ||
+            category match $words ||
+            pitch match $words
+          )] | order(_createdAt desc) [0...$limit] {
+            _id,
+            title,
+            description,
+            category,
+            pitch,
+            author->{name, username},
+            _createdAt,
+            views,
+            likes,
+            dislikes,
+            "imageUrl": image.asset->url
+          }
+        `, { phrase: `*${cleanQuery}*`, words: wordQueries, limit });
+
+        startupsWithSimilarity = (fallback || []).map((s: any) => ({ ...s, similarity: 0.01 }));
       }
 
       const finalResult = {
@@ -1527,6 +1632,8 @@ export class AIService {
           ? [`Found ${startupsWithSimilarity.length} highly relevant startups matching "${cleanQuery}"`]
           : [`No highly relevant startups found for "${cleanQuery}". Try different search terms.`],
         confidence: searchResults.matches?.[0]?.score || 0,
+        fallbackUsed: searchResults.matches?.length === 0 || startupsWithSimilarity.length === 0,
+        toastMessage: (searchResults.matches?.length === 0) ? 'showing text matches' : undefined
       };
       
       console.log('✅ [GROQ SEMANTIC SEARCH] Search completed successfully:', {
@@ -1537,19 +1644,16 @@ export class AIService {
       
       return finalResult;
     } catch (error) {
-      console.error('❌ [GROQ SEMANTIC SEARCH] Error in GROQ semantic search:');
-      console.error('  Error message:', error instanceof Error ? error.message : 'Unknown error');
-      console.error('  Error type:', error instanceof Error ? error.constructor.name : typeof error);
-      console.error('  Query:', query);
-      console.error('  Limit:', limit);
-      if (error instanceof Error && error.stack) {
-        console.error('  Stack trace:', error.stack);
+      const suppress = process.env.SUPPRESS_AI_ERRORS === 'true';
+      if (!suppress) {
+        // Keep a single concise warning to avoid noisy devtools error overlays
+        console.warn('AI search failed:', error instanceof Error ? error.message : String(error));
       }
-      
+
       // Return empty results on error
       return {
         startups: [],
-        reasons: [`Search temporarily unavailable: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        reasons: [`Search temporarily unavailable`],
         confidence: 0,
       };
     }
