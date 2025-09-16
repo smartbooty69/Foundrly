@@ -280,6 +280,7 @@ export type Author = {
     _key: string;
     [internalGroqTypeReferenceTo]?: "author";
   }>;
+  savedBy?: Array<string>;
   bannedUntil?: string;
   isBanned?: boolean;
   banHistory?: Array<{

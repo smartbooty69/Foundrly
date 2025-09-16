@@ -60,16 +60,14 @@ export default function FollowersFollowingToast({
 
   return (
     <>
-      <div className="text-center font-bold mt-2 text-[16px]">
+      <div className="flex items-center justify-center gap-1 font-bold mt-0.5 text-[16px] whitespace-nowrap">
         <span
           className={`${safeFollowers.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
           onClick={() => showList('followers')}
         >
           {safeFollowers.length} followers
         </span>
-        {' '}
-        &middot;
-        {' '}
+        <span aria-hidden>·</span>
         <span
           className={`${safeFollowing.length ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
           onClick={() => showList('following')}

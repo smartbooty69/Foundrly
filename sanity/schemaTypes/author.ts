@@ -48,6 +48,13 @@ export const author = defineType({
       initialValue: [],
     }),
     defineField({
+      name: "savedBy",
+      type: "array",
+      of: [{ type: "string" }],
+      initialValue: [],
+      description: "Array of user IDs who have saved this user",
+    }),
+    defineField({
       name: "bannedUntil",
       type: "datetime",
       description: "Timestamp until which this user is banned (null if not banned)",

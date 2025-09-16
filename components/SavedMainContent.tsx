@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import SavedStartupsList from './SavedStartupsList';
+import SavedUsersList from './SavedUsersList';
 import SortFilterModal from './SortFilterModal';
 
 interface FilterState {
@@ -79,8 +80,6 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
     switch (activeSection) {
       case 'saved-startups':
         return 'Saved Startups';
-      case 'interested-startups':
-        return 'Interested Startups';
       case 'saved-users':
         return 'Saved Users';
       default:
@@ -92,8 +91,6 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
     switch (activeSection) {
       case 'saved-startups':
         return 'Review and manage your saved startup pitches';
-      case 'interested-startups':
-        return 'See which startups you\'ve shown interest in';
       case 'saved-users':
         return 'Manage your saved user profiles';
       default:
@@ -186,44 +183,9 @@ const SavedMainContent = ({ activeSection }: SavedMainContentProps) => {
               selectedCategory={selectedCategory}
               onCategoriesLoaded={handleCategoriesLoaded}
             />
-          ) : activeSection === 'interested-startups' ? (
-            // Interested Startups Section
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No interested startups yet</h3>
-              <p className="text-gray-500 mb-4">
-                Start exploring startups and show interest in the ones you find interesting!
-              </p>
-              <a 
-                href="/"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Browse Startups
-              </a>
-            </div>
           ) : activeSection === 'saved-users' ? (
             // Saved Users Section
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No saved users yet</h3>
-              <p className="text-gray-500 mb-4">
-                Start exploring user profiles and save the ones you want to follow!
-              </p>
-              <a 
-                href="/"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Browse Users
-              </a>
-            </div>
+            <SavedUsersList />
           ) : (
             // Default fallback
             <SavedStartupsList 

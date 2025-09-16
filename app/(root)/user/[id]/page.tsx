@@ -8,7 +8,7 @@ import { StartupCardSkeleton } from "@/components/StartupCard";
 import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
 import ProfileFollowWrapper from "@/components/ProfileFollowWrapper";
 import { Button } from "@/components/ui/button";
-import MessageButton from "@/components/MessageButton";
+import UserSaveButton from "@/components/UserSaveButton";
 import BadgeLabels from "@/components/BadgeLabels";
 import { enhancedBadgeSystem, TIER_LEVELS } from "@/lib/enhanced-badge-system";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
@@ -126,7 +126,7 @@ const Page = async ({ params }: { params: { id: string } }) => {
             </div>
           )}
 
-          <div className="mt-1">
+          <div className="mt-1 flex flex-col items-center justify-center gap-1">
             <ProfileFollowWrapper
               initialFollowers={user.followers || []}
               initialFollowing={user.following || []}
@@ -137,9 +137,12 @@ const Page = async ({ params }: { params: { id: string } }) => {
         </div>
 
         <div className="flex-1 flex flex-col gap-5 lg:-mt-5">
-          <p className="text-30-bold">
-            {isOwnProfile ? "Your" : "All"} Startups
-          </p>
+          <div className="flex items-center justify-between gap-3 w-full">
+            <p className="text-30-bold">
+              {isOwnProfile ? "Your" : "All"} Startups
+            </p>
+            <UserSaveButton profileId={id} currentUserId={session?.user?.id} />
+          </div>
           <ul className="card_grid-sm">
             <Suspense fallback={<StartupCardSkeleton />}>
               <UserStartups id={id} sessionId={session?.user?.id} />

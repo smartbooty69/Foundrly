@@ -19,12 +19,6 @@ const navItems = [
     description: 'Review and manage your saved startup pitches.',
   },
   {
-    id: 'interested-startups',
-    icon: Heart,
-    title: 'Interested Startups',
-    description: "See which startups you've shown interest in.",
-  },
-  {
     id: 'saved-users',
     icon: User,
     title: 'Saved Users',

@@ -71,7 +71,7 @@ export default function ProfileFollowWrapper({
         currentUserId={currentUserId}
         onFollowChange={refetchUser}
       />
-      <div className="flex flex-row items-center justify-center gap-4 mt-2">
+      <div className="flex flex-row items-center justify-center gap-2 mt-0.5">
         <FollowUnfollowButton
           profileId={profileId}
           currentUserId={currentUserId}

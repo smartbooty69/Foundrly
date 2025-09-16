@@ -2084,6 +2084,16 @@
         },
         "optional": true
       },
+      "savedBy": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "array",
+          "of": {
+            "type": "string"
+          }
+        },
+        "optional": true
+      },
       "bannedUntil": {
         "type": "objectAttribute",
         "value": {
