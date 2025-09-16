@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
+import ReportFeedbackButton from "@/components/ReportFeedbackButton";
 
 export default async function ReportPage() {
   const session = await auth();
@@ -24,6 +25,12 @@ export default async function ReportPage() {
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="mb-6">
+                <ReportFeedbackButton 
+                  label="Open Sentry Feedback Form"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-black text-white hover:bg-black/90"
+                />
+              </div>
               <form className="space-y-6">
                 <div>
                   <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
@@ -71,7 +78,7 @@ export default async function ReportPage() {
                 </div>
                 
                 <div>
-                  <label htmlFor="severity" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="severity" className="block text sm font-medium text-gray-700 mb-2">
                     Severity Level
                   </label>
                   <select

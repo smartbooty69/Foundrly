@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import * as Sentry from '@sentry/nextjs';
+import { useSession } from 'next-auth/react';
 
 interface UserSidebarProps {
   userId: string;
@@ -24,6 +26,24 @@ interface UserSidebarProps {
 const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
+
+  const openOfficialFeedback = () => {
+    if (session?.user) {
+      Sentry.setUser({
+        id: session.user.id as string,
+        email: (session.user as any).email,
+        username: (session.user as any).name,
+      });
+    }
+    const anySentry = Sentry as any;
+    if (typeof anySentry.feedback === 'function') {
+      anySentry.feedback({ showForm: true, colorScheme: theme === 'dark' ? 'dark' : 'light' });
+    } else if (typeof anySentry.showReportDialog === 'function') {
+      anySentry.captureMessage('User opened feedback dialog');
+      anySentry.showReportDialog();
+    }
+  };
 
   const sidebarItems = [
     {
@@ -60,8 +80,9 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
     {
       name: 'Report a problem',
       icon: Flag,
-      href: '/report',
-      description: 'Notify the developers about an issue or bug'
+      href: '#',
+      description: 'Notify the developers about an issue or bug',
+      onClick: openOfficialFeedback
     }
   ];
 
@@ -69,13 +90,9 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
     setIsCollapsed(!isCollapsed);
   };
 
-  const handleReportProblem = () => {
-    console.log('Report problem clicked');
-  };
-
   const handleItemClick = (item: any) => {
     if (item.name === 'Report a problem') {
-      handleReportProblem();
+      item.onClick();
     } else if (item.name === 'Switch appearance') {
       item.onClick();
     }
