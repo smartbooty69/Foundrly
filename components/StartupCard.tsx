@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import DeleteStartupButton from "./DeleteStartupButton";
 import InterestedModal from "./InterestedModal";
 import React from "react";
-import CountUp from 'react-countup';
+// import CountUp from 'react-countup';
 
 export type StartupTypeCard = Omit<Startup, "author"> & { author?: Author };
 
@@ -256,7 +256,7 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         {!hideViews && (
         <div className="flex gap-1.5">
           <EyeIcon className="size-6 text-primary" />
-          <span className="text-16-medium">{typeof totalViews === 'number' ? <CountUp end={totalViews} duration={1} /> : '...'}</span>
+          <span className="text-16-medium">{typeof totalViews === 'number' ? totalViews : '...'}</span>
         </div>
         )}
       </div>

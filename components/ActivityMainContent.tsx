@@ -248,7 +248,7 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
           {activeSection === 'account-history' ? (
             // Account History Section
             <AccountHistory 
-              userId={session?.user?.id || ''} 
+              userId={session?.user?.id || ''}
               selectedTab={selectedAccountHistoryTab}
               onTabChange={handleAccountHistoryTabChange}
               filters={accountHistoryFilters}
@@ -261,6 +261,7 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
               activityType={getActivityType()}
               userId={session?.user?.id}
               filters={currentFilters}
+              showAnalytics={false}
             />
           ) : (
             // Other Activity Sections
@@ -268,13 +269,15 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
               activityType={getActivityType()}
               userId={session?.user?.id}
               filters={currentFilters}
+              showAnalytics={false}
             />
           )}
         </div>
       </div>
 
       {/* Sort & Filter Modal - Only for non-account-history sections */}
-      {activeSection !== 'account-history' && (
+      {/* Temporarily disabled for debugging */}
+      {/* {activeSection !== 'account-history' && (
         <SortFilterModal
           isOpen={isModalOpen}
           onClose={handleCloseModal}
@@ -282,14 +285,14 @@ const ActivityMainContent = ({ activeSection }: ActivityMainContentProps) => {
         />
       )}
       
-      {/* Sort & Filter Modal for Account History */}
+      Sort & Filter Modal for Account History
       {activeSection === 'account-history' && (
         <SortFilterModal
           isOpen={isAccountHistoryModalOpen}
           onClose={handleAccountHistoryCloseModal}
           onApply={handleAccountHistoryApplyFilters}
         />
-      )}
+      )} */}
     </div>
   );
 };
