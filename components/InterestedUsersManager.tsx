@@ -25,6 +25,7 @@ import {
   ThumbsDown,
   Archive
 } from 'lucide-react';
+import ChatController from '@/components/ChatController';
 
 interface InterestedUsersManagerProps {
   userId: string;
@@ -43,6 +44,98 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
   const [notes, setNotes] = useState('');
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openFilterDropdown, setOpenFilterDropdown] = useState(false);
+  const [emailSendingFor, setEmailSendingFor] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [initialChatId, setInitialChatId] = useState<string | null>(null);
+  const [chatLoadingFor, setChatLoadingFor] = useState<string | null>(null);
+  const buildInterestedEmailHtml = (
+    title: string,
+    greetingName: string,
+    bodyHtml: string,
+    cta?: { text: string; href: string }
+  ) => `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; background-color: #F7F7F7; padding: 24px; color: #141413;">
+        <div style="max-width: 600px; margin: auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">
+          <div style="background-color: #4E71FF; padding: 16px; text-align: center;">
+            <h1 style="color: #FFFFFF; margin: 0; font-size: 20px;">${title}</h1>
+          </div>
+
+          <div style="padding: 24px;">
+            <p style="margin: 0 0 16px 0; color: #141413;">Hi ${greetingName},</p>
+            ${bodyHtml}
+            ${cta ? `
+              <div style="text-align: center; margin: 32px 0;">
+                <a href="${cta.href}"
+                  style="
+                    display: inline-block;
+                    background-color: #FBE843;
+                    color: #141413;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    text-decoration: none;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  ">
+                  ${cta.text}
+                </a>
+              </div>
+            ` : ''}
+            <p style="margin-top: 20px; color: #7D8087;">Best regards,</p>
+            <p style="margin: 0; color: #7D8087;">Your Team</p>
+          </div>
+
+          <div style="background-color: #333333; color: #FFFFFF; text-align: center; padding: 12px; font-size: 12px;">
+            © ${new Date().getFullYear()} Interested Users Manager. All rights reserved.
+          </div>
+        </div>
+      </div>
+    `;
+  const handleStartChatWithUser = async (targetUser: { id: string; name?: string | null; image?: string | null }) => {
+    if (!userId || !targetUser?.id) return;
+    try {
+      setChatLoadingFor(targetUser.id);
+
+      const upsertResponse = await fetch('/api/chat/upsert-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: targetUser.id,
+          name: targetUser.name || undefined,
+          image: targetUser.image || undefined,
+        }),
+      });
+      if (!upsertResponse.ok && upsertResponse.status === 403) {
+        const err = await upsertResponse.json().catch(() => ({}));
+        throw new Error(err?.error || 'Not allowed to message');
+      }
+
+      const channelResp = await fetch('/api/chat/create-channel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          memberIds: [userId, targetUser.id],
+          channelData: {
+            name: targetUser.name ? `Chat with ${targetUser.name}` : 'Direct chat',
+            image: targetUser.image || undefined,
+          },
+        }),
+      });
+      if (!channelResp.ok) {
+        const details = await channelResp.json().catch(() => ({}));
+        throw new Error(details?.details || details?.error || 'Failed to create/open chat');
+      }
+      const { channelId } = await channelResp.json();
+      if (channelId) {
+        setInitialChatId(channelId);
+        setIsChatOpen(true);
+      }
+    } catch (e) {
+      // Optionally show toast
+    } finally {
+      setChatLoadingFor(null);
+    }
+  };
 
   // AI Matching State
   const [aiMatches, setAiMatches] = useState<string | null>(null);
@@ -610,13 +703,74 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                       >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <a
-                        href={`mailto:${submission.email}`}
-                        className="text-green-600 hover:text-green-800"
-                        title="Send Email"
+                      {(() => {
+                        const relatedUserId = (submission as any).userId || (submission as any).user?._id;
+                        const relatedUserName = (submission as any).user?.name || submission.name;
+                        const relatedUserImage = (submission as any).user?.image || undefined;
+                        if (!relatedUserId) return null;
+                        const busy = chatLoadingFor === relatedUserId;
+                        return (
+                          <button
+                            onClick={() => handleStartChatWithUser({ id: relatedUserId as string, name: relatedUserName, image: relatedUserImage })}
+                            className={`text-purple-600 hover:text-purple-800 ${busy ? 'opacity-60 pointer-events-none' : ''}`}
+                            title={busy ? 'Opening…' : 'Chat'}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </button>
+                        );
+                      })()}
+                      <button
+                        onClick={async () => {
+                          if (!submission.email) return;
+                          try {
+                            setEmailSendingFor(submission._id);
+                            const subject = `Re: Your interest in ${submission.startupTitle || 'our startup'}`;
+                            const greetingName = submission.name || 'there';
+                            const textBody = [
+                              `Hi ${greetingName},`,
+                              '',
+                              `Thanks for your interest in ${submission.startupTitle || 'our startup'}.`,
+                              submission.investmentAmount ? `You indicated interest around ${submission.investmentAmount}.` : '',
+                              submission.message ? `Your note: "${submission.message}"` : '',
+                              '',
+                              'Would you be open to a quick chat to discuss further?',
+                              '',
+                              'Best regards,'
+                            ].filter(Boolean).join('\n');
+
+                            const rowBodyHtml = `
+                              <p style=\"margin: 0 0 16px 0; color: #333333;\">Thanks for your interest in <strong>${submission.startupTitle || 'our startup'}</strong>.</p>
+                              ${submission.investmentAmount ? `<p style=\\\"margin: 0 0 16px 0; color: #333333;\\\">You indicated interest around <strong>${submission.investmentAmount}</strong>.</p>` : ''}
+                              ${submission.message ? `<blockquote style=\\\"margin: 12px 0; padding: 12px; background: #f9fafb; border-left: 4px solid #8b5cf6; color: #333333;\\\">${submission.message}</blockquote>` : ''}
+                              <p style=\"margin: 0 0 16px 0; color: #333333;\">Would you be open to a quick chat to discuss further?</p>
+                            `;
+                            const htmlBody = buildInterestedEmailHtml(
+                              'Interested Users Manager',
+                              greetingName,
+                              rowBodyHtml,
+                              { text: 'Schedule a Chat', href: (typeof window !== 'undefined' ? window.location.origin : 'https://foundrly.com') }
+                            );
+
+                            const res = await fetch('/api/interested-submissions/send-email', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ to: submission.email, subject, body: textBody, html: htmlBody })
+                            });
+                            if (!res.ok) {
+                              const err = await res.json().catch(() => ({}));
+                              throw new Error(err?.error || 'Failed to send email');
+                            }
+                          } catch (err) {
+                            // optionally show toast
+                          } finally {
+                            setEmailSendingFor(null);
+                          }
+                        }}
+                        className={`text-green-600 hover:text-green-800 ${emailSendingFor === submission._id ? 'opacity-60 pointer-events-none' : ''}`}
+                        title={emailSendingFor === submission._id ? 'Sending…' : 'Send Email'}
                       >
                         <Mail className="h-4 w-4" />
-                      </a>
+                      </button>
                       {submission.phone && (
                         <a
                           href={`tel:${submission.phone}`}
@@ -804,13 +958,58 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
                 >
                   Close
                 </button>
-                <a
-                  href={`mailto:${selectedSubmission.email}?subject=Re: Your interest in ${selectedSubmission.startupTitle}`}
-                  className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                <button
+                  onClick={async () => {
+                    if (!selectedSubmission.email) return;
+                    try {
+                      setEmailSendingFor(selectedSubmission._id);
+                      const subject = `Re: Your interest in ${selectedSubmission.startupTitle || 'our startup'}`;
+                      const greetingName = selectedSubmission.name || 'there';
+                      const textBody = [
+                        `Hi ${greetingName},`,
+                        '',
+                        `Thanks for your interest in ${selectedSubmission.startupTitle || 'our startup'}.`,
+                        selectedSubmission.investmentAmount ? `You indicated interest around ${selectedSubmission.investmentAmount}.` : '',
+                        selectedSubmission.message ? `Your note: "${selectedSubmission.message}"` : '',
+                        '',
+                        'Would you be open to a quick chat to discuss further?',
+                        '',
+                        'Best regards,'
+                      ].filter(Boolean).join('\n');
+
+                      const modalBodyHtml = `
+                        <p style=\"margin: 0 0 16px 0; color: #333333;\">Thanks for your interest in <strong>${selectedSubmission.startupTitle || 'our startup'}</strong>.</p>
+                        ${selectedSubmission.investmentAmount ? `<p style=\\\"margin: 0 0 16px 0; color: #333333;\\\">You indicated interest around <strong>${selectedSubmission.investmentAmount}</strong>.</p>` : ''}
+                        ${selectedSubmission.message ? `<blockquote style=\\\"margin: 12px 0; padding: 12px; background: #f9fafb; border-left: 4px solid #8b5cf6; color: #333333;\\\">${selectedSubmission.message}</blockquote>` : ''}
+                        <p style=\"margin: 0 0 16px 0; color: #333333;\">Would you be open to a quick chat to discuss further?</p>
+                      `;
+                      const htmlBody = buildInterestedEmailHtml(
+                        'Interested Users Manager',
+                        greetingName,
+                        modalBodyHtml,
+                        { text: 'Schedule a Chat', href: (typeof window !== 'undefined' ? window.location.origin : 'https://foundrly.com') }
+                      );
+
+                      const res = await fetch('/api/interested-submissions/send-email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ to: selectedSubmission.email, subject, body: textBody, html: htmlBody })
+                      });
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err?.error || 'Failed to send email');
+                      }
+                    } catch (err) {
+                      // optionally show toast
+                    } finally {
+                      setEmailSendingFor(null);
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${emailSendingFor === selectedSubmission._id ? 'opacity-60 pointer-events-none' : ''}`}
                 >
                   <Mail className="h-4 w-4" />
-                  Send Email
-                </a>
+                  {emailSendingFor === selectedSubmission._id ? 'Sending…' : 'Send Email'}
+                </button>
                 {selectedSubmission.phone && (
                   <a
                     href={`tel:${selectedSubmission.phone}`}
@@ -826,6 +1025,13 @@ const InterestedUsersManager: React.FC<InterestedUsersManagerProps> = ({ userId 
         </div>,
         typeof window !== "undefined" && document.body ? document.body : document.createElement("div")
       )}
+
+      <ChatController
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        currentUserId={userId}
+        initialChatId={initialChatId}
+      />
     </div>
   );
 };
