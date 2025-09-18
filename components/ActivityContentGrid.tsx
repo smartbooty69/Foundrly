@@ -761,7 +761,6 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
               isOwner={false}
               isLoggedIn={!!userId}
               userId={userId}
-<<<<<<< HEAD
               showDescription={false}
               showCategory={false}
               showDetailsButton={false}
@@ -772,25 +771,6 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
               onAnalyticsClick={activityType === 'startup-selection' 
                 ? (id) => onStartupSelect?.(id)
                 : onAnalyticsClick}
-=======
-              showDescription={activityType === 'startup-selection'}
-              showCategory={activityType === 'startup-selection'}
-              showDetailsButton={activityType === 'startup-selection'}
-              analyticsContent={activityType === 'startup-selection' ? (
-                <div className="mt-3">
-                  <button
-                    onClick={() => onStartupSelect?.(startup._id)}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Analyze This Startup
-                  </button>
-                </div>
-              ) : undefined}
-              hideActions={showAnalytics}
-              hideViews={showAnalytics}
-              analyticsRedirect={showAnalytics}
-              onAnalyticsClick={onAnalyticsClick}
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
             />
           ))}
         </ul>
