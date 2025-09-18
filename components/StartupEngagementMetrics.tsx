@@ -4,10 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Heart, MessageCircle, Eye, Bookmark, UserPlus } from 'lucide-react';
-<<<<<<< HEAD
 import AnalyticsPeriodSparkline from './AnalyticsPeriodSparkline';
-=======
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
 
 interface StartupEngagementMetricsProps {
   startupId: string;
@@ -103,11 +100,7 @@ export default function StartupEngagementMetrics({ startupId, startupTitle, onBa
 
   if (loading) {
     return (
-<<<<<<< HEAD
       <div className="pr-20 h-full overflow-y-auto min-h-0 pb-16">
-=======
-      <div className="pr-20">
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
         <div className="mb-4">
           <h3 className="text-lg font-semibold">Loading engagement metrics...</h3>
         </div>
@@ -124,11 +117,7 @@ export default function StartupEngagementMetrics({ startupId, startupTitle, onBa
   }
 
   return (
-<<<<<<< HEAD
     <div className="pr-20 h-full overflow-y-auto min-h-0 pb-16">
-=======
-    <div className="pr-20">
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {metrics.map((metric) => {
@@ -152,7 +141,6 @@ export default function StartupEngagementMetrics({ startupId, startupTitle, onBa
         })}
       </div>
 
-<<<<<<< HEAD
       {/* Trends (Sparklines) */}
       <div className="mt-8">
         <h3 className="text-lg font-semibold mb-4">Trends</h3>
@@ -204,8 +192,6 @@ export default function StartupEngagementMetrics({ startupId, startupTitle, onBa
         </div>
       </div>
 
-=======
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
       <div className="mt-8 p-6 bg-gray-50 rounded-lg">
         <h3 className="text-lg font-semibold mb-4">Engagement Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
