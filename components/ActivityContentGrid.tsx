@@ -103,9 +103,10 @@ interface ActivityContentGridProps {
   onStartupSelect?: (startupId: string) => void;
   selectedCategory?: string;
   showAnalytics?: boolean;
+  onAnalyticsClick?: (startupId: string, title: string) => void;
 }
 
-const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, onStartupSelect, selectedCategory, showAnalytics = false }: ActivityContentGridProps) => {
+const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, onStartupSelect, selectedCategory, showAnalytics = false, onAnalyticsClick }: ActivityContentGridProps) => {
   const [startups, setStartups] = useState<StartupData[]>([]);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,10 +240,26 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
             }
           `, { userId });
         } else {
-          // Use the existing query for likes
-          const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
-          const params = { userId, startDate, endDate };
-          data = await client.fetch(query, params);
+          // For engagement-audience tabs now representing categories, fetch own startups filtered by category
+          const categoryFilter = activityType && activityType !== 'all' 
+            ? `&& category == "${activityType}"` 
+            : '';
+          data = await client.fetch(`
+            *[_type == "startup" && author._ref == $userId ${categoryFilter}] | order(_createdAt desc) {
+              _id,
+              title,
+              slug,
+              _createdAt,
+              author -> { _id, name, image, bio },
+              views,
+              description,
+              category,
+              image,
+              likes,
+              dislikes,
+              "commentsCount": count(comments)
+            }
+          `, { userId });
         }
         
         // Handle data based on activity type
@@ -538,7 +555,7 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
   }
 
   return (
-    <div className="pr-20">
+    <div className="pr-20 pb-20">
       {/* Render comments for comments activity type */}
       {activityType === 'comments' && comments.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -728,30 +745,16 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
               isOwner={false}
               isLoggedIn={!!userId}
               userId={userId}
-              showDescription={activityType === 'startup-selection'}
-              showCategory={activityType === 'startup-selection'}
-              showDetailsButton={activityType === 'startup-selection'}
-              analyticsContent={showAnalytics && activityType === 'likes' ? (
-                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.likes || 0} apiPath={'/api/analytics/likes'} />
-              ) : showAnalytics && activityType === 'dislikes' ? (
-                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.dislikes || 0} apiPath={'/api/analytics/dislikes'} />
-              ) : showAnalytics && activityType === 'comments' ? (
-                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.commentsCount || 0} apiPath={'/api/analytics/comments'} />
-              ) : showAnalytics && activityType === 'views' ? (
-                <AnalyticsPeriodSparkline startupId={startup._id} currentValue={startup.views || 0} apiPath={'/api/analytics/views'} />
-              ) : activityType === 'startup-selection' ? (
-                <div className="mt-3">
-                  <button
-                    onClick={() => onStartupSelect?.(startup._id)}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Analyze This Startup
-                  </button>
-                </div>
-              ) : undefined}
-              hideActions={showAnalytics && (activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views')}
-              hideImage={showAnalytics && (activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views')}
-              hideViews={showAnalytics && (activityType === 'likes' || activityType === 'dislikes' || activityType === 'comments' || activityType === 'views')}
+              showDescription={false}
+              showCategory={false}
+              showDetailsButton={false}
+              analyticsContent={undefined}
+              hideActions={showAnalytics || activityType === 'startup-selection'}
+              hideViews={showAnalytics}
+              analyticsRedirect={showAnalytics || activityType === 'startup-selection'}
+              onAnalyticsClick={activityType === 'startup-selection' 
+                ? (id) => onStartupSelect?.(id)
+                : onAnalyticsClick}
             />
           ))}
         </ul>

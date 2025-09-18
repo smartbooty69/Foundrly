@@ -1,14 +1,25 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import AnalyticsSidebar from "@/components/AnalyticsSidebar";
 import AnalyticsMainContent from "@/components/AnalyticsMainContent";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
 
 export default function AnalyticsPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState('engagement-audience');
+  const [selectedStartupId, setSelectedStartupId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const startupId = searchParams.get('startup');
+    if (startupId) {
+      setSelectedStartupId(startupId);
+      setActiveSection('startup-analytics');
+    }
+  }, [searchParams]);
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
@@ -36,6 +47,8 @@ export default function AnalyticsPage() {
         <div className="flex-1 flex">
           <AnalyticsMainContent 
             activeSection={activeSection}
+            selectedStartupId={selectedStartupId}
+            onStartupSelect={setSelectedStartupId}
           />
           <UserSidebarWrapper 
             userId={session.user.id} 

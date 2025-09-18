@@ -22,7 +22,7 @@ const navItems = [
     id: 'engagement-audience',
     icon: Users,
     title: 'Engagement & Network',
-    description: 'Likes, dislikes, comments, views, followers and following.'
+    description: 'Explore startups by categories and track your follower network growth.'
   },
 ];
 

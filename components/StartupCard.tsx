@@ -29,9 +29,11 @@ interface StartupCardProps {
   hideActions?: boolean;
   hideImage?: boolean;
   hideViews?: boolean;
+  analyticsRedirect?: boolean;
+  onAnalyticsClick?: (startupId: string, title: string) => void;
 }
 
-const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true, analyticsContent, hideActions = false, hideImage = false, hideViews = false }: StartupCardProps) => {
+const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true, analyticsContent, hideActions = false, hideImage = false, hideViews = false, analyticsRedirect = false, onAnalyticsClick }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -266,9 +268,18 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
           <Link href={author?._id ? `/user/${author._id}` : "#"}>
             <p className="text-16-medium line-clamp-1">{author?.name != null ? author.name : "Unknown"}</p>
           </Link>
-          <Link href={`/startup/${_id}`}>
-            <h3 className="text-26-semibold line-clamp-1">{title}</h3>
-          </Link>
+          {analyticsRedirect && onAnalyticsClick ? (
+            <button 
+              onClick={() => onAnalyticsClick(_id, title || "")}
+              className="text-26-semibold line-clamp-1 text-left hover:text-primary transition-colors"
+            >
+              {title}
+            </button>
+          ) : (
+            <Link href={`/startup/${_id}`}>
+              <h3 className="text-26-semibold line-clamp-1">{title}</h3>
+            </Link>
+          )}
         </div>
         <Link href={author?._id ? `/user/${author._id}` : "#"}>
           {author?.image && author.image.trim() !== "" ? (
@@ -287,14 +298,30 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         </Link>
       </div>
 
-      <Link href={`/startup/${_id}`}>
-        {showDescription && (
-          <p className="startup-card_desc relative z-10">{description}</p>
-        )}
+      {analyticsRedirect && onAnalyticsClick ? (
+        <button 
+          onClick={() => onAnalyticsClick(_id, title || "")}
+          className="block w-full text-left hover:opacity-90 transition-opacity"
+        >
+          {showDescription && (
+            <p className="startup-card_desc relative z-10">{description}</p>
+          )}
 
-        {!hideImage && (
-          <img src={image} alt="placeholder" className="startup-card_img relative z-10" />
-        )}
+          {!hideImage && (
+            <img src={image} alt="placeholder" className="startup-card_img relative z-10" />
+          )}
+        </button>
+      ) : (
+        <Link href={`/startup/${_id}`}>
+          {showDescription && (
+            <p className="startup-card_desc relative z-10">{description}</p>
+          )}
+
+          {!hideImage && (
+            <img src={image} alt="placeholder" className="startup-card_img relative z-10" />
+          )}
+        </Link>
+      )}
         
         {/* Likes/Dislikes/Interested/Save controls (only when no analyticsContent) */}
         {!analyticsContent && (!hideActions && showLikesDislikes) && (
@@ -427,7 +454,6 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
               )}
             </div>
           )}
-      </Link>
 
       {/* Analytics slot moved outside Link to prevent navigation on interaction */}
       {analyticsContent && (
@@ -474,9 +500,18 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
         )}
         <div className="action-buttons">
           {showDetailsButton && (
-          <Button className="startup-card_btn" asChild>
-            <Link href={`/startup/${_id}`}>Details</Link>
-          </Button>
+            analyticsRedirect && onAnalyticsClick ? (
+              <Button 
+                className="startup-card_btn" 
+                onClick={() => onAnalyticsClick(_id, title || "")}
+              >
+                View Analytics
+              </Button>
+            ) : (
+              <Button className="startup-card_btn" asChild>
+                <Link href={`/startup/${_id}`}>Details</Link>
+              </Button>
+            )
           )}
           
           {isOwner && (
