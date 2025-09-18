@@ -175,6 +175,11 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
             }
           }`, { userId });
           data = result;
+        } else if (activityType === 'likes') {
+          // Fetch startups the user has liked
+          const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
+          const params = { userId, startDate, endDate };
+          data = await client.fetch(query, params);
         } else if (activityType === 'dislikes') {
           // Use the existing query for dislikes (same as likes but for disliked content)
           const query = USER_ACTIVITY_QUERY(activityType, startDate, endDate);
@@ -302,6 +307,17 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
 
           setStartups([]);
           setComments(sortedData);
+        } else if (activityType === 'likes') {
+          // For likes, we only have startups
+          let sortedData = [...data];
+          if (filters?.sortBy === 'oldest') {
+            sortedData.sort((a, b) => new Date(a._createdAt).getTime() - new Date(b._createdAt).getTime());
+          } else {
+            sortedData.sort((a, b) => new Date(b._createdAt).getTime() - new Date(a._createdAt).getTime());
+          }
+          
+          setStartups(sortedData);
+          setComments([]);
         } else if (activityType === 'dislikes') {
           // For dislikes, we only have startups
           let sortedData = [...data];
@@ -745,6 +761,7 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
               isOwner={false}
               isLoggedIn={!!userId}
               userId={userId}
+<<<<<<< HEAD
               showDescription={false}
               showCategory={false}
               showDetailsButton={false}
@@ -755,6 +772,25 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
               onAnalyticsClick={activityType === 'startup-selection' 
                 ? (id) => onStartupSelect?.(id)
                 : onAnalyticsClick}
+=======
+              showDescription={activityType === 'startup-selection'}
+              showCategory={activityType === 'startup-selection'}
+              showDetailsButton={activityType === 'startup-selection'}
+              analyticsContent={activityType === 'startup-selection' ? (
+                <div className="mt-3">
+                  <button
+                    onClick={() => onStartupSelect?.(startup._id)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Analyze This Startup
+                  </button>
+                </div>
+              ) : undefined}
+              hideActions={showAnalytics}
+              hideViews={showAnalytics}
+              analyticsRedirect={showAnalytics}
+              onAnalyticsClick={onAnalyticsClick}
+>>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
             />
           ))}
         </ul>
