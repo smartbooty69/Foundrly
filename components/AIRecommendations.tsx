@@ -135,6 +135,13 @@ export default function AIRecommendations({
         <div className="flex items-center justify-between mb-7">
           <div className="flex items-center gap-3">
             <p className="text-30-semibold">Recommended Startups for you</p>
+            {recommendations?.reasons && recommendations.reasons.length > 0 && (
+              <div className="hidden md:flex flex-wrap gap-2 ml-4">
+                {recommendations.reasons.slice(0, 3).map((reason, idx) => (
+                  <Badge key={idx} variant="secondary">{reason}</Badge>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button

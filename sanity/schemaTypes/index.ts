@@ -15,6 +15,7 @@ import { interestedSubmission } from './interestedSubmission'
 import { startupLikeEvent } from './startupLikeEvent';
 import { startupDislikeEvent } from './startupDislikeEvent';
 import { startupCommentEvent } from './startupCommentEvent';
+import { searchEvent } from './searchEvent';
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -34,5 +35,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     startupLikeEvent,
     startupDislikeEvent,
     startupCommentEvent,
+    searchEvent,
   ],
 }

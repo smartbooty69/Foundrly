@@ -26,13 +26,13 @@ import { STARTUPS_QUERY } from '../sanity/lib/queries';
  * For now, returns latest startups as 'recommended'.
  */
 export async function getPersonalizedRecommendations(userId: string, limit: number = 6) {
-  // You can add user-based logic here for personalization
-  const startups = await client.fetch(STARTUPS_QUERY, { search: null });
-  return {
-    startups: startups.slice(0, limit),
-    reasons: ["Latest startups recommended for you"],
-    confidence: 0.9
-  };
+  // Delegate to AIService behavior-based recommender
+  try {
+    return await aiService.getPersonalizedRecommendations(userId, limit);
+  } catch (e) {
+    // Fallback to popular startups if personalized fails
+    return await aiService["getPopularStartups" as any](limit);
+  }
 }
 // Initialize AI services with environment validation
 console.log('🔧 [AI SERVICES INIT] Initializing AI services...');
@@ -1123,6 +1123,28 @@ export class AIService {
       parts.push(`Engagement: ${views} views, ${likes} likes`);
     }
     
+    // Website
+    if (startup.website) {
+      try {
+        const url = String(startup.website).trim();
+        const hostname = url.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+        if (hostname) parts.push(`Website: ${hostname}`);
+      } catch {}
+    }
+
+    // Social links (domains only)
+    if (startup.socialLinks && Array.isArray(startup.socialLinks)) {
+      const domains: string[] = [];
+      for (const link of startup.socialLinks) {
+        if (!link) continue;
+        const val = typeof link === 'string' ? link : (link.url || link.href || link.link || '');
+        if (!val) continue;
+        const hostname = String(val).replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+        if (hostname) domains.push(hostname);
+      }
+      if (domains.length > 0) parts.push(`Social: ${Array.from(new Set(domains)).join(', ')}`);
+    }
+
     // Created date
     if (startup._createdAt) {
       try {
@@ -1166,11 +1188,19 @@ export class AIService {
           title: startup.title,
           description: startup.description,
           category: startup.category,
+          pitch: startup.pitch,
           author: startup.author?.name || 'Unknown',
           createdAt: startup._createdAt,
           views: startup.views || 0,
           likes: startup.likes || 0,
           dislikes: startup.dislikes || 0,
+          tags: Array.isArray(startup.tags) ? startup.tags : undefined,
+          status: startup.status,
+          fundingStage: startup.fundingStage,
+          teamSize: startup.teamSize,
+          location: startup.location,
+          website: startup.website,
+          socialLinks: startup.socialLinks,
           textContent: textContent, // Store the processed text for debugging
         }
       }]);
@@ -1202,11 +1232,19 @@ export class AIService {
           title: startup.title,
           description: startup.description,
           category: startup.category,
+          pitch: startup.pitch,
           author: startup.author?.name || 'Unknown',
           createdAt: startup._createdAt,
           views: startup.views || 0,
           likes: startup.likes || 0,
           dislikes: startup.dislikes || 0,
+          tags: Array.isArray(startup.tags) ? startup.tags : undefined,
+          status: startup.status,
+          fundingStage: startup.fundingStage,
+          teamSize: startup.teamSize,
+          location: startup.location,
+          website: startup.website,
+          socialLinks: startup.socialLinks,
           textContent: textContent, // Store the processed text for debugging
         }
       }]);
@@ -2080,57 +2118,96 @@ export class AIService {
   // Get personalized recommendations based on user behavior
   async getPersonalizedRecommendations(userId: string, limit: number = 10): Promise<any> {
     try {
-      // Get user's interaction history (likes, views, etc.)
-      const userInteractions = await client.fetch(`
-        *[_type == "userInteraction" && userId == $userId] {
-          startupId,
-          type,
-          _createdAt
-        } | order(_createdAt desc)
-      `, { userId });
+      // Collect user signals from Sanity
+      const [likedStartups, dislikedStartups, savedStartups, interestedStartups, commentedRefs] = await Promise.all([
+        client.fetch(`*[_type == "startup" && $userId in likedBy]{ _id, title, description, category, pitch }`, { userId }),
+        client.fetch(`*[_type == "startup" && $userId in dislikedBy]{ _id }`, { userId }),
+        client.fetch(`*[_type == "startup" && $userId in savedBy]{ _id, title, description, category, pitch }`, { userId }),
+        client.fetch(`*[_type == "startup" && $userId in interestedBy]{ _id, title, description, category, pitch }`, { userId }),
+        client.fetch(`*[_type == "comment" && author._ref == $userId]{ startup->{ _id, title, description, category, pitch } }`, { userId })
+      ]);
 
-      // Get user's liked startups
-      const likedStartups = await client.fetch(`
-        *[_type == "startup" && _id in $likedIds] {
-          _id,
-          title,
-          description,
-          category,
-          pitch
-        }
-      `, { 
-        likedIds: userInteractions
-          .filter(interaction => interaction.type === 'like')
-          .map(interaction => interaction.startupId)
-      });
+      const commentedStartups = Array.from(
+        new Map(
+          (commentedRefs || [])
+            .map((c: any) => c?.startup)
+            .filter((s: any) => s && s._id)
+            .map((s: any) => [s._id, s])
+        ).values()
+      );
 
-      if (likedStartups.length === 0) {
-        // If no user history, return popular startups
+      // Build sets for quick filtering
+      const negativeIds = new Set<string>((dislikedStartups || []).map((s: any) => s._id));
+      const likedIds = new Set<string>((likedStartups || []).map((s: any) => s._id));
+
+      // Determine if we have any positive signals
+      const hasPositiveSignals = (savedStartups?.length || 0) > 0
+        || (interestedStartups?.length || 0) > 0
+        || (likedStartups?.length || 0) > 0
+        || (commentedStartups?.length || 0) > 0;
+
+      if (!hasPositiveSignals) {
+        // No signals yet → popular fallback
         return await this.getPopularStartups(limit);
       }
 
-      // Create a combined text from user's preferences
-      const userPreferences = likedStartups
-        .map(startup => `${startup.title} ${startup.description} ${startup.category}`)
-        .join(' ');
+      // Weight different signals when building the preference profile
+      const weightSaved = 3;
+      const weightInterested = 3;
+      const weightLiked = 2;
+      const weightCommented = 1;
 
-      // Generate embedding for user preferences
+      const positiveStartups: Array<{ _id: string; title: string; description: string; category: string; pitch?: string; weight: number; }> = [];
+
+      (savedStartups || []).forEach((s: any) => positiveStartups.push({ ...s, weight: weightSaved }));
+      (interestedStartups || []).forEach((s: any) => positiveStartups.push({ ...s, weight: weightInterested }));
+      (likedStartups || []).forEach((s: any) => positiveStartups.push({ ...s, weight: weightLiked }));
+      (commentedStartups || []).forEach((s: any) => positiveStartups.push({ ...s, weight: weightCommented }));
+
+      // De-duplicate keeping max weight
+      const idToStartup = new Map<string, any>();
+      for (const s of positiveStartups) {
+        const existing = idToStartup.get(s._id);
+        if (!existing || s.weight > existing.weight) {
+          idToStartup.set(s._id, s);
+        }
+      }
+      const dedupedPositives = Array.from(idToStartup.values());
+
+      // Build category preference map
+      const categoryToCount = new Map<string, number>();
+      for (const s of dedupedPositives) {
+        const cat = (s.category || '').toLowerCase();
+        if (!cat) continue;
+        categoryToCount.set(cat, (categoryToCount.get(cat) || 0) + s.weight);
+      }
+      const topCategories = Array.from(categoryToCount.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([cat]) => cat);
+
+      // Build weighted preference text
+      const preferenceParts: string[] = [];
+      for (const s of dedupedPositives) {
+        const piece = `${s.title} ${s.description} ${s.category} ${s.pitch || ''}`.trim();
+        for (let i = 0; i < s.weight; i++) preferenceParts.push(piece);
+      }
+      const userPreferences = preferenceParts.join(' ');
+
+      // Generate embedding and query vector index
       const userEmbedding = await this.generateEmbedding(userPreferences);
-
-      // Search for similar startups
       const searchResults = await index.query({
         vector: userEmbedding,
-        topK: limit * 2, // Get more results to filter out already liked ones
+        topK: Math.max(limit * 10, 50),
         includeMetadata: true,
       });
 
-      // Filter out already liked startups
-      const likedIds = new Set(likedStartups.map(s => s._id));
-      const filteredMatches = searchResults.matches?.filter(match => !likedIds.has(match.id)) || [];
+      // Filter out negatives and already-liked items
+      const filteredMatches = (searchResults.matches || [])
+        .filter((m: any) => !negativeIds.has(m.id))
+        .filter((m: any) => !likedIds.has(m.id));
 
-      // Get full startup data
-      const startupIds = filteredMatches.slice(0, limit).map(match => match.id);
-      
+      const startupIds = filteredMatches.map((m: any) => m.id).slice(0, limit * 5);
       if (startupIds.length === 0) {
         return await this.getPopularStartups(limit);
       }
@@ -2151,25 +2228,38 @@ export class AIService {
         }
       `, { startupIds });
 
-      // Add similarity scores
-      const startupsWithSimilarity = startups.map(startup => {
-        const match = filteredMatches.find(m => m.id === startup._id);
-        return {
-          ...startup,
-          similarity: match?.score || 0,
-        };
+      // Attach scores and apply simple category boost
+      const categoryBoost = 0.05; // small boost per match
+      const scored = startups.map((s: any) => {
+        const match = filteredMatches.find((m: any) => m.id === s._id);
+        let score = match?.score || 0;
+        const cat = (s.category || '').toLowerCase();
+        if (cat && topCategories.includes(cat)) score += categoryBoost;
+        return { ...s, similarity: score };
       });
 
-      // Sort by similarity
-      startupsWithSimilarity.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+      scored.sort((a: any, b: any) => (b.similarity || 0) - (a.similarity || 0));
+      let finalStartups = scored.slice(0, limit);
+
+      // Backfill with popular items if we have fewer than requested
+      if (finalStartups.length < limit) {
+        const need = limit - finalStartups.length;
+        const popular = await this.getPopularStartups(Math.max(need * 2, need));
+        const existingIds = new Set(finalStartups.map((s: any) => s._id));
+        const backfill = (popular.startups || []).filter((p: any) => !existingIds.has(p._id)).slice(0, need);
+        finalStartups = finalStartups.concat(backfill);
+      }
+
+      const reasons: string[] = [];
+      if ((savedStartups?.length || 0) > 0) reasons.push('Based on your saved startups');
+      if ((interestedStartups?.length || 0) > 0) reasons.push('Because you showed interest');
+      if ((likedStartups?.length || 0) > 0) reasons.push('Similar to startups you liked');
+      if ((commentedStartups?.length || 0) > 0) reasons.push('You engaged via comments');
+      if (topCategories.length > 0) reasons.push(`Category preference: ${topCategories.join(', ')}`);
 
       return {
-        startups: startupsWithSimilarity,
-        reasons: [
-          'Based on your liked startups',
-          'Similar to your interests',
-          'Personalized for you'
-        ],
+        startups: finalStartups,
+        reasons: reasons.length ? reasons : ['Personalized for you'],
         confidence: filteredMatches[0]?.score || 0,
       };
     } catch (error) {

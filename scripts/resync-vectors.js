@@ -10,10 +10,17 @@
 // Load environment variables
 require('dotenv').config({ path: '.env.local' });
 
-// Import using dynamic imports for ES modules
-async function loadModules() {
-  const { client } = await import('../sanity/lib/client.ts');
-  const { aiService } = await import('../lib/ai-services.ts');
+// Enable requiring TypeScript modules when running under Node
+try {
+  require('ts-node').register({ transpileOnly: true });
+} catch (e) {
+  // ts-node may not be installed in prod; the script will fail gracefully below if so
+}
+
+// Load modules (supports TS via ts-node/register)
+function loadModules() {
+  const { client } = require('../sanity/lib/client');
+  const { aiService } = require('../lib/ai-services');
   return { client, aiService };
 }
 
@@ -22,7 +29,7 @@ async function resyncAllVectors() {
   console.log('This will use all startup fields for better semantic search results.\n');
 
   try {
-    const { client, aiService } = await loadModules();
+    const { client, aiService } = loadModules();
     // Fetch comprehensive startup data from Sanity
     const startups = await client.fetch(`
       *[_type == "startup"] {

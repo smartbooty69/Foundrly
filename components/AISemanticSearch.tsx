@@ -49,6 +49,18 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
     localStorage.setItem('foundrly-search-history', JSON.stringify(newHistory));
   };
 
+  const logSearch = async (term: string) => {
+    try {
+      await fetch('/api/search/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ term }),
+      });
+    } catch (e) {
+      // Non-blocking; ignore logging failures
+    }
+  };
+
   const performSearch = async (searchQuery: string) => {
     console.log('🔍 [FRONTEND SEARCH] Starting search:', { searchQuery });
     
@@ -105,6 +117,7 @@ export default function AISemanticSearch({ onStartupSelect, className }: AISeman
         
         setResults(searchResults);
         saveToHistory(searchQuery);
+        logSearch(searchQuery);
         
         // Show detailed toast with error information if fallback was used
         if (apiResults?.fallbackUsed && apiResults?.toastMessage) {

@@ -13,6 +13,20 @@
  */
 
 // Source: schema.json
+export type SearchEvent = {
+  _id: string;
+  _type: "searchEvent";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  userId?: string;
+  term?: string;
+  timestamp?: string;
+  userAgent?: string;
+  ipAddress?: string;
+  sessionId?: string;
+};
+
 export type StartupCommentEvent = {
   _id: string;
   _type: "startupCommentEvent";
@@ -548,5 +562,5 @@ export type SanityAssetSourceData = {
   url?: string;
 };
 
-export type AllSanitySchemaTypes = StartupCommentEvent | StartupDislikeEvent | StartupLikeEvent | InterestedSubmission | AccountHistory | UserBadge | Badge | PushSubscription | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
+export type AllSanitySchemaTypes = SearchEvent | StartupCommentEvent | StartupDislikeEvent | StartupLikeEvent | InterestedSubmission | AccountHistory | UserBadge | Badge | PushSubscription | ModerationActivity | ModerationSettings | Playlist | Author | Report | Comment | Startup | Markdown | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageHotspot | SanityImageCrop | SanityFileAsset | SanityImageAsset | SanityImageMetadata | Geopoint | Slug | SanityAssetSourceData;
 export declare const internalGroqTypeReferenceTo: unique symbol;
