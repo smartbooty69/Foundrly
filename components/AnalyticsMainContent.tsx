@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import ActivityContentGrid from './ActivityContentGrid';
@@ -24,6 +24,7 @@ interface FilterState {
 
 interface AnalyticsMainContentProps {
   activeSection: string;
+  initialStartupId?: string | null;
 }
 
 const interactionTabs = [
@@ -35,7 +36,7 @@ const interactionTabs = [
   { value: 'education', label: 'Education' },
 ];
 
-export default function AnalyticsMainContent({ activeSection }: AnalyticsMainContentProps) {
+export default function AnalyticsMainContent({ activeSection, initialStartupId }: AnalyticsMainContentProps) {
   const { data: session } = useSession();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,6 +49,13 @@ export default function AnalyticsMainContent({ activeSection }: AnalyticsMainCon
     endDate: { month: 'December', day: '31', year: '2025' }
   });
   const [selectedStartupForEngagement, setSelectedStartupForEngagement] = useState<{ id: string, title: string } | null>(null);
+
+  // Sync an initial startup id from parent (e.g., query param) into local state
+  useEffect(() => {
+    if (initialStartupId) {
+      setSelectedStartupId(initialStartupId);
+    }
+  }, [initialStartupId]);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
