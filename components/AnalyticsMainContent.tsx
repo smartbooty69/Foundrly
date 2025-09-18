@@ -113,11 +113,7 @@ export default function AnalyticsMainContent({ activeSection }: AnalyticsMainCon
           )}
         </div>
 
-<<<<<<< HEAD
         {(activeSection === 'engagement-audience' && !selectedStartupForEngagement) || (activeSection === 'startup-analytics' && !selectedStartupId) ? (
-=======
-        {activeSection === 'engagement-audience' && !selectedStartupForEngagement && (
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
           <div className="space-y-6">
             {/* Tabs */}
             <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
@@ -161,7 +157,6 @@ export default function AnalyticsMainContent({ activeSection }: AnalyticsMainCon
         <div className={(activeSection === 'engagement-audience' ? 'p-4 pt-2 sm:pt-4 sm:px-8' : 'p-4 sm:p-8') + ' h-full flex flex-col min-h-0 pb-20'}>
           {activeSection === 'engagement-audience' ? (
             selectedStartupForEngagement ? (
-<<<<<<< HEAD
               <div className="flex-1 min-h-0 flex flex-col space-y-6">
                 <div className="flex-1 min-h-0">
                   <StartupEngagementMetrics
@@ -170,24 +165,6 @@ export default function AnalyticsMainContent({ activeSection }: AnalyticsMainCon
                     onBack={handleBackFromEngagement}
                   />
                 </div>
-=======
-              <div className="space-y-6">
-                <div className="flex items-center mb-6 pr-20">
-                  <h2 className="text-xl font-semibold truncate">Engagement Metrics</h2>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleBackFromEngagement}
-                    className="ml-auto shrink-0 flex items-center gap-2"
-                  >
-                    Back
-                  </Button>
-                </div>
-                <StartupEngagementMetrics
-                  startupId={selectedStartupForEngagement.id}
-                  startupTitle={selectedStartupForEngagement.title}
-                  onBack={handleBackFromEngagement}
-                />
->>>>>>> c03851b1e29834b98b1c777d2ec4e57aa4bf8864
               </div>
             ) : (
               <ActivityContentGrid 
