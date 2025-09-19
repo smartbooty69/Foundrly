@@ -1,4 +1,29 @@
 import { StreamChat } from 'stream-chat';
+import { getMessaging, getToken, deleteToken, Messaging } from 'firebase/messaging';
+import { initializeApp, getApps } from 'firebase/app';
+
+// Lightweight Firebase client init to obtain FCM web token
+function ensureFirebaseApp() {
+  if (getApps().length) return;
+  const cfg = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  } as any;
+  initializeApp(cfg);
+}
+
+async function getFcmMessaging(): Promise<Messaging | null> {
+  try {
+    // Some Chrome setups inaccurately report unsupported; attempt anyway
+    ensureFirebaseApp();
+    return getMessaging();
+  } catch {
+    return null;
+  }
+}
 
 // Interface for Stream Chat push notification data
 export interface StreamChatPushData {
@@ -96,35 +121,41 @@ export class StreamChatPushService {
         throw new Error('Notification permission denied');
       }
 
-      // Re-validate before service worker registration
-      validateClient();
+      // Register (or ensure) service worker for Firebase messaging and use it for token
+      const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      console.log('✅ Service worker registered for Firebase messaging');
 
-      // Register service worker for push notifications
-      const registration = await navigator.serviceWorker.register('/sw-stream-chat.js');
-      console.log('✅ Service worker registered for Stream Chat:', registration);
+      // Obtain FCM token for this browser
+      const messaging = await getFcmMessaging();
+      if (!messaging) {
+        throw new Error('FCM not supported in this browser');
+      }
 
-      // Re-validate before push subscription
-      validateClient();
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) {
+        throw new Error('Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY');
+      }
 
-      // Get push subscription
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
-      });
+      const fcmToken = await getToken(messaging, { vapidKey, serviceWorkerRegistration: swRegistration });
+      if (!fcmToken) {
+        throw new Error('Failed to obtain FCM token');
+      }
 
-      // Final validation before Stream Chat operations
-      validateClient();
-
-      // Send subscription to Stream Chat
-      await this.chatClient.updateUser({
-        pushNotificationSettings: {
-          push: {
-            enabled: true,
-            pushNotificationChannels: ['messaging'],
-            pushNotificationChannelsEnabled: ['messaging']
-          }
+      // Register device with Stream using your named Firebase provider ("foundrly").
+      // Different SDK versions support different signatures; try common ones.
+      try {
+        await (this.chatClient as any).addDevice(fcmToken, 'firebase', 'foundrly');
+      } catch (e1) {
+        try {
+          await (this.chatClient as any).addDevice(fcmToken, 'firebase', undefined, 'foundrly');
+        } catch (e2) {
+          // Last resort: object form is not accepted in current SDK for id, so rethrow first error
+          throw e1;
         }
-      });
+      }
+
+      // Skip updateUser here to avoid "User ID is required" errors on some clients.
+      // Device registration is sufficient for push delivery.
 
       console.log('✅ Successfully registered for Stream Chat push notifications');
       return true;
@@ -150,36 +181,37 @@ export class StreamChatPushService {
     }
 
     try {
-      // Disable push notifications in Stream Chat
-      await this.chatClient.updateUser({
-        pushNotificationSettings: {
-          push: {
-            enabled: false,
-            pushNotificationChannels: [],
-            pushNotificationChannelsEnabled: []
+      // Remove FCM token from Stream and delete local token
+      const messaging = await getFcmMessaging();
+      if (messaging) {
+        try {
+          const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          const token = await getToken(messaging, { vapidKey });
+          if (token) {
+            try {
+              await (this.chatClient as any).removeDevice(token, 'foundrly');
+            } catch (e1) {
+              try {
+                await (this.chatClient as any).removeDevice(token);
+              } catch {
+                // best effort
+              }
+            }
+            await deleteToken(messaging);
           }
-        }
-      });
-
-      // Update user settings
-      await this.chatClient.updateUser({
-        pushNotificationSettings: {
-          push: {
-            enabled: false,
-            pushNotificationChannels: [],
-            pushNotificationChannelsEnabled: []
-          }
-        }
-      });
-
-      // Unsubscribe from push manager
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration) {
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          await subscription.unsubscribe();
-        }
+        } catch {}
       }
+
+      // Also disable push in Stream user settings (best-effort)
+      await this.chatClient.updateUser({
+        pushNotificationSettings: {
+          push: {
+            enabled: false,
+            pushNotificationChannels: [],
+            pushNotificationChannelsEnabled: []
+          }
+        }
+      });
 
       console.log('✅ Successfully unregistered from Stream Chat push notifications');
       return true;

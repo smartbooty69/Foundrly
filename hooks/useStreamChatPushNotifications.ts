@@ -88,9 +88,30 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
       return false;
     }
 
+    // Ensure Stream Chat client is initialized if not ready
     if (!streamChatPushService.isReady()) {
-      setState(prev => ({ ...prev, error: 'Stream Chat service not ready' }));
-      return false;
+      try {
+        setState(prev => ({ ...prev, isLoading: true, error: null }));
+        const res = await fetch("/api/chat/token", {
+          method: "POST",
+          body: JSON.stringify({ userId: session.user.id }),
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || 'Failed to get chat token');
+        }
+        const { token } = await res.json();
+        const apiKey = process.env.NEXT_PUBLIC_STREAM_API_KEY!;
+        if (!apiKey) {
+          throw new Error('Missing NEXT_PUBLIC_STREAM_API_KEY');
+        }
+        await streamChatPushService.initialize(apiKey, session.user.id, token);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to initialize Stream Chat';
+        setState(prev => ({ ...prev, isLoading: false, error: message }));
+        return false;
+      }
     }
 
     // Retry mechanism for connection issues

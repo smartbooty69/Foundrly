@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import ProfileEditModal from "@/components/ProfileEditModal";
+import StreamChatPushNotificationSettings from "@/components/StreamChatPushNotificationSettings";
 
 interface SettingsClientProps {
   currentUser: {
@@ -81,6 +82,12 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Messaging & Push Notifications */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Messaging & Push Notifications</h2>
+            <StreamChatPushNotificationSettings />
           </div>
         </div>
       </div>
