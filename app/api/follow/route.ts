@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { writeClient } from '@/sanity/lib/write-client';
 import { canUserPerformAction } from '@/lib/ban-checks';
 import { createFollowNotification } from '@/sanity/lib/notifications';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 export async function POST(req: Request) {
   try {
@@ -173,6 +174,24 @@ export async function POST(req: Request) {
           currentUser.name || currentUser.username || 'Unknown User',
           currentUser.image
         );
+
+        // Send push notification for new follow
+        try {
+          await ServerPushNotificationService.sendNotification({
+            type: 'follow',
+            recipientId: profileId,
+            title: 'New Follower',
+            message: `${currentUser.name || currentUser.username || 'Someone'} started following you`,
+            metadata: {
+              followerId: currentUserId,
+              followerName: currentUser.name || currentUser.username || 'Unknown User',
+              followerImage: currentUser.image,
+              followerUsername: currentUser.username
+            }
+          });
+        } catch (pushError) {
+          console.error('Failed to send follow push notification:', pushError);
+        }
       } catch (notificationError) {
         console.error('Failed to create follow notification:', notificationError);
         // Don't fail the entire request if notification creation fails

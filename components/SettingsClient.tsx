@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import StreamChatPushNotificationSettings from "@/components/StreamChatPushNotificationSettings";
+import NotificationTestPanel from "@/components/NotificationTestPanel";
+import NotificationDiagnostics from "@/components/NotificationDiagnostics";
+import NotificationTestButton from "@/components/NotificationTestButton";
+import StartupCardNotificationTest from "@/components/StartupCardNotificationTest";
+import StartupCardNotificationTestMock from "@/components/StartupCardNotificationTestMock";
+import SimpleNotificationTest from "@/components/SimpleNotificationTest";
+import NotificationDeliveryTest from "@/components/NotificationDeliveryTest";
 
 interface SettingsClientProps {
   currentUser: {
@@ -88,6 +95,88 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
           <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Messaging & Push Notifications</h2>
             <StreamChatPushNotificationSettings />
+          </div>
+
+          {/* Push Notification Testing */}
+          {/* Simple Notification Test */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Simple Notification Test</h2>
+            <SimpleNotificationTest />
+          </div>
+
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Test All Notification Types</h2>
+            <NotificationTestPanel />
+          </div>
+
+          {/* Real Component Notifications */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Real Component Notifications</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              These buttons simulate real component interactions (like liking a startup, commenting, etc.)
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <NotificationTestButton
+                type="like"
+                title="New Like"
+                message="John Doe liked your startup 'Amazing App'"
+                metadata={{ startupTitle: 'Amazing App', likerName: 'John Doe' }}
+              />
+              <NotificationTestButton
+                type="dislike"
+                title="New Dislike"
+                message="Jane Smith disliked your startup 'Cool Product'"
+                metadata={{ startupTitle: 'Cool Product', dislikerName: 'Jane Smith' }}
+              />
+              <NotificationTestButton
+                type="comment"
+                title="New Comment"
+                message="Mike Johnson commented on your startup 'Great Idea'"
+                metadata={{ startupTitle: 'Great Idea', commenterName: 'Mike Johnson' }}
+              />
+              <NotificationTestButton
+                type="reply"
+                title="New Reply"
+                message="Sarah Wilson replied to your comment on 'Awesome Startup'"
+                metadata={{ startupTitle: 'Awesome Startup', replierName: 'Sarah Wilson' }}
+              />
+              <NotificationTestButton
+                type="interested"
+                title="New Interest"
+                message="Alex Brown is interested in your startup 'Innovative Solution'"
+                metadata={{ startupTitle: 'Innovative Solution', interestedUserName: 'Alex Brown' }}
+              />
+              <NotificationTestButton
+                type="follow"
+                title="New Follower"
+                message="Emma Davis started following you"
+                metadata={{ followerName: 'Emma Davis' }}
+              />
+            </div>
+          </div>
+
+          {/* Direct Notification Testing */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Direct Notification Testing</h2>
+            <StartupCardNotificationTestMock />
+          </div>
+
+          {/* StartupCard with Notifications */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">StartupCard Component with Notifications</h2>
+            <StartupCardNotificationTest />
+          </div>
+
+          {/* Notification Delivery Test */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Delivery Test</h2>
+            <NotificationDeliveryTest />
+          </div>
+
+          {/* Notification Diagnostics */}
+          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Diagnostics</h2>
+            <NotificationDiagnostics />
           </div>
         </div>
       </div>

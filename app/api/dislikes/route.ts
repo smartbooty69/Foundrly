@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -111,6 +112,40 @@ export async function POST(req: Request) {
       }
     } catch (e) {
       console.error('Failed to log dislike analytics event', e);
+    }
+
+    // Send push notification for new dislike (only if it's a new dislike, not un-disliking)
+    if (!userHasDisliked && dislikes > doc.dislikes) {
+      try {
+        // Get startup owner and startup details
+        const startup = await client.fetch(
+          `*[_type == "startup" && _id == $startupId][0]{
+            author->{_id, name, username, image},
+            title
+          }`,
+          { startupId: id }
+        );
+
+        if (startup && startup.author?._id !== userId) {
+          // Only send notification if disliker is not the startup owner
+          await ServerPushNotificationService.sendNotification({
+            type: 'dislike',
+            recipientId: startup.author._id,
+            title: 'New Dislike',
+            message: `${session.user.name || session.user.username || 'Someone'} disliked your startup "${startup.title}"`,
+            metadata: {
+              startupId: id,
+              startupTitle: startup.title,
+              dislikerId: userId,
+              dislikerName: session.user.name || session.user.username || 'Unknown User',
+              dislikerImage: session.user.image
+            }
+          });
+        }
+      } catch (pushError) {
+        console.error('Failed to send dislike push notification:', pushError);
+        // Don't fail the entire request if push notification fails
+      }
     }
 
     return NextResponse.json({ success: true, ...result });
