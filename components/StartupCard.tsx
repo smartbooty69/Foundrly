@@ -31,9 +31,11 @@ interface StartupCardProps {
   hideViews?: boolean;
   analyticsRedirect?: boolean;
   onAnalyticsClick?: (startupId: string, title: string) => void;
+  // Notification props
+  currentUserName?: string;
 }
 
-const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true, analyticsContent, hideActions = false, hideImage = false, hideViews = false, analyticsRedirect = false, onAnalyticsClick }: StartupCardProps) => {
+const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDescription = true, showCategory = true, showDetailsButton = true, showComment = false, commentType = 'comment', showLikesDislikes = true, analyticsContent, hideActions = false, hideImage = false, hideViews = false, analyticsRedirect = false, onAnalyticsClick, currentUserName = 'Someone' }: StartupCardProps) => {
   const {
     _createdAt,
     views,
@@ -65,6 +67,8 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
   const [interestedLoading, setInterestedLoading] = React.useState(false);
   const [isInterestedModalOpen, setIsInterestedModalOpen] = React.useState(false);
   const hasIncremented = React.useRef(false);
+  
+  // Client-side popup notifications removed; rely on server to notify recipients
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -158,40 +162,71 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
     e.preventDefault(); // Prevent default link behavior
     e.stopPropagation(); // Prevent event bubbling to parent Link
     if (!userId || likeLoading) return;
+    
+    const previousLiked = liked;
     setLikeLoading(true);
-    const res = await fetch(`/api/likes?id=${_id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    });
-    const data = await res.json();
-    setLikes(data.likes ?? likes);
-    setDislikes(data.dislikes ?? dislikes);
-    setLikedBy(data.likedBy ?? likedBy);
-    setDislikedBy(data.dislikedBy ?? dislikedBy);
-    setLiked(data.likedBy?.includes(userId) ?? false);
-    setDisliked(data.dislikedBy?.includes(userId) ?? false);
-    setLikeLoading(false);
+    
+    try {
+      const res = await fetch(`/api/likes?id=${_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setLikes(data.likes ?? likes);
+      setDislikes(data.dislikes ?? dislikes);
+      setLikedBy(data.likedBy ?? likedBy);
+      setDislikedBy(data.dislikedBy ?? dislikedBy);
+      setLiked(data.likedBy?.includes(userId) ?? false);
+      setDisliked(data.dislikedBy?.includes(userId) ?? false);
+      
+      // Debug info
+      console.log('🔍 Like debug info:', {
+        previousLiked,
+        isNewLike: !previousLiked && data.likedBy?.includes(userId),
+        authorId: author?._id,
+        userId,
+        isNotOwner: author?._id && author._id !== userId,
+        shouldShowNotification: !previousLiked && data.likedBy?.includes(userId) && author?._id && author._id !== userId,
+        apiLikedBy: data.likedBy,
+        userInLikedBy: data.likedBy?.includes(userId)
+      });
+      // No client popup; server handles notifying the startup owner
+    } catch (error) {
+      console.error('Error liking startup:', error);
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
   const handleDislike = async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent default link behavior
     e.stopPropagation(); // Prevent event bubbling to parent Link
     if (!userId || dislikeLoading) return;
+    
+    const previousDisliked = disliked;
     setDislikeLoading(true);
-    const res = await fetch(`/api/dislikes?id=${_id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    });
-    const data = await res.json();
-    setLikes(data.likes ?? likes);
-    setDislikes(data.dislikes ?? dislikes);
-    setLikedBy(data.likedBy ?? likedBy);
-    setDislikedBy(data.dislikedBy ?? dislikedBy);
-    setLiked(data.likedBy?.includes(userId) ?? false);
-    setDisliked(data.dislikedBy?.includes(userId) ?? false);
-    setDislikeLoading(false);
+    
+    try {
+      const res = await fetch(`/api/dislikes?id=${_id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setLikes(data.likes ?? likes);
+      setDislikes(data.dislikes ?? dislikes);
+      setLikedBy(data.likedBy ?? likedBy);
+      setDislikedBy(data.dislikedBy ?? dislikedBy);
+      setLiked(data.likedBy?.includes(userId) ?? false);
+      setDisliked(data.dislikedBy?.includes(userId) ?? false);
+      
+      // No client popup for dislike; server handles notifying the recipient
+    } catch (error) {
+      console.error('Error disliking startup:', error);
+    } finally {
+      setDislikeLoading(false);
+    }
   };
 
   const handleSave = async (e: React.MouseEvent) => {
@@ -233,10 +268,11 @@ const StartupCard = ({ post, isOwner = false, isLoggedIn = false, userId, showDe
     setIsInterestedModalOpen(true);
   };
 
-  const handleInterestedSuccess = () => {
+  const handleInterestedSuccess = async () => {
     // Update the interested state after successful form submission
     setInterested(true);
     setInterestedBy(prev => [...prev, userId!]);
+    // No client popup; server sends notification to startup owner
   };
 
   return (

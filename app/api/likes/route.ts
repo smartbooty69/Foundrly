@@ -3,6 +3,7 @@ import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
 import { createLikeNotification } from '@/sanity/lib/notifications';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -136,6 +137,26 @@ export async function POST(req: Request) {
             session.user.name || session.user.username || 'Unknown User',
             session.user.image
           );
+
+          // Send push notification
+          try {
+            await ServerPushNotificationService.sendNotification({
+              type: 'like',
+              recipientId: startup.author._id,
+              title: 'New Like',
+              message: `${session.user.name || session.user.username || 'Someone'} liked your startup "${startup.title}"`,
+              metadata: {
+                startupId: id,
+                startupTitle: startup.title,
+                likerId: userId,
+                likerName: session.user.name || session.user.username || 'Unknown User',
+                likerImage: session.user.image
+              }
+            });
+          } catch (pushError) {
+            console.error('Failed to send like push notification:', pushError);
+            // Don't fail the entire request if push notification fails
+          }
   
         }
       } catch (notificationError) {

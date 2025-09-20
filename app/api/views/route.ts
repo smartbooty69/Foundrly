@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { STARTUP_VIEWS_QUERY } from '@/sanity/lib/queries';
+// View notifications disabled per request
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -23,6 +24,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
+  // const session = await auth();
 
   if (!id) {
     return NextResponse.json({ success: false, message: 'No ID provided' }, { status: 400 });
@@ -38,6 +40,9 @@ export async function POST(req: Request) {
 
     // Fetch updated views count
     const data = await client.withConfig({ useCdn: false }).fetch(STARTUP_VIEWS_QUERY, { id });
+
+    // View notifications disabled
+
     return NextResponse.json({ success: true, views: data.views });
   } catch (error) {
     console.error('Error incrementing views:', error);

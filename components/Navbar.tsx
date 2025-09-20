@@ -9,11 +9,15 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import ChatController from './ChatController'
 import NotificationBell from './NotificationBell'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications'
 
 const Navbar = () => {
     const session = useSession();
     const [isMessagesOpen, setIsMessagesOpen] = useState(false);
     const { totalUnreadMessages, isStreamChatLoaded } = useNotifications();
+    
+    // Initialize real-time notifications globally
+    useRealtimeNotifications();
     
     // Messages loaded
 

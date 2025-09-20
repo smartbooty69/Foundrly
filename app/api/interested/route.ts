@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { client } from '@/sanity/lib/client';
 import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -77,6 +78,40 @@ export async function POST(req: Request) {
         interestedBy: interestedBy,
       })
       .commit();
+
+    // Send push notification for new interest (only when someone becomes interested, not when they un-interest)
+    if (!userHasInterested) {
+      try {
+        // Get startup owner and startup details
+        const startup = await client.fetch(
+          `*[_type == "startup" && _id == $startupId][0]{
+            author->{_id, name, username, image},
+            title
+          }`,
+          { startupId: id }
+        );
+
+        if (startup && startup.author?._id !== userId) {
+          // Only send notification if interested user is not the startup owner
+          await ServerPushNotificationService.sendNotification({
+            type: 'interested',
+            recipientId: startup.author._id,
+            title: 'New Interest',
+            message: `${session.user.name || session.user.username || 'Someone'} is interested in your startup "${startup.title}"`,
+            metadata: {
+              startupId: id,
+              startupTitle: startup.title,
+              interestedUserId: userId,
+              interestedUserName: session.user.name || session.user.username || 'Unknown User',
+              interestedUserImage: session.user.image
+            }
+          });
+        }
+      } catch (pushError) {
+        console.error('Failed to send interested push notification:', pushError);
+        // Don't fail the entire request if push notification fails
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 

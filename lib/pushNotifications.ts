@@ -154,6 +154,26 @@ export class PushNotificationService {
           };
           break;
 
+        case 'dislike':
+          pushData = {
+            title: 'New Dislike',
+            body: notification.message,
+            icon: '/icons/dislike.svg',
+            tag: 'dislike',
+            data: { type: 'dislike', ...notification.metadata }
+          };
+          break;
+
+        case 'interested':
+          pushData = {
+            title: 'New Interest',
+            body: notification.message,
+            icon: '/icons/interested.svg',
+            tag: 'interested',
+            data: { type: 'interested', ...notification.metadata }
+          };
+          break;
+
         case 'report':
           pushData = {
             title: 'Moderation Update',
@@ -274,13 +294,37 @@ export async function sendPushNotification(notification: {
   message: string;
   metadata?: any;
 }): Promise<boolean> {
-  return PushNotificationService.sendNotificationPush(
-    notification.recipientId,
-    {
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      metadata: notification.metadata
+  try {
+    // For now, we'll use a simple approach: send through the API endpoint
+    // This will work if the user has subscribed to push notifications
+    const response = await fetch('/api/push-notifications/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        notification: {
+          title: notification.title,
+          body: notification.message,
+          icon: `/icons/${notification.type}.svg`,
+          tag: notification.type,
+          data: { type: notification.type, ...notification.metadata }
+        },
+        // We'll need to get the user's subscription from the database
+        // For now, this is a placeholder
+        subscription: null
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send push notification:', response.statusText);
+      return false;
     }
-  );
+
+    const result = await response.json();
+    return result.success;
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+    return false;
+  }
 } 

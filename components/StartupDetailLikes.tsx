@@ -2,14 +2,25 @@
 
 import React from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { useClientNotifications } from "@/hooks/useClientNotifications";
 
 interface StartupDetailLikesProps {
   startupId: string;
   isLoggedIn?: boolean;
   userId?: string;
+  startupTitle?: string;
+  startupAuthorId?: string;
+  currentUserName?: string;
 }
 
-const StartupDetailLikes = ({ startupId, isLoggedIn = false, userId }: StartupDetailLikesProps) => {
+const StartupDetailLikes = ({ 
+  startupId, 
+  isLoggedIn = false, 
+  userId, 
+  startupTitle = 'this startup',
+  startupAuthorId,
+  currentUserName = 'Someone'
+}: StartupDetailLikesProps) => {
   const [likes, setLikes] = React.useState(0);
   const [dislikes, setDislikes] = React.useState(0);
   const [liked, setLiked] = React.useState(false);
@@ -17,6 +28,8 @@ const StartupDetailLikes = ({ startupId, isLoggedIn = false, userId }: StartupDe
   const [likeLoading, setLikeLoading] = React.useState(false);
   const [dislikeLoading, setDislikeLoading] = React.useState(false);
   const [initialLoading, setInitialLoading] = React.useState(true);
+  
+  const { showLikeNotification, showDislikeNotification } = useClientNotifications();
 
   React.useEffect(() => {
     if (!startupId) return;
@@ -36,33 +49,61 @@ const StartupDetailLikes = ({ startupId, isLoggedIn = false, userId }: StartupDe
   const handleLike = async () => {
     if (!userId || likeLoading) return;
     setLikeLoading(true);
-    const res = await fetch(`/api/likes?id=${startupId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    });
-    const data = await res.json();
-    setLikes(data.likes ?? 0);
-    setDislikes(data.dislikes ?? 0);
-    setLiked(data.likedBy?.includes(userId) ?? false);
-    setDisliked(data.dislikedBy?.includes(userId) ?? false);
-    setLikeLoading(false);
+    
+    const previousLiked = liked;
+    
+    try {
+      const res = await fetch(`/api/likes?id=${startupId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setLikes(data.likes ?? 0);
+      setDislikes(data.dislikes ?? 0);
+      setLiked(data.likedBy?.includes(userId) ?? false);
+      setDisliked(data.dislikedBy?.includes(userId) ?? false);
+      
+      // Show notification if this is a new like (not un-liking)
+      if (!previousLiked && data.likedBy?.includes(userId) && startupAuthorId && startupAuthorId !== userId) {
+        console.log('🔔 Showing like notification for startup:', startupTitle);
+        await showLikeNotification(startupTitle, currentUserName);
+      }
+    } catch (error) {
+      console.error('Error liking startup:', error);
+    } finally {
+      setLikeLoading(false);
+    }
   };
 
   const handleDislike = async () => {
     if (!userId || dislikeLoading) return;
     setDislikeLoading(true);
-    const res = await fetch(`/api/dislikes?id=${startupId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    });
-    const data = await res.json();
-    setLikes(data.likes ?? 0);
-    setDislikes(data.dislikes ?? 0);
-    setLiked(data.likedBy?.includes(userId) ?? false);
-    setDisliked(data.dislikedBy?.includes(userId) ?? false);
-    setDislikeLoading(false);
+    
+    const previousDisliked = disliked;
+    
+    try {
+      const res = await fetch(`/api/dislikes?id=${startupId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setLikes(data.likes ?? 0);
+      setDislikes(data.dislikes ?? 0);
+      setLiked(data.likedBy?.includes(userId) ?? false);
+      setDisliked(data.dislikedBy?.includes(userId) ?? false);
+      
+      // Show notification if this is a new dislike (not un-disliking)
+      if (!previousDisliked && data.dislikedBy?.includes(userId) && startupAuthorId && startupAuthorId !== userId) {
+        console.log('🔔 Showing dislike notification for startup:', startupTitle);
+        await showDislikeNotification(startupTitle, currentUserName);
+      }
+    } catch (error) {
+      console.error('Error disliking startup:', error);
+    } finally {
+      setDislikeLoading(false);
+    }
   };
 
   return (

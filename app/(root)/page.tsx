@@ -7,6 +7,7 @@ import FilterDropdown from "../../components/FilterDropdown";
 import AIRecommendations from "../../components/AIRecommendations";
 import { AIService } from "@/lib/ai-services";
 import SearchToast from "../../components/SearchToast";
+import HomeNotifications from "../../components/HomeNotifications";
 
 export default async function Home({searchParams}:{
   searchParams: Promise<{ query?:string, filter?:string }>
@@ -95,6 +96,13 @@ export default async function Home({searchParams}:{
       {!query && (
         <section className="section_container">
           <AIRecommendations limit={6} />
+        </section>
+      )}
+
+      {/* Notifications Section */}
+      {!query && (
+        <section className="section_container">
+          <HomeNotifications />
         </section>
       )}
 

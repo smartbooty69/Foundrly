@@ -4,6 +4,7 @@ import { writeClient } from '@/sanity/lib/write-client';
 import { auth } from '@/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { createCommentNotification, createReplyNotification } from '@/sanity/lib/notifications';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 // GET: Fetch comments for a startup (PUBLIC - no auth required)
 export async function GET(req: Request) {
@@ -136,6 +137,28 @@ export async function POST(req: Request) {
             parentComment.text // parent comment text for context
           );
 
+          // Send push notification for reply
+          try {
+            await ServerPushNotificationService.sendNotification({
+              type: 'comment',
+              recipientId: parentComment.author._id,
+              title: 'New Reply',
+              message: `${session.user.name || session.user.username || 'Someone'} replied to your comment on "${parentComment.startup.title}"`,
+              metadata: {
+                startupId: parentComment.startup._id,
+                startupTitle: parentComment.startup.title,
+                commenterId: session.user.id,
+                commenterName: session.user.name || session.user.username || 'Unknown User',
+                commenterImage: session.user.image,
+                replyText: text,
+                parentCommentText: parentComment.text,
+                isReply: true
+              }
+            });
+          } catch (pushError) {
+            console.error('Failed to send reply push notification:', pushError);
+          }
+
         } else {
           // Skipping reply notification - replier is parent comment author
         }
@@ -192,6 +215,43 @@ export async function POST(req: Request) {
           dislikedBy
         })
         .commit();
+
+      // Send notification for comment like (only for new likes, not unlikes)
+      if (action === 'like' && !userHasLiked) {
+        try {
+          // Get comment author and startup details
+          const comment = await client.fetch(
+            `*[_type == "comment" && _id == $commentId][0]{
+              author->{_id, name, username, image},
+              startup->{_id, title},
+              text
+            }`,
+            { commentId }
+          );
+
+          if (comment && comment.author?._id !== userId) {
+            // Only send notification if liker is not the comment author
+            await ServerPushNotificationService.sendNotification({
+              type: 'comment_like',
+              recipientId: comment.author._id,
+              title: 'Comment Liked',
+              message: `${session.user.name || session.user.username || 'Someone'} liked your comment on "${comment.startup.title}"`,
+              metadata: {
+                startupId: comment.startup._id,
+                startupTitle: comment.startup.title,
+                commentId: commentId,
+                commentText: comment.text,
+                likerId: userId,
+                likerName: session.user.name || session.user.username || 'Unknown User',
+                likerImage: session.user.image
+              }
+            });
+          }
+        } catch (pushError) {
+          console.error('Failed to send comment like push notification:', pushError);
+        }
+      }
+
       return NextResponse.json({ success: true });
     } else if (action === 'create') {
       // New top-level comment
@@ -239,6 +299,27 @@ export async function POST(req: Request) {
             session.user.image,
             text
           );
+
+          // Send push notification for new comment
+          try {
+            await ServerPushNotificationService.sendNotification({
+              type: 'comment',
+              recipientId: startup.author._id,
+              title: 'New Comment',
+              message: `${session.user.name || session.user.username || 'Someone'} commented on your startup "${startup.title}"`,
+              metadata: {
+                startupId: startupId,
+                startupTitle: startup.title,
+                commenterId: session.user.id,
+                commenterName: session.user.name || session.user.username || 'Unknown User',
+                commenterImage: session.user.image,
+                commentText: text,
+                isReply: false
+              }
+            });
+          } catch (pushError) {
+            console.error('Failed to send comment push notification:', pushError);
+          }
 
         } else {
           // Skipping notification - commenter is startup owner or startup not found
