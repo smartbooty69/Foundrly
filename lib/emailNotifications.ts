@@ -1,13 +1,23 @@
 import nodemailer from 'nodemailer';
+import { client } from '@/sanity/lib/client';
 
-// Email configuration
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // You can change this to your preferred email service
+// Email configuration - using same config as main email system
+const emailConfig = {
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
   },
-});
+};
+
+const transporter = nodemailer.createTransport(emailConfig);
+
+// Check if email is properly configured
+export function isEmailConfigured(): boolean {
+  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+}
 
 export interface InterestedSubmissionEmailData {
   startupOwnerName: string;
@@ -245,7 +255,8 @@ export async function sendNotificationEmail(
   recipientName: string,
   title: string,
   message: string,
-  actionUrl?: string
+  actionUrl?: string,
+  notificationType?: string
 ) {
   try {
     const emailHtml = `
@@ -333,9 +344,9 @@ export async function sendNotificationEmail(
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Foundrly" <${process.env.SMTP_USER}>`,
       to: recipientEmail,
-      subject: title,
+      subject: `🔔 ${title} - Foundrly`,
       html: emailHtml,
     };
 
@@ -367,22 +378,99 @@ export interface CriticalNotificationEmailData {
 
 export async function sendCriticalNotificationEmail(data: CriticalNotificationEmailData) {
   try {
-    // For now, we'll just log that this function was called
-    // In a real implementation, you might want to send different types of emails
-    // based on the notification type or make it configurable
-    console.log('Critical notification email requested:', {
+    console.log('🔔 Critical notification email requested:', {
       type: data.type,
       title: data.title,
       message: data.message,
       recipientId: data.recipientId
     });
 
-    // You could implement different email templates based on the notification type
-    // For now, we'll return success without actually sending an email
-    // to avoid build issues
-    return { success: true, messageId: 'critical-notification-skipped' };
+    // Check if email is configured
+    if (!isEmailConfigured()) {
+      console.warn('⚠️ Email not configured, skipping critical notification email');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    // Get recipient email from user ID
+    const user = await client.fetch(
+      `*[_type == "author" && _id == $userId][0]{
+        name,
+        email
+      }`,
+      { userId: data.recipientId }
+    );
+
+    if (!user || !user.email) {
+      console.warn('⚠️ User not found or no email address:', data.recipientId);
+      return { success: false, error: 'User email not found' };
+    }
+
+    // Determine if this notification type should trigger an email
+    const shouldSendEmail = shouldSendNotificationEmail(data.type);
+    if (!shouldSendEmail) {
+      console.log('🔕 Email not sent for notification type:', data.type);
+      return { success: true, messageId: 'email-skipped-by-type' };
+    }
+
+    // Send the email
+    const result = await sendNotificationEmail(
+      user.email,
+      user.name || 'User',
+      data.title,
+      data.message,
+      data.metadata?.actionUrl,
+      data.type
+    );
+
+    if (result.success) {
+      console.log('✅ Critical notification email sent successfully:', result.messageId);
+    } else {
+      console.error('❌ Failed to send critical notification email:', result.error);
+    }
+
+    return result;
   } catch (error) {
-    console.error('Error sending critical notification email:', error);
+    console.error('❌ Error sending critical notification email:', error);
     return { success: false, error: error.message };
+  }
+}
+
+// Determine which notification types should trigger emails
+function shouldSendNotificationEmail(type: string): boolean {
+  const emailEnabledTypes = [
+    'follow',
+    'comment', 
+    'reply',
+    'like',
+    'interested_submission',
+    'report',
+    'system'
+  ];
+  
+  return emailEnabledTypes.includes(type);
+}
+
+// Test function to verify email configuration
+export async function testEmailConfiguration(): Promise<{ success: boolean; message: string }> {
+  try {
+    if (!isEmailConfigured()) {
+      return { 
+        success: false, 
+        message: 'Email not configured. Please set SMTP_USER and SMTP_PASS environment variables.' 
+      };
+    }
+
+    // Test the transporter
+    await transporter.verify();
+    
+    return { 
+      success: true, 
+      message: 'Email configuration is valid and ready to send notifications.' 
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      message: `Email configuration error: ${error.message}` 
+    };
   }
 }

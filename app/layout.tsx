@@ -5,6 +5,7 @@ import 'easymde/dist/easymde.min.css';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import Providers from "@/components/Providers";
+import NotificationPermissionPrompt from "@/components/NotificationPermissionPrompt";
 
 const workSans = localFont({
   src: [ 
@@ -155,6 +156,7 @@ export default function RootLayout({
         className={workSans.variable}
       >
         <Providers>
+          <NotificationPermissionPrompt />
           {children}
         </Providers>
         <Toaster />

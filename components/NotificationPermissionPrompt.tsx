@@ -32,7 +32,21 @@ export default function NotificationPermissionPrompt() {
       if (permission === 'granted') {
         // Set notifications as enabled by default when permission is granted
         localStorage.setItem('notifications_enabled', 'true');
+        
+        // Set Stream Chat notifications as enabled by default
+        localStorage.setItem('streamchat_notifications_enabled', 'true');
+        
+        // Set default notification types as enabled
+        const defaultTypes = {
+          message: true,
+          reply: true,
+          reaction: true,
+          mention: true
+        };
+        localStorage.setItem('streamchat_notification_types_enabled', JSON.stringify(defaultTypes));
+        
         console.log('✅ Notification permission granted and enabled by default');
+        console.log('✅ Stream Chat notifications enabled by default');
       }
       
       setShowPrompt(false);

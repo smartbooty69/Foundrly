@@ -204,6 +204,7 @@ export class StreamChatPushService {
 
       // Also disable push in Stream user settings (best-effort)
       await this.chatClient.updateUser({
+        id: this.chatClient.userID,
         pushNotificationSettings: {
           push: {
             enabled: false,
@@ -303,6 +304,7 @@ export class StreamChatPushService {
 
     try {
       await this.chatClient.updateUser({
+        id: this.chatClient.userID,
         pushNotificationSettings: settings
       });
       console.log('✅ Push notification settings updated');

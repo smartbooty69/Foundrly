@@ -30,6 +30,35 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
   // Get the Stream Chat push notification service instance
   const streamChatPushService = StreamChatPushService.getInstance();
 
+  // Check Stream Chat push notification status
+  const checkStreamChatStatus = useCallback(async () => {
+    if (!session?.user?.id || !streamChatPushService.isReady()) {
+      return;
+    }
+
+    try {
+      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      // Check if user is registered for push notifications
+      const settings = await streamChatPushService.getPushNotificationSettings();
+      const isRegistered = settings?.push?.enabled || false;
+      
+      setState(prev => ({
+        ...prev,
+        isRegistered,
+        isEnabled: isRegistered,
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('❌ Error checking Stream Chat push notification status:', error);
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: 'Failed to check Stream Chat status'
+      }));
+    }
+  }, [session?.user?.id, streamChatPushService]);
+
   // Initialize push notification service
   useEffect(() => {
     if (!session?.user?.id) {
@@ -45,6 +74,8 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
       // Use the existing Stream Chat client
       streamChatPushService.setChatClient(existingChatClient);
       console.log('✅ Using existing Stream Chat client for push notifications');
+      // Check status after setting client
+      checkStreamChatStatus();
     } else if (supported && !existingChatClient) {
       // Initialize a new client if no existing one is provided
       const initializeService = async () => {
@@ -67,6 +98,9 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
           await streamChatPushService.initialize(apiKey, session.user.id, token);
           
           setState(prev => ({ ...prev, isLoading: false, error: null }));
+          
+          // Check status after initialization
+          checkStreamChatStatus();
         } catch (error) {
           console.error('❌ Failed to initialize Stream Chat for push notifications:', error);
           setState(prev => ({
@@ -79,7 +113,7 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
 
       initializeService();
     }
-  }, [session?.user?.id, existingChatClient]);
+  }, [session?.user?.id, existingChatClient, checkStreamChatStatus]);
 
   // Register for push notifications
   const registerForPushNotifications = useCallback(async () => {
@@ -292,6 +326,7 @@ export const useStreamChatPushNotifications = (existingChatClient?: StreamChat) 
     unregisterFromPushNotifications,
     updateSettings,
     sendTestNotification,
+    checkStreamChatStatus,
     initializeStreamChat: () => {
       // This function is no longer needed as initialization is handled by useEffect
       // Keeping it for now, but it will be removed if not used elsewhere.

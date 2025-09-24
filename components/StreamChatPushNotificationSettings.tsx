@@ -36,6 +36,21 @@ export default function StreamChatPushNotificationSettings() {
     } catch {}
   }, []);
 
+  // Auto-register for Stream Chat push notifications if enabled by default
+  useEffect(() => {
+    if (isSupported && !isRegistered && !isLoading) {
+      const streamChatEnabled = typeof window !== 'undefined' 
+        ? window.localStorage.getItem('streamchat_notifications_enabled') === 'true'
+        : false;
+      
+      // Only auto-register if explicitly enabled, not if it's just missing from localStorage
+      if (streamChatEnabled) {
+        console.log('🚀 Auto-registering for Stream Chat push notifications (enabled by default)');
+        registerForPushNotifications();
+      }
+    }
+  }, [isSupported, isRegistered, isLoading, registerForPushNotifications]);
+
   const toggleType = async (key: string) => {
     setTypePrefs(prev => {
       const next = { ...prev, [key]: !prev[key] };
@@ -91,7 +106,15 @@ export default function StreamChatPushNotificationSettings() {
             {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
           </div>
           <button
-            onClick={() => { if (!isEnabled) { registerForPushNotifications(); } else { unregisterFromPushNotifications(); } }}
+            onClick={async () => { 
+              if (!isEnabled) { 
+                await registerForPushNotifications();
+                localStorage.setItem('streamchat_notifications_enabled', 'true');
+              } else { 
+                await unregisterFromPushNotifications();
+                localStorage.setItem('streamchat_notifications_enabled', 'false');
+              } 
+            }}
             disabled={isLoading}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${isEnabled ? 'bg-green-500' : 'bg-gray-300'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             aria-pressed={isEnabled}
@@ -109,9 +132,21 @@ export default function StreamChatPushNotificationSettings() {
             { key: 'reaction', label: 'Reactions' },
             { key: 'mention', label: 'Mentions' }
           ].map(item => (
-            <label key={item.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-[14px] border-[2px] border-gray-300">
-              <span className="text-sm text-gray-800">{item.label}</span>
-              <button onClick={() => toggleType(item.key)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${typePrefs[item.key] ? 'bg-green-500' : 'bg-gray-300'}`} aria-pressed={typePrefs[item.key]} type="button">
+            <label key={item.key} className={`flex items-center justify-between p-3 rounded-[14px] border-[2px] transition-colors ${isEnabled ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
+              <span className={`text-sm transition-colors ${isEnabled ? 'text-gray-800' : 'text-gray-500'}`}>{item.label}</span>
+              <button 
+                onClick={() => isEnabled && toggleType(item.key)} 
+                disabled={!isEnabled}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${
+                  !isEnabled 
+                    ? 'bg-gray-200 cursor-not-allowed opacity-50' 
+                    : typePrefs[item.key] 
+                      ? 'bg-green-500' 
+                      : 'bg-gray-300'
+                }`} 
+                aria-pressed={typePrefs[item.key]} 
+                type="button"
+              >
                 <span className="inline-block h-5 w-5 transform rounded-full bg-white border border-black transition-transform" style={{ transform: typePrefs[item.key] ? 'translateX(22px)' : 'translateX(2px)' }} />
               </button>
             </label>

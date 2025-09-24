@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, Heart, MessageSquare, UserPlus, AlertCircle, Eye } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Notification {
   _id: string;
-  type: 'like' | 'dislike' | 'comment' | 'reply' | 'follow' | 'interested_submission' | 'comment_like' | 'interested' | 'view';
+  type: 'like' | 'dislike' | 'comment' | 'reply' | 'follow' | 'interested_submission' | 'comment_like' | 'interested';
   title: string;
   message: string;
   isRead: boolean;
@@ -66,8 +66,6 @@ export default function HomeNotifications() {
       case 'interested_submission':
       case 'interested':
         return <AlertCircle className="w-4 h-4 text-purple-500" />;
-      case 'view':
-        return <Eye className="w-4 h-4 text-indigo-500" />;
       default:
         return <Bell className="w-4 h-4 text-gray-500" />;
     }

@@ -175,7 +175,7 @@ const NotificationBell = () => {
           />
           
           {/* Notification Dropdown */}
-          <div className="absolute right-0 top-12 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+          <div className="absolute right-0 top-12 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
               <div>
@@ -206,7 +206,7 @@ const NotificationBell = () => {
             </div>
 
             {/* Notifications List */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto">
               {displayNotifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -310,19 +310,22 @@ const NotificationBell = () => {
             </div>
 
             {/* Footer */}
-            {notifications.length > 0 && (
-              <div className="p-3 border-t border-gray-200 bg-gray-50 text-center">
-                <button
-                  onClick={() => window.location.href = '/notifications'}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  {notifications.length > displayNotifications.length 
-                    ? `View all ${notifications.length} notifications` 
-                    : 'View all notifications'
-                  }
-                </button>
-              </div>
-            )}
+            <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-gray-50 text-center">
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  window.location.href = '/notifications';
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                {notifications.length > 0 
+                  ? (notifications.length > displayNotifications.length 
+                      ? `Show All (${notifications.length})` 
+                      : 'View All Notifications')
+                  : 'View All Notifications'
+                }
+              </button>
+            </div>
           </div>
         </>
       )}

@@ -7,8 +7,7 @@ import FilterDropdown from "../../components/FilterDropdown";
 import AIRecommendations from "../../components/AIRecommendations";
 import { AIService } from "@/lib/ai-services";
 import SearchToast from "../../components/SearchToast";
-import HomeNotifications from "../../components/HomeNotifications";
-import NotificationPermissionPrompt from "../../components/NotificationPermissionPrompt";
+ 
 
 export default async function Home({searchParams}:{
   searchParams: Promise<{ query?:string, filter?:string }>
@@ -86,8 +85,6 @@ export default async function Home({searchParams}:{
 
   return (
     <>
-      {/* Notification Permission Prompt */}
-      <NotificationPermissionPrompt />
       
       <section className="blue_container">
         <h1 className="heading">pitch your startup,<br/> Connect with enterpreneurs</h1>
@@ -103,12 +100,6 @@ export default async function Home({searchParams}:{
         </section>
       )}
 
-      {/* Notifications Section */}
-      {!query && (
-        <section className="section_container">
-          <HomeNotifications />
-        </section>
-      )}
 
       <section className="section_container">
         <div className="flex items-center justify-between">

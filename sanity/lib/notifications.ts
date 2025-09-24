@@ -503,24 +503,3 @@ export async function createCommentLikeNotification(
     }
   });
 }
-
-/**
- * Create startup view notification
- */
-export async function createStartupViewNotification(
-  startupOwnerId: string,
-  startupId: string,
-  startupTitle: string
-): Promise<string> {
-  return createNotification({
-    recipientId: startupOwnerId,
-    type: 'startup_view',
-    title: 'Startup Viewed',
-    message: 'Your startup received a new view',
-    startupId,
-    actionUrl: `/startup/${startupId}`,
-    metadata: {
-      startupTitle
-    }
-  });
-} 
