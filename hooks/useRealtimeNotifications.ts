@@ -88,6 +88,16 @@ export function useRealtimeNotifications() {
             
             // Show notification for any new notifications
             if ('Notification' in window && Notification.permission === 'granted') {
+              // Check if notifications are enabled by user preferences
+              const notificationsEnabled = typeof window !== 'undefined' 
+                ? window.localStorage.getItem('notifications_enabled') !== 'false'
+                : true;
+              
+              if (!notificationsEnabled) {
+                console.log('🔕 Realtime notifications disabled by user preferences');
+                return;
+              }
+
               const uniqueTag = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
               
               const notification = new Notification('New Notification!', {

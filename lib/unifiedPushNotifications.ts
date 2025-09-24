@@ -56,6 +56,12 @@ export class UnifiedPushNotificationService {
         return false;
       }
 
+      // Check user notification preferences
+      if (!this.shouldShowNotification(notification.type)) {
+        console.log('🔕 Notification blocked by user preferences:', notification.type);
+        return false;
+      }
+
       // Check if we can send more notifications
       if (!this.canSendNotification()) {
         console.warn('❌ Cannot send notification due to browser limits');
@@ -194,6 +200,43 @@ export class UnifiedPushNotificationService {
       totalSent: this.notificationCount,
       permissionStatus: this.getPermissionStatus()
     };
+  }
+
+  // Check if notification should be shown based on user preferences
+  private static shouldShowNotification(type: string): boolean {
+    try {
+      // Check if notifications are globally enabled
+      const notificationsEnabled = typeof window !== 'undefined' 
+        ? window.localStorage.getItem('notifications_enabled') !== 'false'
+        : true;
+      
+      if (!notificationsEnabled) {
+        console.log('🔕 Notifications globally disabled');
+        return false;
+      }
+
+      // Check type-specific preferences
+      const typePrefs = typeof window !== 'undefined' 
+        ? window.localStorage.getItem('notification_types_enabled')
+        : null;
+      
+      if (typePrefs) {
+        try {
+          const parsed = JSON.parse(typePrefs);
+          if (parsed && typeof parsed === 'object' && parsed[type] === false) {
+            console.log('🔕 Notification type disabled:', type);
+            return false;
+          }
+        } catch (error) {
+          console.warn('Failed to parse notification type preferences:', error);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.warn('Error checking notification preferences:', error);
+      return true; // Default to showing notifications if there's an error
+    }
   }
 
   // Check if we can send more notifications (browser limits)

@@ -1,16 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import StreamChatPushNotificationSettings from "@/components/StreamChatPushNotificationSettings";
-import NotificationTestPanel from "@/components/NotificationTestPanel";
-import NotificationDiagnostics from "@/components/NotificationDiagnostics";
-import NotificationTestButton from "@/components/NotificationTestButton";
-import StartupCardNotificationTest from "@/components/StartupCardNotificationTest";
-import StartupCardNotificationTestMock from "@/components/StartupCardNotificationTestMock";
-import SimpleNotificationTest from "@/components/SimpleNotificationTest";
-import NotificationDeliveryTest from "@/components/NotificationDeliveryTest";
+// Testing components removed from settings page
 
 interface SettingsClientProps {
   currentUser: {
@@ -26,6 +20,79 @@ interface SettingsClientProps {
 export default function SettingsClient({ currentUser }: SettingsClientProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userData, setUserData] = useState(currentUser);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+  const [typePrefs, setTypePrefs] = useState<Record<string, boolean>>({
+    like: true,
+    dislike: true,
+    comment: true,
+    reply: true,
+    follow: true,
+    interested: true,
+    comment_like: true
+  });
+
+  // Initialize notifications toggle from localStorage
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = window.localStorage.getItem('notifications_enabled');
+        // Default to true (enabled) unless explicitly set to false
+        if (stored === 'false') {
+          setNotificationsEnabled(false);
+        } else {
+          setNotificationsEnabled(true);
+          // If no preference is stored, set it to true in localStorage
+          if (stored === null) {
+            window.localStorage.setItem('notifications_enabled', 'true');
+          }
+        }
+
+        const storedTypes = window.localStorage.getItem('notification_types_enabled');
+        if (storedTypes) {
+          try {
+            const parsed = JSON.parse(storedTypes);
+            if (parsed && typeof parsed === 'object') setTypePrefs((prev) => ({ ...prev, ...parsed }));
+          } catch {}
+        }
+      }
+    } catch {}
+  }, []);
+
+  const toggleNotifications = async () => {
+    try {
+      const next = !notificationsEnabled;
+      setNotificationsEnabled(next);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('notifications_enabled', next ? 'true' : 'false');
+      }
+      // Ask for browser permission when enabling
+      if (next && typeof window !== 'undefined' && 'Notification' in window) {
+        try { await Notification.requestPermission(); } catch {}
+      }
+    } catch {}
+  };
+
+  // Request browser permission on first load if notifications are enabled by default
+  useEffect(() => {
+    if (notificationsEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+      // Only request permission if it hasn't been requested yet
+      if (Notification.permission === 'default') {
+        try { Notification.requestPermission(); } catch {}
+      }
+    }
+  }, [notificationsEnabled]);
+
+  const toggleType = (key: string) => {
+    setTypePrefs(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('notification_types_enabled', JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
+  };
 
   // Transform user data for the modal
   const currentProfile = {
@@ -94,90 +161,66 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
           {/* Messaging & Push Notifications */}
           <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Messaging & Push Notifications</h2>
-            <StreamChatPushNotificationSettings />
-          </div>
+            <div className="p-4 bg-gray-50 rounded-[22px] border-[3px] border-gray-300">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Browser Push Notifications</h3>
+                  <p className="text-sm text-gray-500">Show pop-up notifications on this device</p>
+                </div>
+                <button
+                  onClick={toggleNotifications}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${notificationsEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                  aria-label="Toggle notifications"
+                  aria-pressed={notificationsEnabled}
+                  type="button"
+                >
+                  <span
+                    className="inline-block h-5 w-5 transform rounded-full bg-white border border-black transition-transform"
+                    style={{ transform: notificationsEnabled ? 'translateX(22px)' : 'translateX(2px)' }}
+                  />
+                </button>
+              </div>
 
-          {/* Push Notification Testing */}
-          {/* Simple Notification Test */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Simple Notification Test</h2>
-            <SimpleNotificationTest />
-          </div>
+              {/* Notification type preferences (Browser Push) */}
+              <div className="mt-4 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { key: 'like', label: 'Likes on my startup' },
+                  { key: 'dislike', label: 'Dislikes on my startup' },
+                  { key: 'comment', label: 'New comments' },
+                  { key: 'reply', label: 'Replies to my comment' },
+                  { key: 'follow', label: 'New followers' },
+                  { key: 'interested', label: 'Interested in my startup' },
+                  { key: 'comment_like', label: 'Likes on my comment' }
+                ].map(item => (
+                  <label key={item.key} className={`flex items-center justify-between p-3 rounded-[14px] border-[2px] transition-colors ${notificationsEnabled ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
+                    <span className={`text-sm transition-colors ${notificationsEnabled ? 'text-gray-800' : 'text-gray-500'}`}>{item.label}</span>
+                    <button
+                      onClick={() => notificationsEnabled && toggleType(item.key)}
+                      disabled={!notificationsEnabled}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${notificationsEnabled ? (typePrefs[item.key] ? 'bg-green-500' : 'bg-gray-300') : 'bg-gray-200 cursor-not-allowed'}`}
+                      aria-pressed={typePrefs[item.key]}
+                      type="button"
+                    >
+                      <span
+                        className="inline-block h-5 w-5 transform rounded-full bg-white border border-black transition-transform"
+                        style={{ transform: typePrefs[item.key] ? 'translateX(22px)' : 'translateX(2px)' }}
+                      />
+                    </button>
+                  </label>
+                ))}
+              </div>
+              </div>
+            </div>
 
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Test All Notification Types</h2>
-            <NotificationTestPanel />
-          </div>
-
-          {/* Real Component Notifications */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Real Component Notifications</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              These buttons simulate real component interactions (like liking a startup, commenting, etc.)
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <NotificationTestButton
-                type="like"
-                title="New Like"
-                message="John Doe liked your startup 'Amazing App'"
-                metadata={{ startupTitle: 'Amazing App', likerName: 'John Doe' }}
-              />
-              <NotificationTestButton
-                type="dislike"
-                title="New Dislike"
-                message="Jane Smith disliked your startup 'Cool Product'"
-                metadata={{ startupTitle: 'Cool Product', dislikerName: 'Jane Smith' }}
-              />
-              <NotificationTestButton
-                type="comment"
-                title="New Comment"
-                message="Mike Johnson commented on your startup 'Great Idea'"
-                metadata={{ startupTitle: 'Great Idea', commenterName: 'Mike Johnson' }}
-              />
-              <NotificationTestButton
-                type="reply"
-                title="New Reply"
-                message="Sarah Wilson replied to your comment on 'Awesome Startup'"
-                metadata={{ startupTitle: 'Awesome Startup', replierName: 'Sarah Wilson' }}
-              />
-              <NotificationTestButton
-                type="interested"
-                title="New Interest"
-                message="Alex Brown is interested in your startup 'Innovative Solution'"
-                metadata={{ startupTitle: 'Innovative Solution', interestedUserName: 'Alex Brown' }}
-              />
-              <NotificationTestButton
-                type="follow"
-                title="New Follower"
-                message="Emma Davis started following you"
-                metadata={{ followerName: 'Emma Davis' }}
-              />
+            {/* Stream Chat push settings */}
+            <div className="mt-6">
+              <StreamChatPushNotificationSettings />
             </div>
           </div>
 
-          {/* Direct Notification Testing */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Direct Notification Testing</h2>
-            <StartupCardNotificationTestMock />
-          </div>
-
-          {/* StartupCard with Notifications */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">StartupCard Component with Notifications</h2>
-            <StartupCardNotificationTest />
-          </div>
-
-          {/* Notification Delivery Test */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Delivery Test</h2>
-            <NotificationDeliveryTest />
-          </div>
-
-          {/* Notification Diagnostics */}
-          <div className="bg-white rounded-[22px] shadow-200 border-[5px] border-black p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notification Diagnostics</h2>
-            <NotificationDiagnostics />
-          </div>
+          {/* Testing sections removed */}
         </div>
       </div>
 
