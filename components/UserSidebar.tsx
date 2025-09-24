@@ -13,10 +13,12 @@ import {
   Sun, 
   Flag, 
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 import * as Sentry from '@sentry/nextjs';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 
 interface UserSidebarProps {
   userId: string;
@@ -25,7 +27,7 @@ interface UserSidebarProps {
 
 const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { data: session } = useSession();
 
   const openOfficialFeedback = () => {
@@ -59,6 +61,12 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
       description: 'View past interactions and usage'
     },
     {
+      name: 'Analytics',
+      icon: BarChart3,
+      href: '/analytics',
+      description: 'View performance metrics and insights'
+    },
+    {
       name: 'Saved',
       icon: Bookmark,
       href: '/saved',
@@ -70,20 +78,21 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
       href: '/interested',
       description: 'View startups you\'ve shown interest in'
     },
-    {
-      name: 'Switch appearance',
-      icon: theme === 'dark' ? Sun : Moon,
-      href: '#',
-      description: 'Change the theme, for example, from light mode to dark mode',
-      onClick: toggleTheme
-    },
+    
     {
       name: 'Report a problem',
       icon: Flag,
       href: '#',
       description: 'Notify the developers about an issue or bug',
       onClick: openOfficialFeedback
-    }
+    },
+    ...(session?.user ? [{
+      name: 'Logout',
+      icon: LogOut,
+      href: '#',
+      description: 'Sign out of your account',
+      onClick: () => signOut()
+    }] : [])
   ];
 
   const toggleSidebar = () => {
@@ -93,7 +102,7 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
   const handleItemClick = (item: any) => {
     if (item.name === 'Report a problem') {
       item.onClick();
-    } else if (item.name === 'Switch appearance') {
+    } else if (item.name === 'Logout' && item.onClick) {
       item.onClick();
     }
   };
@@ -142,6 +151,7 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
         )}>
           {sidebarItems.map((item) => {
             const Icon = item.icon;
+            const isDanger = item.name === 'Logout';
             
             if (isCollapsed) {
               if (item.href === '#') {
@@ -159,9 +169,11 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
                   >
                     <Icon className={cn(
                       'w-5 h-5 mx-auto block',
-                      theme === 'dark'
-                        ? 'text-gray-400 group-hover:text-white'
-                        : 'text-gray-600 group-hover:text-gray-900'
+                      isDanger
+                        ? 'text-red-500 group-hover:text-red-600'
+                        : theme === 'dark'
+                          ? 'text-gray-400 group-hover:text-white'
+                          : 'text-gray-600 group-hover:text-gray-900'
                     )} />
                     
                     {/* Tooltip for collapsed state */}
@@ -185,9 +197,11 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
                   >
                     <Icon className={cn(
                       'w-5 h-5 mx-auto block',
-                      theme === 'dark'
-                        ? 'text-gray-400 group-hover:text-white'
-                        : 'text-gray-600 group-hover:text-gray-900'
+                      isDanger
+                        ? 'text-red-500 group-hover:text-red-600'
+                        : theme === 'dark'
+                          ? 'text-gray-400 group-hover:text-white'
+                          : 'text-gray-600 group-hover:text-gray-900'
                     )} />
                     
                     {/* Tooltip for collapsed state */}
@@ -213,18 +227,24 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
                   >
                     <Icon className={cn(
                       'w-5 h-5 flex-shrink-0',
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      item.name === 'Logout'
+                        ? 'text-red-500'
+                        : (theme === 'dark' ? 'text-gray-400' : 'text-gray-600')
                     )} />
                     <div>
                       <div className={cn(
                         'font-medium',
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        item.name === 'Logout'
+                          ? 'text-red-600'
+                          : (theme === 'dark' ? 'text-white' : 'text-gray-900')
                       )}>
                         {item.name}
                       </div>
                       <div className={cn(
                         'text-sm',
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        item.name === 'Logout'
+                          ? 'text-red-500'
+                          : (theme === 'dark' ? 'text-gray-400' : 'text-gray-500')
                       )}>
                         {item.description}
                       </div>
@@ -242,18 +262,24 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
                   >
                     <Icon className={cn(
                       'w-5 h-5 flex-shrink-0',
-                      theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      item.name === 'Logout'
+                        ? 'text-red-500'
+                        : (theme === 'dark' ? 'text-gray-400' : 'text-gray-600')
                     )} />
                     <div>
                       <div className={cn(
                         'font-medium',
-                        theme === 'dark' ? 'text-white' : 'text-gray-900'
+                        item.name === 'Logout'
+                          ? 'text-red-600'
+                          : (theme === 'dark' ? 'text-white' : 'text-gray-900')
                       )}>
                         {item.name}
                       </div>
                       <div className={cn(
                         'text-sm',
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                        item.name === 'Logout'
+                          ? 'text-red-500'
+                          : (theme === 'dark' ? 'text-gray-400' : 'text-gray-500')
                       )}>
                         {item.description}
                       </div>

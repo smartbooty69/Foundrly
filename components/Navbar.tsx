@@ -30,9 +30,9 @@ const Navbar = () => {
             <div className="flex items-center gap-5 text-black">
                 { session.data && session.data.user ? (
                     <>
-                        <Link href="/startup/create" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
+                        <Link href="/startup/create" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors flex items-center gap-2">
+                            <BadgePlus className='size-5' />
                             <span className="max-sm:hidden">Create</span>
-                            <BadgePlus className='size-6 sm:hidden' />
                         </Link>
 
                         <div className="relative">
@@ -40,8 +40,8 @@ const Navbar = () => {
                                 onClick={() => setIsMessagesOpen(true)}
                                 className="relative flex items-center gap-2 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
                             >
+                                <MessageSquare className='size-5' />
                                 <span className="max-sm:hidden">Messages</span>
-                                <MessageSquare className='size-6 sm:hidden' />
                                 {session.data?.user && isStreamChatLoaded && totalUnreadMessages && totalUnreadMessages > 0 && (
                                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                                         {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
@@ -50,23 +50,18 @@ const Navbar = () => {
                             </button>
                         </div>
 
-                                                        <Link href={`/badges?user=${session.data.user.id}`} className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
-                                    <span className="max-sm:hidden">Badges</span>
-                                    <Trophy className='size-6 sm:hidden' />
-                                </Link>
+                        <Link href={`/badges?user=${session.data.user.id}`} className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors flex items-center gap-2">
+                            <Trophy className='size-5' />
+                            <span className="max-sm:hidden">Badges</span>
+                        </Link>
                                 
-                                <Link href="/leaderboard" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
-                                    <span className="max-sm:hidden">Leaderboard</span>
-                                    <Award className='size-6 sm:hidden' />
-                                </Link>
+                        <Link href="/leaderboard" className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors flex items-center gap-2">
+                            <Award className='size-5' />
+                            <span className="max-sm:hidden">Leaderboard</span>
+                        </Link>
 
 
                         <NotificationBell />
-
-                        <button onClick={() => signOut()} className="p-2 rounded-lg hover:bg-gray-100 hover:text-blue-600 transition-colors">
-                            <span className="max-sm:hidden">Logout</span>
-                            <LogOut className='size-6 mt-1.5 sm:hidden text-red-500' />
-                        </button>
 
                         <Link href={`/user/${session.data.user.id}`}>
                             <Avatar className='size-10' >

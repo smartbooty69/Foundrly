@@ -71,19 +71,28 @@ export async function GET(request: Request) {
     if (currentSeries.length < minPoints || prevSeries.length < minPoints) {
       const likesCount = await client.fetch(`*[_type == "startup" && _id == $id][0].likes`, { id: startupId });
       const value = typeof likesCount === 'number' ? likesCount : 0;
-      const fillValues = Array.from({ length: desiredLen }, () => value);
+      
+      // Calculate the actual current value from the events
+      const currentValue = currentEvents.reduce((sum, event) => sum + (event.action === 'like' ? 1 : -1), 0);
+      const prevValue = prevEvents.reduce((sum, event) => sum + (event.action === 'like' ? 1 : -1), 0);
+      
+      // Use the calculated values instead of the database count
+      const currentFillValue = Math.max(0, currentValue);
+      const prevFillValue = Math.max(0, prevValue);
+      
       const today = new Date();
       const fillDays = Array.from({ length: desiredLen }, (_, i) => {
         const d = new Date(today);
         d.setDate(today.getDate() - (desiredLen - 1 - i));
         return d.toISOString().slice(0, 10);
       });
+      
       if (currentSeries.length < minPoints) {
-        currentSeries = fillValues;
+        currentSeries = Array.from({ length: desiredLen }, () => currentFillValue);
         currentDays = fillDays;
       }
       if (prevSeries.length < minPoints) {
-        prevSeries = fillValues;
+        prevSeries = Array.from({ length: desiredLen }, () => prevFillValue);
         prevDays = fillDays;
       }
     }

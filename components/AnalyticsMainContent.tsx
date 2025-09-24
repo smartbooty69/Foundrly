@@ -29,11 +29,15 @@ interface AnalyticsMainContentProps {
 
 const interactionTabs = [
   { value: 'all', label: 'All' },
-  { value: 'technology', label: 'Technology' },
-  { value: 'healthcare', label: 'Healthcare' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'e-commerce', label: 'E-commerce' },
-  { value: 'education', label: 'Education' },
+  { value: 'Technology', label: 'Technology' },
+  { value: 'Healthcare', label: 'Healthcare' },
+  { value: 'Finance', label: 'Finance' },
+  { value: 'E-commerce', label: 'E-commerce' },
+  { value: 'Education', label: 'Education' },
+  { value: 'AI/ML', label: 'AI/ML' },
+  { value: 'SaaS', label: 'SaaS' },
+  { value: 'Fintech', label: 'Fintech' },
+  { value: 'Social', label: 'Social' },
 ];
 
 export default function AnalyticsMainContent({ activeSection, initialStartupId }: AnalyticsMainContentProps) {
@@ -43,6 +47,7 @@ export default function AnalyticsMainContent({ activeSection, initialStartupId }
   const [selectedTab, setSelectedTab] = useState('all');
   const [selectedStartupId, setSelectedStartupId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [currentFilters, setCurrentFilters] = useState<FilterState>({
     sortBy: 'newest',
     startDate: { month: 'January', day: '1', year: '2025' },
@@ -56,6 +61,27 @@ export default function AnalyticsMainContent({ activeSection, initialStartupId }
       setSelectedStartupId(initialStartupId);
     }
   }, [initialStartupId]);
+
+  // Fetch available categories from user's startups
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const response = await fetch(`/api/analytics/categories?userId=${session.user.id}`);
+        const data = await response.json();
+        if (data.success && data.categories) {
+          setAvailableCategories(data.categories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    if (activeSection === 'engagement-audience' || activeSection === 'startup-analytics') {
+      fetchCategories();
+    }
+  }, [session?.user?.id, activeSection]);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -124,21 +150,38 @@ export default function AnalyticsMainContent({ activeSection, initialStartupId }
         {(activeSection === 'engagement-audience' && !selectedStartupForEngagement) || (activeSection === 'startup-analytics' && !selectedStartupId) ? (
           <div className="space-y-6">
             {/* Tabs */}
-            <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6">
-              {interactionTabs.map((tab) => (
+            <nav className="flex items-center space-x-8 border-b border-gray-200 mb-6 overflow-x-auto">
+              {/* Use dynamic categories for both sections */}
+              {availableCategories.length > 0 ? availableCategories.map((category) => (
                 <button
-                  key={tab.value}
-                  onClick={() => handleTabChange(tab.value)}
-                  className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors
+                  key={category}
+                  onClick={() => handleTabChange(category === 'All' ? 'all' : category)}
+                  className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors whitespace-nowrap
                     ${
-                      selectedTab === tab.value
+                      selectedTab === (category === 'All' ? 'all' : category)
                         ? 'text-primary border-b-2 border-primary'
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                 >
-                  {tab.label}
+                  {category}
                 </button>
-              ))}
+              )) : (
+                // Fallback to static tabs while loading
+                interactionTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => handleTabChange(tab.value)}
+                    className={`pb-3 font-semibold text-xs sm:text-sm tracking-wider uppercase transition-colors whitespace-nowrap
+                      ${
+                        selectedTab === tab.value
+                          ? 'text-primary border-b-2 border-primary'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))
+              )}
             </nav>
 
             {/* Filters */}
