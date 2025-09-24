@@ -21,7 +21,17 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [userData, setUserData] = useState(currentUser);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+  const [emailEnabled, setEmailEnabled] = useState<boolean>(true);
   const [typePrefs, setTypePrefs] = useState<Record<string, boolean>>({
+    like: true,
+    dislike: true,
+    comment: true,
+    reply: true,
+    follow: true,
+    interested: true,
+    comment_like: true
+  });
+  const [emailTypePrefs, setEmailTypePrefs] = useState<Record<string, boolean>>({
     like: true,
     dislike: true,
     comment: true,
@@ -54,6 +64,25 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
             if (parsed && typeof parsed === 'object') setTypePrefs((prev) => ({ ...prev, ...parsed }));
           } catch {}
         }
+
+        // Initialize email preferences
+        const emailStored = window.localStorage.getItem('email_notifications_enabled');
+        if (emailStored === 'false') {
+          setEmailEnabled(false);
+        } else {
+          setEmailEnabled(true);
+          if (emailStored === null) {
+            window.localStorage.setItem('email_notifications_enabled', 'true');
+          }
+        }
+
+        const emailTypesStored = window.localStorage.getItem('email_notification_types_enabled');
+        if (emailTypesStored) {
+          try {
+            const parsed = JSON.parse(emailTypesStored);
+            if (parsed && typeof parsed === 'object') setEmailTypePrefs((prev) => ({ ...prev, ...parsed }));
+          } catch {}
+        }
       }
     } catch {}
   }, []);
@@ -82,12 +111,34 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
     }
   }, [notificationsEnabled]);
 
+  const toggleEmailNotifications = async () => {
+    try {
+      const next = !emailEnabled;
+      setEmailEnabled(next);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('email_notifications_enabled', next ? 'true' : 'false');
+      }
+    } catch {}
+  };
+
   const toggleType = (key: string) => {
     setTypePrefs(prev => {
       const next = { ...prev, [key]: !prev[key] };
       try {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('notification_types_enabled', JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
+  };
+
+  const toggleEmailType = (key: string) => {
+    setEmailTypePrefs(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('email_notification_types_enabled', JSON.stringify(next));
         }
       } catch {}
       return next;
@@ -144,15 +195,6 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
                     </Button>
                   </div>
                   
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-[22px] border-[3px] border-gray-300">
-                    <div>
-                      <h3 className="font-medium text-gray-900">Email Preferences</h3>
-                      <p className="text-sm text-gray-500">Manage notification and email settings</p>
-                    </div>
-                    <Button variant="default" className="w-24">
-                      Configure
-                    </Button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -197,7 +239,7 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
                   <label key={item.key} className={`flex items-center justify-between p-3 rounded-[14px] border-[2px] transition-colors ${notificationsEnabled ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
                     <span className={`text-sm transition-colors ${notificationsEnabled ? 'text-gray-800' : 'text-gray-500'}`}>{item.label}</span>
                     <button
-                      onClick={() => notificationsEnabled && toggleType(item.key)}
+                      onClick={() => toggleType(item.key)}
                       disabled={!notificationsEnabled}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${notificationsEnabled ? (typePrefs[item.key] ? 'bg-green-500' : 'bg-gray-300') : 'bg-gray-200 cursor-not-allowed'}`}
                       aria-pressed={typePrefs[item.key]}
@@ -217,6 +259,60 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
             {/* Stream Chat push settings */}
             <div className="mt-6">
               <StreamChatPushNotificationSettings />
+            </div>
+
+            {/* Email Preferences */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-[22px] border-[3px] border-gray-300">
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Email Notifications</h3>
+                  <p className="text-sm text-gray-500">Receive email notifications for activities</p>
+                </div>
+                <button
+                  onClick={toggleEmailNotifications}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${emailEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                  aria-label="Toggle email notifications"
+                  aria-pressed={emailEnabled}
+                  type="button"
+                >
+                  <span
+                    className="inline-block h-5 w-5 transform rounded-full bg-white border border-black transition-transform"
+                    style={{ transform: emailEnabled ? 'translateX(22px)' : 'translateX(2px)' }}
+                  />
+                </button>
+              </div>
+
+              {/* Email notification type preferences */}
+              <div className="mt-4 w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { key: 'like', label: 'Likes on my startup' },
+                  { key: 'dislike', label: 'Dislikes on my startup' },
+                  { key: 'comment', label: 'New comments' },
+                  { key: 'reply', label: 'Replies to my comment' },
+                  { key: 'follow', label: 'New followers' },
+                  { key: 'interested', label: 'Interested in my startup' },
+                  { key: 'comment_like', label: 'Likes on my comment' }
+                ].map(item => (
+                  <label key={item.key} className={`flex items-center justify-between p-3 rounded-[14px] border-[2px] transition-colors ${emailEnabled ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}>
+                    <span className={`text-sm transition-colors ${emailEnabled ? 'text-gray-800' : 'text-gray-500'}`}>{item.label}</span>
+                    <button
+                      onClick={() => toggleEmailType(item.key)}
+                      disabled={!emailEnabled}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none border border-black ${emailEnabled ? (emailTypePrefs[item.key] ? 'bg-green-500' : 'bg-gray-300') : 'bg-gray-200 cursor-not-allowed'}`}
+                      aria-pressed={emailTypePrefs[item.key]}
+                      type="button"
+                    >
+                      <span
+                        className="inline-block h-5 w-5 transform rounded-full bg-white border border-black transition-transform"
+                        style={{ transform: emailTypePrefs[item.key] ? 'translateX(22px)' : 'translateX(2px)' }}
+                      />
+                    </button>
+                  </label>
+                ))}
+              </div>
+              </div>
             </div>
           </div>
 

@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
 import Providers from "@/components/Providers";
 import NotificationPermissionPrompt from "@/components/NotificationPermissionPrompt";
+import IOSInstallPrompt from "@/components/IOSInstallPrompt";
 
 const workSans = localFont({
   src: [ 
@@ -157,6 +158,7 @@ export default function RootLayout({
       >
         <Providers>
           <NotificationPermissionPrompt />
+          <IOSInstallPrompt />
           {children}
         </Providers>
         <Toaster />

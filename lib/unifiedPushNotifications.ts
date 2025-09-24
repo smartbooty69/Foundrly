@@ -32,6 +32,18 @@ export class UnifiedPushNotificationService {
   private static activeNotifications = new Set<Notification>();
   private static notificationCount = 0;
   
+  // Detect if device is mobile
+  private static isMobileDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+  
+  // Detect if device is iOS
+  private static isIOSDevice(): boolean {
+    if (typeof window === 'undefined') return false;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+  }
+  
   // Send push notification using Firebase
   static async sendNotification(notification: {
     type: string;
@@ -71,15 +83,24 @@ export class UnifiedPushNotificationService {
       // Create unique tag to prevent notification blocking
       const uniqueTag = `${notification.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
+      // Mobile-specific notification options
+      const isMobile = this.isMobileDevice();
+      const isIOS = this.isIOSDevice();
+      
       const notificationOptions = {
         title: notification.title,
         body: notification.message,
         icon: `/icons/${notification.type}.svg`,
         tag: uniqueTag, // Use unique tag to prevent blocking
         data: { type: notification.type, ...notification.metadata },
-        requireInteraction: false, // Don't require interaction for instant notifications
+        requireInteraction: isMobile, // Keep notifications visible longer on mobile
         silent: false,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        vibrate: isMobile ? [200, 100, 200] : undefined, // Only vibrate on mobile
+        // iOS-specific options
+        ...(isIOS && {
+          renotify: true
+        })
       };
 
       console.log('🔔 Creating notification with options:', notificationOptions);

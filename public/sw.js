@@ -58,17 +58,25 @@ self.addEventListener('push', (event) => {
     const notification = event.data.json();
     console.log('📋 Notification data:', notification);
 
+    // Detect mobile device for enhanced notification options
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
     const options = {
       body: notification.body,
-              icon: notification.icon || '/icons/notification.svg',
-        badge: notification.badge || '/icons/notification.svg',
+      icon: notification.icon || '/icons/notification.svg',
+      badge: notification.badge || '/icons/notification.svg',
       tag: notification.tag || 'general',
       data: notification.data || {},
-      requireInteraction: notification.requireInteraction || false,
+      requireInteraction: notification.requireInteraction || isMobile, // Keep visible longer on mobile
       silent: notification.silent || false,
       actions: notification.actions || [],
-      vibrate: [200, 100, 200],
-      timestamp: Date.now()
+      vibrate: isMobile ? [200, 100, 200] : undefined, // Only vibrate on mobile
+      timestamp: Date.now(),
+      // iOS-specific options
+      ...(isIOS && {
+        renotify: true
+      })
     };
 
     event.waitUntil(
