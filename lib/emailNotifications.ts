@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { client } from '@/sanity/lib/client';
+import { getUserEmailPreferences } from '@/sanity/lib/user-preferences';
 
 // Email configuration - using same config as main email system
 const emailConfig = {
@@ -391,6 +392,13 @@ export async function sendCriticalNotificationEmail(data: CriticalNotificationEm
       return { success: false, error: 'Email service not configured' };
     }
 
+    // Check user email preferences
+    const prefs = await getUserEmailPreferences(data.recipientId);
+    if (!prefs.enabled) {
+      console.log('🔕 Email notifications disabled by user');
+      return { success: true, messageId: 'email-disabled-by-user' };
+    }
+
     // Get recipient email from user ID
     const user = await client.fetch(
       `*[_type == "author" && _id == $userId][0]{
@@ -406,7 +414,7 @@ export async function sendCriticalNotificationEmail(data: CriticalNotificationEm
     }
 
     // Determine if this notification type should trigger an email
-    const shouldSendEmail = shouldSendNotificationEmail(data.type);
+    const shouldSendEmail = shouldSendNotificationEmail(data.type) && (prefs.types?.[data.type as keyof typeof prefs.types] ?? true);
     if (!shouldSendEmail) {
       console.log('🔕 Email not sent for notification type:', data.type);
       return { success: true, messageId: 'email-skipped-by-type' };

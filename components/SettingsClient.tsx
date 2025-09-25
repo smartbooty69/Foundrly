@@ -65,24 +65,41 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
           } catch {}
         }
 
-        // Initialize email preferences
-        const emailStored = window.localStorage.getItem('email_notifications_enabled');
-        if (emailStored === 'false') {
-          setEmailEnabled(false);
-        } else {
-          setEmailEnabled(true);
-          if (emailStored === null) {
-            window.localStorage.setItem('email_notifications_enabled', 'true');
-          }
-        }
-
-        const emailTypesStored = window.localStorage.getItem('email_notification_types_enabled');
-        if (emailTypesStored) {
+        // Initialize email preferences from server (fallback to localStorage)
+        (async () => {
           try {
-            const parsed = JSON.parse(emailTypesStored);
-            if (parsed && typeof parsed === 'object') setEmailTypePrefs((prev) => ({ ...prev, ...parsed }));
+            const res = await fetch('/api/email-preferences');
+            if (res.ok) {
+              const data = await res.json();
+              if (data?.preferences) {
+                setEmailEnabled(!!data.preferences.enabled);
+                setEmailTypePrefs(prev => ({ ...prev, ...(data.preferences.types || {}) }));
+                window.localStorage.setItem('email_notifications_enabled', data.preferences.enabled ? 'true' : 'false');
+                window.localStorage.setItem('email_notification_types_enabled', JSON.stringify(data.preferences.types || {}));
+                return;
+              }
+            }
           } catch {}
-        }
+
+          // Fallback to localStorage when server not available
+          const emailStored = window.localStorage.getItem('email_notifications_enabled');
+          if (emailStored === 'false') {
+            setEmailEnabled(false);
+          } else {
+            setEmailEnabled(true);
+            if (emailStored === null) {
+              window.localStorage.setItem('email_notifications_enabled', 'true');
+            }
+          }
+
+          const emailTypesStored = window.localStorage.getItem('email_notification_types_enabled');
+          if (emailTypesStored) {
+            try {
+              const parsed = JSON.parse(emailTypesStored);
+              if (parsed && typeof parsed === 'object') setEmailTypePrefs((prev) => ({ ...prev, ...parsed }));
+            } catch {}
+          }
+        })();
       }
     } catch {}
   }, []);
@@ -118,6 +135,13 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('email_notifications_enabled', next ? 'true' : 'false');
       }
+      try {
+        await fetch('/api/email-preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preferences: { enabled: next } })
+        });
+      } catch {}
     } catch {}
   };
 
@@ -140,6 +164,16 @@ export default function SettingsClient({ currentUser }: SettingsClientProps) {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('email_notification_types_enabled', JSON.stringify(next));
         }
+        // Persist to server
+        (async () => {
+          try {
+            await fetch('/api/email-preferences', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ preferences: { types: { [key]: next[key] } } })
+            });
+          } catch {}
+        })();
       } catch {}
       return next;
     });

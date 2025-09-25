@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { writeClient } from '@/sanity/lib/write-client';
 import { client } from '@/sanity/lib/client';
 import { sendInterestedSubmissionEmail } from '@/lib/emailNotifications';
+import { getUserEmailPreferences } from '@/sanity/lib/user-preferences';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -127,8 +128,19 @@ export async function POST(req: Request) {
       submittedAt: new Date().toISOString()
     });
 
-    // Send email notification to startup owner
+    // Send email notification to startup owner (respect owner's email prefs)
     try {
+      const ownerId = startup?.author?._ref || startup?.author?._id || startup?.author?._refId;
+      if (ownerId) {
+        const ownerPrefs = await getUserEmailPreferences(ownerId);
+        if (!ownerPrefs.enabled || ownerPrefs.types?.interested === false) {
+          console.log('🔕 Skipping interested email due to owner preferences');
+          return NextResponse.json({ 
+            success: true, 
+            message: 'Interest submitted successfully (email skipped by preferences)' 
+          });
+        }
+      }
       const emailData = {
         startupOwnerName: startup.author.name,
         startupOwnerEmail: startup.author.email,
