@@ -4,15 +4,18 @@ How to use Foundrly's AI-powered features, including pitch generation, analysis,
 
 ## Pitch Generator
 - Instantly generate full startup pitches from your idea or description
+ - Uses Gemini as primary, with fallbacks (Claude, Grok, GROQ) per `lib/ai-services.ts`
 
 ## Pitch Analysis
 - Scoring, strengths/weaknesses, improvement suggestions, market insights
 
 ## Recommendations
 - Personalized suggestions based on user behavior
+ - Vector similarity via Pinecone; embeddings generated from comprehensive startup fields
 
 ## Content Moderation
 - AI-powered analysis and flagging
+ - Stream Chat moderation integrated via `lib/stream-chat-moderation.ts` and `app/api/chat/moderation/route.ts`
 
 
 ## AI-Driven Role-Based User Matching
@@ -28,7 +31,7 @@ The `InterestedUsersManager.tsx` component provides an AI-driven interface for f
 
 ### AI Matching Logic
 - **Trigger:** The AI matching is triggered by a button (or programmatically) and sends the currently filtered user profiles to the backend API (`/api/match-cofounder-investor`).
-- **Backend:** The API uses OpenAI (GPT-4) to analyze the profiles and return a list of top matches (by ID or object with `_id`).
+- **Backend:** The API uses Gemini/Claude/Grok/GROQ (via `lib/ai-services.ts`) to analyze profiles and return top matches.
 - **Frontend:** The component parses the AI response and sets `topMatchedIds` state. If matches are found, only those users are shown in the table.
 - **Fallback:** If parsing fails or no matches are returned, all filtered users are shown.
 
@@ -48,3 +51,12 @@ The `InterestedUsersManager.tsx` component provides an AI-driven interface for f
 
 ---
 For technical details, see `InterestedUsersManager.tsx` and `/api/match-cofounder-investor.ts`.
+
+### Environment Variables
+```env
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=...
+GROK_API_KEY=...
+GROQ_API_KEY=...
+PINECONE_API_KEY=...
+```

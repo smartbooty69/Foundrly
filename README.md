@@ -4,20 +4,21 @@
 
 ## 📚 **Documentation**
 
-For comprehensive documentation, visit our **[Documentation Hub](./docs/README.md)** which includes:
+Key guides in this repository:
 
-- **[Getting Started Guide](./docs/getting-started.md)** - Set up your development environment
-- **[Architecture Overview](./docs/architecture.md)** - Understand the system design
-- **[API Reference](./docs/api/README.md)** - Complete API documentation
-- **[Feature Guides](./docs/features/)** - Badge system, notifications, and more
-- **[Deployment Guide](./docs/deployment.md)** - Deploy to production
-- **[Troubleshooting](./docs/troubleshooting/common-issues.md)** - Common issues and solutions
+- **[Getting Started](./GETTING_STARTED.md)**
+- **[Architecture Overview](./ARCHITECTURE_OVERVIEW.md)**
+- **[API Reference](./API_REFERENCE.md)**
+- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)**
+- **[Troubleshooting Guide](./TROUBLESHOOTING_GUIDE.md)**
+- More topics: badges, notifications, analytics, Docker, Vercel, and AI integration are covered in the root-level guides (e.g., `BADGE_SYSTEM_GUIDE.md`, `ENHANCED_BADGE_SYSTEM_GUIDE.md`, `NOTIFICATION_SYSTEM_GUIDE.md`, `PUSH_NOTIFICATIONS_GUIDE.md`, `STARTUP_ANALYTICS_GUIDE.md`, `DOCKER_*_GUIDE.md`, `GROK_API_SETUP.md`, `GROQ_API_SETUP.md`).
 
 ## 🚀 **Quick Start**
 
 ```bash
 # Set up environment variables
 cp .env.example .env.local
+```
 ## Overview
 
 
@@ -33,17 +34,14 @@ cp .env.example .env.local
 
 ## Tech Stack
 
-  - **Next.js** — SSR, API routes, image optimization
-  - **React** — UI components and client-side rendering
-  - **Sanity** — Headless CMS for managing and querying content
-  - **NextAuth** — Authentication with GitHub provider
-  - **Sentry** — Application performance and error monitoring
-  - **Framework**: Next.js 15
+  - **Framework**: Next.js 15 (canary)
+  - **UI Library**: React 18
   - **Language**: TypeScript
   - **Styling**: Tailwind CSS
-  - **CMS**: Sanity
-  - **Authentication**: NextAuth.js
-  - **File Storage**: Vercel Blob (production) / Local storage (development)
+  - **CMS**: Sanity v3
+  - **Authentication**: NextAuth.js v5 (beta) with GitHub provider
+  - **File Storage**: Vercel Blob (prod) / Local filesystem (dev)
+  - **Observability**: Sentry
   - **UI Components**: Radix UI
   - **Icons**: Lucide React
 
@@ -51,7 +49,7 @@ cp .env.example .env.local
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18.17+ (or Node 20+)
 - npm or yarn
 - Sanity account (for CMS)
 
@@ -217,7 +215,7 @@ For large-scale ideas, please open an issue first to discuss it.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for full details.
+This project is licensed under the MIT License.
 
 -----
 

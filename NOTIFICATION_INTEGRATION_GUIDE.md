@@ -8,16 +8,19 @@ This guide explains how to integrate push notifications into your existing compo
 ### 1. Client-Side Notifications
 - **Test Panel**: Uses `UnifiedPushNotificationService` directly (for testing)
 - **Real Components**: Use `useClientNotifications` hook (for production)
+ - **Stream Chat**: Use `useStreamChatPushNotifications` for chat push
 
 ### 2. Server-Side Notifications
 - **API Routes**: Log notifications to console (for debugging)
 - **Database**: Store notification data for persistence
+ - **Push API**: `app/api/push-notifications/send/route.ts`
 
 ## Integration Steps
 
 ### Step 1: Import the Hook
 ```tsx
 import { useClientNotifications } from '@/hooks/useClientNotifications';
+import { useStreamChatPushNotifications } from '@/hooks/useStreamChatPushNotifications';
 ```
 
 ### Step 2: Use in Component
@@ -95,6 +98,11 @@ showInterestedNotification(startupTitle, interestedUserName)
 showFollowNotification(followerName)
 ```
 
+### 7. Stream Chat Notifications
+```tsx
+const { registerForStreamChatPush, sendStreamChatNotification } = useStreamChatPushNotifications();
+```
+
 ## Required Props
 
 For components to show notifications, they need:
@@ -123,6 +131,7 @@ interface ComponentProps {
 ### 3. Diagnostics
 - Go to Settings → Notification Diagnostics
 - Check browser support and permission status
+ - Verify VAPID keys and service worker status
 
 ## Troubleshooting
 
@@ -131,6 +140,7 @@ interface ComponentProps {
 2. Use "Clear All" button if too many notifications
 3. Check console for errors
 4. Use diagnostics tool for detailed analysis
+ 5. Verify required env vars: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
 
 ### Permission Issues
 1. Click "Enable Notifications" button

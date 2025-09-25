@@ -3,18 +3,18 @@
 A summary of all API endpoints, authentication, data types, and usage examples for Foundrly.
 
 ## Authentication
-- NextAuth.js (GitHub OAuth)
-- Session cookies
+- NextAuth.js v5 (beta) with GitHub OAuth
+- Server-side sessions via cookies
 
 ## Endpoints
-- Startups: create, list, update, delete
-- Users: profile, search, follow, ban
-- Comments: create, like, dislike, reply
-- Notifications: get, mark as read
-- Badges: get, recalculate
-- Moderation: report, ban
-- File upload
-- Analytics
+- Startups: create, list, update, delete (`app/api/startups/*`)
+- Users: profile, search, follow, ban (`app/api/users/*`)
+- Comments: create, like, dislike, reply (`app/api/comments/*`)
+- Notifications: get, mark as read (`app/api/notifications/*`)
+- Badges: get, recalculate (`app/api/badges/*`)
+- Moderation: report, ban (`app/api/moderation/*`)
+- File upload (`app/api/upload`)
+- Analytics (`app/api/analytics/*`)
 
 ## Data Types
 - Startup, User, Comment, Notification, Badge
@@ -24,4 +24,4 @@ A summary of all API endpoints, authentication, data types, and usage examples f
 - Rate limits per endpoint
 
 ## Example Usage
-- See API_REFERENCE.md for code samples
+- See inline `app/api/*` handlers for examples in this repository

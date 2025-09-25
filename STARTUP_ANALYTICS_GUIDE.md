@@ -28,9 +28,9 @@ The Startup Analytics System provides comprehensive market comparison and perfor
 ## System Architecture
 
 ### APIs & Services Used
-- **Gemini AI**: Market analysis and startup comparison insights
-- **Pinecone**: Vector similarity search for finding similar startups
-- **External APIs**: Market data integration (Crunchbase, AngelList, etc.)
+- **Gemini / Claude / Grok / GROQ**: AI insights via `lib/ai-services.ts`
+- **Pinecone**: Vector similarity search for similar startups
+- **External APIs**: Market data integration
 - **Sanity CMS**: Startup data storage
 - **Recharts**: Interactive data visualizations
 
@@ -206,6 +206,9 @@ PINECONE_API_KEY=your_pinecone_api_key
 NEXT_PUBLIC_SANITY_PROJECT_ID=your_sanity_project_id
 NEXT_PUBLIC_SANITY_DATASET=your_sanity_dataset
 SANITY_API_TOKEN=your_sanity_token
+ANTHROPIC_API_KEY=your_claude_api_key
+GROK_API_KEY=your_grok_api_key
+GROQ_API_KEY=your_groq_api_key
 ```
 
 ### Dependencies

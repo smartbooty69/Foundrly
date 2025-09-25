@@ -24,11 +24,14 @@ Foundrly is a full-stack web application for creating, sharing, and discovering 
 
 ## 2. Getting Started
 - Clone the repo, install dependencies, and set up environment variables.
-- See [Getting Started](docs/getting-started.md) for step-by-step instructions.
+- See `GETTING_STARTED.md` for step-by-step instructions.
 
 ## 3. Tech Stack
-- Next.js, React, TypeScript, Tailwind CSS, Radix UI, Lucide React
-- Sanity CMS, NextAuth.js, Vercel Blob, Sentry
+- Next.js 15 (canary), React 18, TypeScript
+- Tailwind CSS, Radix UI, Lucide React
+- Sanity v3 CMS, NextAuth.js v5 (beta)
+- Vercel Blob (prod) / Local filesystem (dev)
+- Sentry
 
 ## 4. Core Features
 - **Pitch Generator**: Instantly generate full startup pitches from your idea or description
@@ -41,33 +44,34 @@ Foundrly is a full-stack web application for creating, sharing, and discovering 
 - **AI Features**: Pitch analysis, recommendations, content moderation
 
 ## 5. Feature Guides
-- [Badge System](docs/features/badge-system.md)
-- [Notification System](docs/features/notifications.md)
-- [Reporting & Moderation](REPORTING_SYSTEM.md)
-- [Enhanced Badge System](ENHANCED_BADGE_SYSTEM.md)
-- [AI Features](AI_SETUP_GUIDE.md)
+- `BADGE_SYSTEM_GUIDE.md`
+- `ENHANCED_BADGE_SYSTEM_GUIDE.md`
+- `NOTIFICATION_SYSTEM_GUIDE.md`
+- `REPORTING_SYSTEM_GUIDE.md`
+- `AI_FEATURES_GUIDE.md`
+- `STARTUP_ANALYTICS_GUIDE.md`
 
 ## 6. Architecture
-- See [Architecture Overview](docs/architecture.md) for system design, data flow, and tech stack details.
+- See `ARCHITECTURE_OVERVIEW.md` for system design, data flow, and tech stack details.
 
 ## 7. API Reference
-- See [API Reference](docs/api/README.md) for endpoint documentation, authentication, and usage examples.
+- See `API_REFERENCE.md` for endpoint documentation, authentication, and usage examples.
 
 ## 8. Deployment
-- See [Deployment Guide](docs/deployment.md) and [VERCEL_DEPLOYMENT_AFTER_DOCKER.md] for production setup.
-- Docker setup: [DOCKER_SETUP.md], [DOCKER_HOSTING_GUIDE.md], [DOCKER_HOSTING_QUICK_START.md]
+- See `DEPLOYMENT_GUIDE.md` and `VERCEL_DEPLOYMENT_GUIDE.md` for production setup.
+- Docker setup: `DOCKER_SETUP_GUIDE.md`, `DOCKER_HOSTING_GUIDE.md`, `DOCKER_HOSTING_QUICK_START_GUIDE.md`
 
 ## 9. Troubleshooting
-- See [Troubleshooting Guide](docs/troubleshooting/common-issues.md) and [NOTIFICATION_TROUBLESHOOTING.md] for common problems and solutions.
+- See `TROUBLESHOOTING_GUIDE.md` for common problems and solutions.
 
 ## 10. Other Setup Guides
-- Email: [EMAIL_SETUP.md]
-- Push Notifications: [PUSH_NOTIFICATIONS_SETUP.md], [PUSH_NOTIFICATIONS_COMPLETE_SETUP.md]
-- Stream Chat: [STREAM_CHAT_WEBHOOK_SETUP.md], [STREAM_CHAT_PUSH_NOTIFICATIONS_SETUP.md]
-- Buy Me a Coffee: [BUY_ME_A_COFFEE_SETUP.md]
+- Email: `EMAIL_SETUP_GUIDE.md`
+- Push Notifications: `PUSH_NOTIFICATIONS_GUIDE.md`
+- Stream Chat: `STREAM_CHAT_GUIDE.md`
+- Buy Me a Coffee: `BUY_ME_A_COFFEE_GUIDE.md`
 
 ## 11. Contributing & License
-- See [docs/README.md] for contributing guidelines.
+- See `DEVELOPER_GUIDE.md` for contributing guidelines.
 - MIT License.
 
 ---

@@ -68,7 +68,7 @@ node scripts/sync-vectors-cli.js
 ### **Embedding Generation**
 1. **Text Preprocessing**: Cleans and processes all text fields
 2. **Comprehensive Text Creation**: Combines all fields into rich text
-3. **AI Embedding**: Uses GROQ/Gemini/OpenAI to create vectors
+3. **AI Embedding**: Uses Gemini primarily with fallbacks (OpenAI, Grok, GROQ) via `lib/ai-services.ts`
 4. **Fallback Handling**: Uses hash-based embeddings if AI services fail
 
 ### **Pinecone Update**

@@ -20,8 +20,13 @@ Foundrly is a full-stack web platform for creating, sharing, and discovering sta
 - See GETTING_STARTED.md for details
 
 ## Tech Stack
-- Next.js, React, TypeScript, Tailwind CSS, Radix UI, Lucide React
-- Sanity CMS, NextAuth.js, Vercel Blob, Sentry
+- Next.js 15 (canary), React 18, TypeScript
+- Tailwind CSS, Radix UI, Lucide React
+- Sanity v3 CMS, NextAuth.js v5 (beta)
+- Vercel Blob (prod) / Local filesystem (dev)
+- Sentry
+
+See `ARCHITECTURE_OVERVIEW.md` and `README.md` for details.
 
 ## License
 MIT
