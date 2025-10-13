@@ -99,6 +99,7 @@ export async function createNotification(data: CreateNotificationData): Promise<
           _ref: data.commentId
         }
       }),
+      ...(data.interestedSubmissionId && { interestedSubmissionId: data.interestedSubmissionId }),
       ...(data.actionUrl && { actionUrl: data.actionUrl }),
       ...(data.metadata && { metadata: data.metadata })
     };
@@ -500,6 +501,53 @@ export async function createCommentLikeNotification(
       commentText,
       userName: likerName,
       userImage: likerImage
+    }
+  });
+}
+
+/**
+ * Create interested submission notification
+ */
+export async function createInterestedSubmissionNotification(
+  interestedUserId: string,
+  startupOwnerId: string,
+  startupId: string,
+  startupTitle: string,
+  interestedUserName: string,
+  interestedUserEmail: string,
+  interestedSubmissionId: string,
+  message: string,
+  interestedUserImage?: string,
+  additionalData?: {
+    phone?: string;
+    company?: string;
+    role?: string;
+    investmentAmount?: string;
+    investmentType?: string;
+    timeline?: string;
+    preferredContact?: string;
+    linkedin?: string;
+    website?: string;
+    experience?: string;
+    howDidYouHear?: string;
+  }
+): Promise<string> {
+  return createNotification({
+    recipientId: startupOwnerId,
+    type: 'interested_submission',
+    title: 'New Interest in Your Startup',
+    message: `submitted interest in your startup "${startupTitle}"`,
+    senderId: interestedUserId,
+    startupId,
+    interestedSubmissionId,
+    actionUrl: `/interested`,
+    metadata: {
+      startupTitle,
+      userName: interestedUserName,
+      userEmail: interestedUserEmail,
+      userImage: interestedUserImage,
+      message,
+      ...additionalData
     }
   });
 }

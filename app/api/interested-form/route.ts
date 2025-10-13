@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { writeClient } from '@/sanity/lib/write-client';
 import { client } from '@/sanity/lib/client';
-import { sendInterestedSubmissionEmail } from '@/lib/emailNotifications';
-import { getUserEmailPreferences } from '@/sanity/lib/user-preferences';
+import { createInterestedSubmissionNotification } from '@/sanity/lib/notifications';
+import { ServerPushNotificationService } from '@/lib/serverPushNotifications';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -44,8 +44,9 @@ export async function POST(req: Request) {
     }
 
     // Check if user is trying to show interest in their own startup
+    let startup;
     try {
-      const startup = await client.fetch(`
+      startup = await client.fetch(`
         *[_type == "startup" && _id == $startupId][0] {
           _id,
           title,
@@ -128,49 +129,72 @@ export async function POST(req: Request) {
       submittedAt: new Date().toISOString()
     });
 
-    // Send email notification to startup owner (respect owner's email prefs)
-    try {
-      const ownerId = startup?.author?._id;
-      if (ownerId) {
-        const ownerPrefs = await getUserEmailPreferences(ownerId);
-        if (!ownerPrefs.enabled || ownerPrefs.types?.interested === false) {
-          console.log('🔕 Skipping interested email due to owner preferences');
-          return NextResponse.json({ 
-            success: true, 
-            message: 'Interest submitted successfully (email skipped by preferences)' 
-          });
-        }
-      }
-      const emailData = {
-        startupOwnerName: startup.author.name,
-        startupOwnerEmail: startup.author.email,
-        startupTitle,
-        interestedUserName: name,
-        interestedUserEmail: email,
-        interestedUserPhone: phone,
-        interestedUserCompany: company,
-        interestedUserRole: role,
-        message,
-        investmentAmount,
-        investmentType,
-        timeline,
-        preferredContact,
-        linkedin,
-        website,
-        experience,
-        howDidYouHear,
-        submittedAt: new Date().toISOString(),
-      };
+    // Create notification for interested submission (following same pattern as likes/follows)
+    if (startup && startup.author?._id !== userId) {
+      try {
+        console.log('Creating interested submission notification:', {
+          interestedUserId: userId,
+          startupOwnerId: startup.author._id,
+          startupId,
+          startupTitle,
+          interestedUserName: name,
+          interestedUserEmail: email,
+          interestedSubmissionId: result._id
+        });
 
-      const emailResult = await sendInterestedSubmissionEmail(emailData);
-      
-      if (emailResult.success) {
-        console.log('Email notification sent successfully');
-      } else {
-        console.error('Failed to send email notification:', emailResult.error);
+        await createInterestedSubmissionNotification(
+          userId, // interested user
+          startup.author._id, // startup owner
+          startupId,
+          startupTitle,
+          name, // interested user name
+          email, // interested user email
+          result._id, // interested submission ID
+          message,
+          session.user.image, // interested user image
+          {
+            phone,
+            company,
+            role,
+            investmentAmount,
+            investmentType,
+            timeline,
+            preferredContact,
+            linkedin,
+            website,
+            experience,
+            howDidYouHear
+          }
+        );
+
+        console.log('Interested submission notification created successfully');
+
+        // Send push notification
+        try {
+          await ServerPushNotificationService.sendNotification({
+            type: 'interested',
+            recipientId: startup.author._id,
+            title: 'New Interest in Your Startup',
+            message: `${name} submitted interest in your startup "${startupTitle}"`,
+            metadata: {
+              startupId,
+              startupTitle,
+              interestedUserId: userId,
+              interestedUserName: name,
+              interestedUserEmail: email,
+              interestedUserImage: session.user.image,
+              interestedSubmissionId: result._id,
+              message
+            }
+          });
+        } catch (pushError) {
+          console.error('Failed to send interested submission push notification:', pushError);
+          // Don't fail the entire request if push notification fails
+        }
+      } catch (notificationError) {
+        console.error('Failed to create interested submission notification:', notificationError);
+        // Don't fail the entire request if notification creation fails
       }
-    } catch (emailError) {
-      console.error('Error sending email notification:', emailError);
     }
 
     return NextResponse.json({ 
@@ -180,9 +204,15 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error('Error processing interested form:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return NextResponse.json({ 
       success: false, 
-      message: 'Failed to process interest submission' 
+      message: 'Failed to process interest submission',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     }, { status: 500 });
   }
 }
