@@ -1031,7 +1031,7 @@ export class AIService {
   }
   */
 
-  // Enhanced text preprocessing for better embeddings
+  // Clean and preprocess text for better embeddings
   private preprocessText(text: string): string {
     if (!text) {
       console.log('🧹 [PREPROCESS TEXT] Empty text provided, returning empty string');
@@ -1039,107 +1039,24 @@ export class AIService {
     }
     
     const originalLength = text.length;
-    let processed = text;
-    
-    // Step 1: Remove markdown formatting while preserving content
-    processed = processed
+    const processed = text
+      // Remove markdown formatting
       .replace(/#{1,6}\s+/g, '') // Remove headers
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold, keep content
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic, keep content
-      .replace(/`(.*?)`/g, '$1') // Remove code, keep content
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+      .replace(/\*(.*?)\*/g, '$1') // Remove italic
+      .replace(/`(.*?)`/g, '$1') // Remove code
       .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove links, keep text
       .replace(/[#*`\[\]()]/g, '') // Remove remaining markdown chars
-      .replace(/_{1,2}(.*?)_{1,2}/g, '$1') // Remove underline formatting
-      .replace(/~~(.*?)~~/g, '$1'); // Remove strikethrough
-    
-    // Step 2: Remove HTML tags and entities
-    processed = processed
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/&[a-zA-Z0-9#]+;/g, ' ') // Remove HTML entities
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-    
-    // Step 3: Remove URLs but preserve domain names for context
-    processed = processed
-      .replace(/https?:\/\/[^\s]+/g, (match) => {
-        try {
-          const url = new URL(match);
-          return url.hostname.replace(/^www\./, '');
-        } catch {
-          return '';
-        }
-      })
-      .replace(/www\.[^\s]+/g, (match) => match.replace('www.', ''));
-    
-    // Step 4: Normalize whitespace and special characters
-    processed = processed
+      // Remove common noise words and phrases
+      .replace(/\b(hello|hi|hey|test|testing|demo|example|sample)\b/gi, '')
+      .replace(/\b(holaa|amigo|yellow|helllo|world)\b/gi, '')
+      .replace(/\b(where|is|the|library|biblioteca)\b/gi, '')
       .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/[^\w\s\-.,!?]/g, ' ') // Remove special chars except basic punctuation
-      .replace(/\s+/g, ' ') // Clean up multiple spaces
       .trim();
     
-    // Step 5: Remove common noise words and phrases (enhanced list)
-    const noiseWords = [
-      // Basic noise
-      'hello', 'hi', 'hey', 'test', 'testing', 'demo', 'example', 'sample',
-      'holaa', 'amigo', 'yellow', 'helllo', 'world',
-      'where', 'is', 'the', 'library', 'biblioteca',
-      // Common stop words that don't add semantic value
-      'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during',
-      'before', 'after', 'above', 'below', 'between', 'among', 'under',
-      // Redundant phrases
-      'please', 'thank you', 'thanks', 'sorry', 'excuse me',
-      'i think', 'i believe', 'i feel', 'in my opinion',
-      'as you can see', 'as mentioned', 'as stated', 'as shown',
-      'it is', 'there is', 'there are', 'this is', 'that is',
-      'very', 'really', 'quite', 'rather', 'somewhat', 'pretty',
-      'just', 'simply', 'basically', 'essentially', 'fundamentally'
-    ];
-    
-    // Remove noise words while preserving important context
-    const words = processed.split(' ');
-    const filteredWords = words.filter(word => {
-      const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
-      return cleanWord.length > 2 && !noiseWords.includes(cleanWord);
-    });
-    
-    processed = filteredWords.join(' ');
-    
-    // Step 6: Handle contractions and abbreviations
-    const contractions = {
-      "don't": "do not", "won't": "will not", "can't": "cannot",
-      "isn't": "is not", "aren't": "are not", "wasn't": "was not",
-      "weren't": "were not", "hasn't": "has not", "haven't": "have not",
-      "hadn't": "had not", "doesn't": "does not", "didn't": "did not",
-      "wouldn't": "would not", "couldn't": "could not", "shouldn't": "should not",
-      "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
-      "it's": "it is", "we're": "we are", "they're": "they are",
-      "i've": "i have", "you've": "you have", "we've": "we have",
-      "they've": "they have", "i'll": "i will", "you'll": "you will",
-      "he'll": "he will", "she'll": "she will", "we'll": "we will",
-      "they'll": "they will", "i'd": "i would", "you'd": "you would",
-      "he'd": "he would", "she'd": "she would", "we'd": "we would",
-      "they'd": "they would"
-    };
-    
-    Object.entries(contractions).forEach(([contraction, expansion]) => {
-      const regex = new RegExp(`\\b${contraction}\\b`, 'gi');
-      processed = processed.replace(regex, expansion);
-    });
-    
-    // Step 7: Final cleanup
-    processed = processed
-      .replace(/\s+/g, ' ') // Final whitespace normalization
-      .trim();
-    
-    console.log('🧹 [PREPROCESS TEXT] Enhanced text preprocessing completed:', {
+    console.log('🧹 [PREPROCESS TEXT] Text preprocessing completed:', {
       originalLength,
       processedLength: processed.length,
-      reduction: ((originalLength - processed.length) / originalLength * 100).toFixed(1) + '%',
       originalPreview: text.substring(0, 50) + '...',
       processedPreview: processed.substring(0, 50) + '...'
     });
@@ -1147,633 +1064,106 @@ export class AIService {
     return processed;
   }
 
-  // Create comprehensive high-quality text content for embeddings with enhanced context
+  // Create comprehensive high-quality text content for embeddings
   private createEmbeddingText(startup: any): string {
     const parts: string[] = [];
     
-    // Core startup information with semantic context
+    // Title
     if (startup.title) {
-      const title = this.preprocessText(String(startup.title));
-      parts.push(`Startup: ${title}`);
-      
-      // Add semantic context based on title keywords
-      const titleKeywords = this.extractSemanticKeywords(title);
-      if (titleKeywords.length > 0) {
-        parts.push(`Keywords: ${titleKeywords.join(', ')}`);
-      }
+      parts.push(`Title: ${this.preprocessText(String(startup.title))}`);
     }
     
-    // Enhanced category with related terms
+    // Category
     if (startup.category) {
-      const category = this.preprocessText(String(startup.category));
-      parts.push(`Category: ${category}`);
-      
-      // Add category-related semantic terms
-      const categoryTerms = this.getCategorySemanticTerms(category);
-      if (categoryTerms.length > 0) {
-        parts.push(`Related: ${categoryTerms.join(', ')}`);
-      }
+      parts.push(`Category: ${this.preprocessText(String(startup.category))}`);
     }
     
-    // Enhanced description with key concepts
+    // Description
     if (startup.description) {
       const cleanDesc = this.preprocessText(String(startup.description));
-      if (cleanDesc.length > 10) {
-        parts.push(`Description: ${cleanDesc}`);
-        
-        // Extract key concepts from description
-        const concepts = this.extractKeyConcepts(cleanDesc);
-        if (concepts.length > 0) {
-          parts.push(`Concepts: ${concepts.join(', ')}`);
-        }
-      }
+      if (cleanDesc.length > 10) parts.push(`Description: ${cleanDesc}`);
     }
     
-    // Enhanced pitch with business context
+    // Pitch
     if (startup.pitch) {
       const cleanPitch = this.preprocessText(String(startup.pitch));
-      if (cleanPitch.length > 10) {
-        parts.push(`Pitch: ${cleanPitch}`);
-        
-        // Extract business model indicators
-        const businessModel = this.extractBusinessModel(cleanPitch);
-        if (businessModel.length > 0) {
-          parts.push(`Business Model: ${businessModel.join(', ')}`);
-        }
-      }
+      if (cleanPitch.length > 10) parts.push(`Pitch: ${cleanPitch}`);
     }
     
-    // Enhanced tags with semantic expansion
+    // Tags
     if (startup.tags && Array.isArray(startup.tags) && startup.tags.length > 0) {
-      const cleanTags = startup.tags.map((t: any) => this.preprocessText(String(t)));
-      parts.push(`Tags: ${cleanTags.join(', ')}`);
-      
-      // Add semantic tag expansions
-      const expandedTags = this.expandTagsSemantically(cleanTags);
-      if (expandedTags.length > 0) {
-        parts.push(`Related Tags: ${expandedTags.join(', ')}`);
-      }
+      parts.push(`Tags: ${startup.tags.map((t: any) => String(t)).join(', ')}`);
     }
     
-    // Author with credibility context
+    // Author
     if (startup.author?.name) {
-      const author = this.preprocessText(String(startup.author.name));
-      parts.push(`Founder: ${author}`);
+      parts.push(`Author: ${this.preprocessText(String(startup.author.name))}`);
     }
     
-    // Enhanced status and funding with business context
+    // Status / Funding
     if (startup.status) {
-      const status = this.preprocessText(String(startup.status));
-      parts.push(`Status: ${status}`);
-      
-      // Add status-related context
-      const statusContext = this.getStatusContext(status);
-      if (statusContext) {
-        parts.push(`Stage: ${statusContext}`);
-      }
+      parts.push(`Status: ${this.preprocessText(String(startup.status))}`);
     }
-    
     if (startup.fundingStage) {
-      const fundingStage = this.preprocessText(String(startup.fundingStage));
-      parts.push(`Funding: ${fundingStage}`);
-      
-      // Add funding context
-      const fundingContext = this.getFundingContext(fundingStage);
-      if (fundingContext) {
-        parts.push(`Investment: ${fundingContext}`);
-      }
+      parts.push(`Funding Stage: ${this.preprocessText(String(startup.fundingStage))}`);
     }
     
-    // Team and location with market context
+    // Team size / Location
     if (startup.teamSize) {
-      const teamSize = this.preprocessText(String(startup.teamSize));
-      parts.push(`Team: ${teamSize}`);
-      
-      // Add team size context
-      const teamContext = this.getTeamSizeContext(teamSize);
-      if (teamContext) {
-        parts.push(`Size: ${teamContext}`);
-      }
+      parts.push(`Team Size: ${this.preprocessText(String(startup.teamSize))}`);
     }
-    
     if (startup.location) {
-      const location = this.preprocessText(String(startup.location));
-      parts.push(`Location: ${location}`);
-      
-      // Add location context
-      const locationContext = this.getLocationContext(location);
-      if (locationContext) {
-        parts.push(`Market: ${locationContext}`);
-      }
+      parts.push(`Location: ${this.preprocessText(String(startup.location))}`);
     }
     
-    // Enhanced engagement metrics with performance context
+    // Engagement
     const views = typeof startup.views === 'number' ? startup.views : 0;
     const likes = typeof startup.likes === 'number' ? startup.likes : 0;
-    const dislikes = typeof startup.dislikes === 'number' ? startup.dislikes : 0;
-    
     if (views || likes) {
       parts.push(`Engagement: ${views} views, ${likes} likes`);
-      
-      // Add engagement context
-      const engagementContext = this.getEngagementContext(views, likes, dislikes);
-      if (engagementContext) {
-        parts.push(`Performance: ${engagementContext}`);
-      }
     }
     
-    // Enhanced website with domain context
+    // Website
     if (startup.website) {
       try {
         const url = String(startup.website).trim();
         const hostname = url.replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-        if (hostname) {
-          parts.push(`Website: ${hostname}`);
-          
-          // Add domain context
-          const domainContext = this.getDomainContext(hostname);
-          if (domainContext) {
-            parts.push(`Platform: ${domainContext}`);
-          }
-        }
+        if (hostname) parts.push(`Website: ${hostname}`);
       } catch {}
     }
 
-    // Enhanced social links with platform context
+    // Social links (domains only)
     if (startup.socialLinks && Array.isArray(startup.socialLinks)) {
       const domains: string[] = [];
-      const platforms: string[] = [];
-      
       for (const link of startup.socialLinks) {
         if (!link) continue;
         const val = typeof link === 'string' ? link : (link.url || link.href || link.link || '');
         if (!val) continue;
         const hostname = String(val).replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
-        if (hostname) {
-          domains.push(hostname);
-          const platform = this.getSocialPlatformContext(hostname);
-          if (platform) platforms.push(platform);
-        }
+        if (hostname) domains.push(hostname);
       }
-      
-      if (domains.length > 0) {
-        parts.push(`Social: ${Array.from(new Set(domains)).join(', ')}`);
-        if (platforms.length > 0) {
-          parts.push(`Platforms: ${Array.from(new Set(platforms)).join(', ')}`);
-        }
-      }
+      if (domains.length > 0) parts.push(`Social: ${Array.from(new Set(domains)).join(', ')}`);
     }
 
-    // Enhanced date with temporal context
+    // Created date
     if (startup._createdAt) {
       try {
         const date = new Date(startup._createdAt);
         if (!isNaN(date.getTime())) {
           parts.push(`Created: ${date.toISOString().split('T')[0]}`);
-          
-          // Add temporal context
-          const temporalContext = this.getTemporalContext(date);
-          if (temporalContext) {
-            parts.push(`Timeline: ${temporalContext}`);
-          }
         }
       } catch {}
     }
     
     const comprehensiveText = parts.join('. ');
-    console.log('📝 [EMBEDDING TEXT] Created enhanced comprehensive text:', {
+    console.log('📝 [EMBEDDING TEXT] Created comprehensive text:', {
       startupId: startup._id,
       title: startup.title,
       textLength: comprehensiveText.length,
-      partsCount: parts.length,
       textPreview: comprehensiveText.substring(0, 200) + '...'
     });
     
     return comprehensiveText;
-  }
-
-  // Helper methods for enhanced semantic context extraction
-  
-  // Extract semantic keywords from text
-  private extractSemanticKeywords(text: string): string[] {
-    const keywords: string[] = [];
-    const words = text.toLowerCase().split(/\s+/);
-    
-    // Business and startup related keywords
-    const businessKeywords = [
-      'startup', 'company', 'business', 'enterprise', 'platform', 'solution',
-      'technology', 'innovation', 'disruptive', 'scalable', 'sustainable',
-      'marketplace', 'saas', 'b2b', 'b2c', 'mobile', 'web', 'app', 'software'
-    ];
-    
-    // Technology keywords
-    const techKeywords = [
-      'ai', 'artificial intelligence', 'ml', 'machine learning', 'data',
-      'analytics', 'cloud', 'saas', 'api', 'blockchain', 'crypto',
-      'iot', 'internet of things', 'ar', 'vr', 'augmented reality', 'virtual reality'
-    ];
-    
-    // Industry keywords
-    const industryKeywords = [
-      'fintech', 'edtech', 'healthtech', 'agritech', 'cleantech', 'proptech',
-      'ecommerce', 'retail', 'logistics', 'transportation', 'mobility',
-      'education', 'healthcare', 'finance', 'banking', 'insurance'
-    ];
-    
-    words.forEach(word => {
-      const cleanWord = word.replace(/[^\w]/g, '');
-      if (cleanWord.length > 3) {
-        if (businessKeywords.includes(cleanWord) || 
-            techKeywords.includes(cleanWord) || 
-            industryKeywords.includes(cleanWord)) {
-          keywords.push(cleanWord);
-        }
-      }
-    });
-    
-    return [...new Set(keywords)]; // Remove duplicates
-  }
-  
-  // Get category-related semantic terms
-  private getCategorySemanticTerms(category: string): string[] {
-    const categoryMap: { [key: string]: string[] } = {
-      'fintech': ['finance', 'banking', 'payments', 'crypto', 'blockchain', 'investment'],
-      'edtech': ['education', 'learning', 'training', 'courses', 'academy', 'school'],
-      'healthtech': ['healthcare', 'medical', 'wellness', 'fitness', 'therapy', 'diagnosis'],
-      'agritech': ['agriculture', 'farming', 'crops', 'livestock', 'sustainable', 'organic'],
-      'cleantech': ['sustainability', 'renewable', 'energy', 'environment', 'green', 'carbon'],
-      'proptech': ['real estate', 'property', 'construction', 'housing', 'smart buildings'],
-      'ecommerce': ['retail', 'shopping', 'marketplace', 'commerce', 'sales', 'inventory'],
-      'mobility': ['transportation', 'logistics', 'delivery', 'ride-sharing', 'autonomous'],
-      'social': ['community', 'networking', 'communication', 'messaging', 'social media']
-    };
-    
-    const lowerCategory = category.toLowerCase();
-    for (const [key, terms] of Object.entries(categoryMap)) {
-      if (lowerCategory.includes(key)) {
-        return terms;
-      }
-    }
-    
-    return [];
-  }
-  
-  // Extract key concepts from description
-  private extractKeyConcepts(text: string): string[] {
-    const concepts: string[] = [];
-    const sentences = text.split(/[.!?]+/);
-    
-    sentences.forEach(sentence => {
-      const words = sentence.toLowerCase().split(/\s+/);
-      if (words.length > 5) { // Only process substantial sentences
-        // Look for concept indicators
-        const conceptIndicators = [
-          'enables', 'provides', 'offers', 'delivers', 'creates', 'builds',
-          'solves', 'addresses', 'improves', 'enhances', 'optimizes',
-          'revolutionizes', 'transforms', 'disrupts', 'innovates'
-        ];
-        
-        conceptIndicators.forEach(indicator => {
-          if (sentence.toLowerCase().includes(indicator)) {
-            // Extract the concept after the indicator
-            const parts = sentence.toLowerCase().split(indicator);
-            if (parts.length > 1) {
-              const concept = parts[1].trim().split(/[.!?]/)[0];
-              if (concept.length > 5 && concept.length < 100) {
-                concepts.push(concept);
-              }
-            }
-          }
-        });
-      }
-    });
-    
-    return [...new Set(concepts)].slice(0, 5); // Limit to 5 concepts
-  }
-  
-  // Extract business model indicators
-  private extractBusinessModel(text: string): string[] {
-    const models: string[] = [];
-    const lowerText = text.toLowerCase();
-    
-    const businessModelMap = {
-      'subscription': ['subscription', 'recurring', 'monthly', 'annual'],
-      'marketplace': ['marketplace', 'platform', 'connecting', 'matching'],
-      'saas': ['software as a service', 'cloud-based', 'web-based'],
-      'freemium': ['freemium', 'free tier', 'premium features'],
-      'advertising': ['advertising', 'ads', 'sponsored', 'revenue from ads'],
-      'transaction': ['transaction', 'commission', 'fee', 'percentage'],
-      'licensing': ['licensing', 'license', 'ip', 'intellectual property']
-    };
-    
-    Object.entries(businessModelMap).forEach(([model, indicators]) => {
-      if (indicators.some(indicator => lowerText.includes(indicator))) {
-        models.push(model);
-      }
-    });
-    
-    return models;
-  }
-  
-  // Expand tags semantically
-  private expandTagsSemantically(tags: string[]): string[] {
-    const expansions: string[] = [];
-    
-    const tagExpansions: { [key: string]: string[] } = {
-      'ai': ['artificial intelligence', 'machine learning', 'automation'],
-      'ml': ['machine learning', 'data science', 'predictive analytics'],
-      'blockchain': ['cryptocurrency', 'defi', 'smart contracts', 'web3'],
-      'mobile': ['ios', 'android', 'mobile app', 'smartphone'],
-      'web': ['website', 'web application', 'frontend', 'backend'],
-      'saas': ['software as a service', 'cloud', 'subscription'],
-      'b2b': ['business to business', 'enterprise', 'corporate'],
-      'b2c': ['business to consumer', 'retail', 'consumer'],
-      'fintech': ['financial technology', 'payments', 'banking'],
-      'healthtech': ['healthcare technology', 'medical', 'wellness']
-    };
-    
-    tags.forEach(tag => {
-      const lowerTag = tag.toLowerCase();
-      if (tagExpansions[lowerTag]) {
-        expansions.push(...tagExpansions[lowerTag]);
-      }
-    });
-    
-    return [...new Set(expansions)];
-  }
-  
-  // Get status context
-  private getStatusContext(status: string): string | null {
-    const statusMap: { [key: string]: string } = {
-      'active': 'operational startup',
-      'launched': 'recently launched',
-      'beta': 'in beta testing',
-      'pre-launch': 'preparing to launch',
-      'fundraising': 'seeking investment',
-      'scaling': 'growth phase',
-      'pivoting': 'changing direction'
-    };
-    
-    const lowerStatus = status.toLowerCase();
-    for (const [key, context] of Object.entries(statusMap)) {
-      if (lowerStatus.includes(key)) {
-        return context;
-      }
-    }
-    
-    return null;
-  }
-  
-  // Get funding context
-  private getFundingContext(fundingStage: string): string | null {
-    const fundingMap: { [key: string]: string } = {
-      'pre-seed': 'early stage startup',
-      'seed': 'seed funded startup',
-      'series a': 'series a funded',
-      'series b': 'series b funded',
-      'series c': 'series c funded',
-      'ipo': 'public company',
-      'acquired': 'acquired company'
-    };
-    
-    const lowerFunding = fundingStage.toLowerCase();
-    for (const [key, context] of Object.entries(fundingMap)) {
-      if (lowerFunding.includes(key)) {
-        return context;
-      }
-    }
-    
-    return null;
-  }
-  
-  // Get team size context
-  private getTeamSizeContext(teamSize: string): string | null {
-    const size = parseInt(teamSize);
-    if (isNaN(size)) return null;
-    
-    if (size <= 2) return 'solo founder or small team';
-    if (size <= 5) return 'small startup team';
-    if (size <= 10) return 'growing startup team';
-    if (size <= 25) return 'medium startup team';
-    if (size <= 50) return 'established startup team';
-    return 'large startup team';
-  }
-  
-  // Get location context
-  private getLocationContext(location: string): string | null {
-    const locationMap: { [key: string]: string } = {
-      'san francisco': 'silicon valley startup',
-      'new york': 'nyc startup',
-      'london': 'london startup',
-      'berlin': 'berlin startup',
-      'singapore': 'singapore startup',
-      'tel aviv': 'israeli startup',
-      'bangalore': 'indian startup',
-      'toronto': 'canadian startup'
-    };
-    
-    const lowerLocation = location.toLowerCase();
-    for (const [key, context] of Object.entries(locationMap)) {
-      if (lowerLocation.includes(key)) {
-        return context;
-      }
-    }
-    
-    return null;
-  }
-  
-  // Get engagement context
-  private getEngagementContext(views: number, likes: number, dislikes: number): string | null {
-    const totalEngagement = likes + dislikes;
-    const engagementRate = totalEngagement > 0 ? likes / totalEngagement : 0;
-    
-    if (views > 1000 && engagementRate > 0.8) return 'highly popular startup';
-    if (views > 500 && engagementRate > 0.7) return 'popular startup';
-    if (views > 100 && engagementRate > 0.6) return 'growing startup';
-    if (views > 50) return 'emerging startup';
-    return 'new startup';
-  }
-  
-  // Get domain context
-  private getDomainContext(hostname: string): string | null {
-    const domainMap: { [key: string]: string } = {
-      'github.com': 'open source project',
-      'linkedin.com': 'professional network',
-      'twitter.com': 'social media presence',
-      'medium.com': 'content marketing',
-      'youtube.com': 'video content',
-      'instagram.com': 'visual content'
-    };
-    
-    for (const [domain, context] of Object.entries(domainMap)) {
-      if (hostname.includes(domain)) {
-        return context;
-      }
-    }
-    
-    return null;
-  }
-  
-  // Get social platform context
-  private getSocialPlatformContext(hostname: string): string | null {
-    const platformMap: { [key: string]: string } = {
-      'twitter.com': 'twitter',
-      'linkedin.com': 'linkedin',
-      'facebook.com': 'facebook',
-      'instagram.com': 'instagram',
-      'youtube.com': 'youtube',
-      'tiktok.com': 'tiktok',
-      'discord.gg': 'discord',
-      'slack.com': 'slack'
-    };
-    
-    for (const [domain, platform] of Object.entries(platformMap)) {
-      if (hostname.includes(domain)) {
-        return platform;
-      }
-    }
-    
-    return null;
-  }
-  
-  // Get temporal context
-  private getTemporalContext(date: Date): string | null {
-    const now = new Date();
-    const diffTime = now.getTime() - date.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays <= 7) return 'very recent startup';
-    if (diffDays <= 30) return 'recent startup';
-    if (diffDays <= 90) return 'new startup';
-    if (diffDays <= 365) return 'young startup';
-    if (diffDays <= 730) return 'established startup';
-    return 'mature startup';
-  }
-  
-  // Expand query with synonyms and related terms
-  private expandQuery(query: string): string {
-    const words = query.toLowerCase().split(/\s+/);
-    const expandedTerms: string[] = [];
-    
-    // Add original terms
-    expandedTerms.push(...words);
-    
-    // Technology and business term expansions
-    const termExpansions: { [key: string]: string[] } = {
-      // AI/ML terms
-      'ai': ['artificial intelligence', 'machine learning', 'automation', 'intelligent'],
-      'ml': ['machine learning', 'data science', 'predictive analytics', 'ai'],
-      'artificial intelligence': ['ai', 'machine learning', 'automation', 'intelligent systems'],
-      'machine learning': ['ml', 'ai', 'data science', 'predictive analytics'],
-      
-      // Business terms
-      'startup': ['company', 'business', 'venture', 'enterprise', 'firm'],
-      'company': ['startup', 'business', 'enterprise', 'organization', 'firm'],
-      'business': ['company', 'startup', 'enterprise', 'organization', 'venture'],
-      'platform': ['service', 'solution', 'system', 'application', 'software'],
-      'solution': ['platform', 'service', 'system', 'application', 'tool'],
-      
-      // Industry terms
-      'fintech': ['financial technology', 'finance', 'banking', 'payments', 'fintech'],
-      'edtech': ['education technology', 'education', 'learning', 'training', 'edtech'],
-      'healthtech': ['healthcare technology', 'healthcare', 'medical', 'wellness', 'healthtech'],
-      'agritech': ['agriculture technology', 'agriculture', 'farming', 'agritech'],
-      'cleantech': ['clean technology', 'sustainability', 'renewable', 'green', 'cleantech'],
-      
-      // Technology terms
-      'blockchain': ['cryptocurrency', 'crypto', 'defi', 'web3', 'distributed ledger'],
-      'crypto': ['cryptocurrency', 'blockchain', 'defi', 'web3', 'digital currency'],
-      'saas': ['software as a service', 'cloud software', 'subscription software'],
-      'mobile': ['mobile app', 'smartphone', 'ios', 'android', 'mobile application'],
-      'web': ['website', 'web application', 'online', 'internet', 'web-based'],
-      
-      // Business model terms
-      'marketplace': ['platform', 'exchange', 'trading', 'commerce', 'market'],
-      'subscription': ['recurring', 'monthly', 'annual', 'membership', 'subscription model'],
-      'freemium': ['free tier', 'premium', 'freemium model', 'free version'],
-      
-      // Engagement terms
-      'popular': ['trending', 'viral', 'successful', 'well-known', 'famous'],
-      'new': ['recent', 'latest', 'fresh', 'emerging', 'upcoming'],
-      'innovative': ['creative', 'novel', 'revolutionary', 'cutting-edge', 'advanced']
-    };
-    
-    // Expand each word with related terms
-    words.forEach(word => {
-      const cleanWord = word.replace(/[^\w]/g, '');
-      if (cleanWord.length > 2) {
-        if (termExpansions[cleanWord]) {
-          expandedTerms.push(...termExpansions[cleanWord]);
-        }
-        
-        // Add partial matches for compound terms
-        Object.entries(termExpansions).forEach(([key, expansions]) => {
-          if (key.includes(cleanWord) || cleanWord.includes(key)) {
-            expandedTerms.push(...expansions);
-          }
-        });
-      }
-    });
-    
-    // Add category-specific expansions based on query context
-    const categoryExpansions = this.getCategoryExpansions(query);
-    expandedTerms.push(...categoryExpansions);
-    
-    // Remove duplicates and limit to reasonable size
-    const uniqueTerms = [...new Set(expandedTerms)];
-    const finalTerms = uniqueTerms.slice(0, 20); // Limit to 20 terms max
-    
-    const expandedQuery = finalTerms.join(' ');
-    
-    console.log('🔍 [QUERY EXPANSION] Query expansion completed:', {
-      originalQuery: query,
-      expandedQuery,
-      termCount: finalTerms.length,
-      originalTerms: words.length
-    });
-    
-    return expandedQuery;
-  }
-  
-  // Get category-specific expansions based on query context
-  private getCategoryExpansions(query: string): string[] {
-    const expansions: string[] = [];
-    const lowerQuery = query.toLowerCase();
-    
-    // Detect category and add relevant terms
-    if (lowerQuery.includes('fintech') || lowerQuery.includes('finance') || lowerQuery.includes('banking')) {
-      expansions.push('payments', 'crypto', 'investment', 'trading', 'wallet', 'lending');
-    }
-    
-    if (lowerQuery.includes('edtech') || lowerQuery.includes('education') || lowerQuery.includes('learning')) {
-      expansions.push('courses', 'training', 'academy', 'school', 'university', 'tutorial');
-    }
-    
-    if (lowerQuery.includes('healthtech') || lowerQuery.includes('health') || lowerQuery.includes('medical')) {
-      expansions.push('wellness', 'fitness', 'therapy', 'diagnosis', 'healthcare', 'medical');
-    }
-    
-    if (lowerQuery.includes('agritech') || lowerQuery.includes('agriculture') || lowerQuery.includes('farming')) {
-      expansions.push('crops', 'livestock', 'sustainable', 'organic', 'food', 'farming');
-    }
-    
-    if (lowerQuery.includes('cleantech') || lowerQuery.includes('sustainability') || lowerQuery.includes('green')) {
-      expansions.push('renewable', 'energy', 'environment', 'carbon', 'sustainable', 'green');
-    }
-    
-    if (lowerQuery.includes('mobility') || lowerQuery.includes('transport') || lowerQuery.includes('logistics')) {
-      expansions.push('delivery', 'ride-sharing', 'autonomous', 'logistics', 'transportation');
-    }
-    
-    if (lowerQuery.includes('ecommerce') || lowerQuery.includes('retail') || lowerQuery.includes('shopping')) {
-      expansions.push('marketplace', 'commerce', 'sales', 'inventory', 'retail', 'shopping');
-    }
-    
-    if (lowerQuery.includes('social') || lowerQuery.includes('community') || lowerQuery.includes('networking')) {
-      expansions.push('messaging', 'communication', 'social media', 'community', 'networking');
-    }
-    
-    return expansions;
   }
 
   // Store startup vector in Pinecone
@@ -1874,25 +1264,20 @@ export class AIService {
     }
   }
 
-  // Enhanced semantic search with query expansion and hybrid matching
+  // Semantic search using vector similarity with fallback
   async semanticSearch(query: string, limit: number = 10): Promise<any> {
-    console.log('🔍 [ENHANCED SEMANTIC SEARCH] Starting enhanced semantic search:', { query, limit });
+    console.log('🔍 [GROQ SEMANTIC SEARCH] Starting GROQ-only semantic search:', { query, limit });
     
     try {
       // Clean and preprocess the query
-      console.log('🧹 [ENHANCED SEMANTIC SEARCH] Preprocessing query...');
+      console.log('🧹 [GROQ SEMANTIC SEARCH] Preprocessing query...');
       const cleanQuery = this.preprocessText(query);
-      console.log('🧹 [ENHANCED SEMANTIC SEARCH] Cleaned query:', cleanQuery);
+      console.log('🧹 [GROQ SEMANTIC SEARCH] Cleaned query:', cleanQuery);
       
-      // Expand query with synonyms and related terms
-      console.log('🔍 [ENHANCED SEMANTIC SEARCH] Expanding query with related terms...');
-      const expandedQuery = this.expandQuery(cleanQuery);
-      console.log('🔍 [ENHANCED SEMANTIC SEARCH] Expanded query:', expandedQuery);
-      
-      // Generate embedding for the expanded query using GROQ
-      console.log('🤖 [ENHANCED SEMANTIC SEARCH] Generating GROQ embedding for expanded query...');
-      const queryEmbedding = await this.generateEmbedding(expandedQuery);
-      console.log('✅ [ENHANCED SEMANTIC SEARCH] GROQ embedding generated, dimensions:', queryEmbedding.length);
+      // Generate embedding for the query using GROQ
+      console.log('🤖 [GROQ SEMANTIC SEARCH] Generating GROQ embedding for query...');
+      const queryEmbedding = await this.generateEmbedding(cleanQuery);
+      console.log('✅ [GROQ SEMANTIC SEARCH] GROQ embedding generated, dimensions:', queryEmbedding.length);
       
       // Search in Pinecone
       console.log('🌲 [GROQ SEMANTIC SEARCH] Searching Pinecone index...');
@@ -1908,12 +1293,12 @@ export class AIService {
         bottomScore: searchResults.matches?.[searchResults.matches.length - 1]?.score || 0
       });
 
-      // Get full startup data from Sanity with enhanced ranking
+      // Get full startup data from Sanity
       const startupIds = searchResults.matches?.map(match => match.id) || [];
-      console.log('📊 [ENHANCED SEMANTIC SEARCH] Startup IDs from Pinecone:', startupIds);
+      console.log('📊 [GROQ SEMANTIC SEARCH] Startup IDs from Pinecone:', startupIds);
       
       if (startupIds.length === 0) {
-        console.log('❌ [ENHANCED SEMANTIC SEARCH] No startup IDs found, returning empty results');
+        console.log('❌ [GROQ SEMANTIC SEARCH] No startup IDs found, returning empty results');
         return {
           startups: [],
           reasons: ['No matching startups found'],
@@ -1921,7 +1306,7 @@ export class AIService {
         };
       }
 
-      console.log('📊 [ENHANCED SEMANTIC SEARCH] Fetching startup data from Sanity...');
+      console.log('📊 [GROQ SEMANTIC SEARCH] Fetching startup data from Sanity...');
       const startups = await client.fetch(`
         *[_type == "startup" && _id in $startupIds] {
           _id,
@@ -2310,474 +1695,6 @@ export class AIService {
         confidence: 0,
       };
     }
-  }
-
-  // Enhanced search result processing with better ranking and scoring
-  private enhanceSearchResults(startups: any[], matches: any[], originalQuery: string): any[] {
-    console.log('🔍 [ENHANCED SEARCH] Processing search results with enhanced ranking...');
-    
-    return startups.map(startup => {
-      const match = matches.find(m => m.id === startup._id);
-      const baseSimilarity = match?.score || 0;
-      
-      // Calculate enhanced relevance score
-      const relevanceScore = this.calculateRelevanceScore(startup, originalQuery, baseSimilarity);
-      
-      // Calculate engagement score
-      const engagementScore = this.calculateEngagementScore(startup);
-      
-      // Calculate recency score
-      const recencyScore = this.calculateRecencyScore(startup);
-      
-      // Calculate quality score
-      const qualityScore = this.calculateQualityScore(startup);
-      
-      // Combined score with weighted factors
-      const finalScore = (
-        relevanceScore * 0.4 +      // 40% relevance
-        engagementScore * 0.25 +    // 25% engagement
-        recencyScore * 0.2 +        // 20% recency
-        qualityScore * 0.15         // 15% quality
-      );
-      
-      return {
-        ...startup,
-        similarity: baseSimilarity,
-        relevanceScore,
-        engagementScore,
-        recencyScore,
-        qualityScore,
-        finalScore,
-        searchMetadata: {
-          originalSimilarity: baseSimilarity,
-          enhancedScore: finalScore,
-          rankingFactors: {
-            relevance: relevanceScore,
-            engagement: engagementScore,
-            recency: recencyScore,
-            quality: qualityScore
-          }
-        }
-      };
-    }).sort((a, b) => b.finalScore - a.finalScore);
-  }
-  
-  // Calculate relevance score based on query matching
-  private calculateRelevanceScore(startup: any, query: string, baseSimilarity: number): number {
-    const queryLower = query.toLowerCase();
-    const title = (startup.title || '').toLowerCase();
-    const description = (startup.description || '').toLowerCase();
-    const category = (startup.category || '').toLowerCase();
-    const pitch = (startup.pitch || '').toLowerCase();
-    
-    let score = baseSimilarity;
-    
-    // Exact title match boost
-    if (title.includes(queryLower)) {
-      score += 0.3;
-    }
-    
-    // Category match boost
-    if (category.includes(queryLower)) {
-      score += 0.2;
-    }
-    
-    // Description match boost
-    if (description.includes(queryLower)) {
-      score += 0.15;
-    }
-    
-    // Pitch match boost
-    if (pitch.includes(queryLower)) {
-      score += 0.1;
-    }
-    
-    // Keyword density analysis
-    const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2);
-    const allText = `${title} ${description} ${pitch}`.toLowerCase();
-    
-    let keywordMatches = 0;
-    queryWords.forEach(word => {
-      if (allText.includes(word)) {
-        keywordMatches++;
-      }
-    });
-    
-    const keywordDensity = keywordMatches / queryWords.length;
-    score += keywordDensity * 0.2;
-    
-    return Math.min(1.0, score);
-  }
-  
-  // Calculate engagement score based on user interactions
-  private calculateEngagementScore(startup: any): number {
-    const views = startup.views || 0;
-    const likes = startup.likes || 0;
-    const dislikes = startup.dislikes || 0;
-    
-    // Normalize views (log scale to prevent outliers from dominating)
-    const normalizedViews = Math.log(views + 1) / Math.log(1000);
-    
-    // Calculate engagement rate
-    const totalEngagement = likes + dislikes;
-    const engagementRate = totalEngagement > 0 ? likes / totalEngagement : 0;
-    
-    // Combine views and engagement rate
-    const score = (normalizedViews * 0.6) + (engagementRate * 0.4);
-    
-    return Math.min(1.0, score);
-  }
-  
-  // Calculate recency score based on creation date
-  private calculateRecencyScore(startup: any): number {
-    if (!startup._createdAt) return 0.5; // Default for unknown dates
-    
-    const createdDate = new Date(startup._createdAt);
-    const now = new Date();
-    const diffDays = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-    
-    // Exponential decay: newer = higher score
-    const score = Math.exp(-diffDays / 365); // Decay over 1 year
-    
-    return Math.min(1.0, score);
-  }
-  
-  // Calculate quality score based on content completeness and structure
-  private calculateQualityScore(startup: any): number {
-    let score = 0;
-    
-    // Title quality (length and content)
-    if (startup.title && startup.title.length > 10) {
-      score += 0.2;
-    }
-    
-    // Description quality
-    if (startup.description && startup.description.length > 50) {
-      score += 0.2;
-    }
-    
-    // Pitch quality
-    if (startup.pitch && startup.pitch.length > 30) {
-      score += 0.2;
-    }
-    
-    // Category presence
-    if (startup.category) {
-      score += 0.1;
-    }
-    
-    // Author information
-    if (startup.author?.name) {
-      score += 0.1;
-    }
-    
-    // Website presence
-    if (startup.website) {
-      score += 0.1;
-    }
-    
-    // Social links
-    if (startup.socialLinks && startup.socialLinks.length > 0) {
-      score += 0.1;
-    }
-    
-    return Math.min(1.0, score);
-  }
-  
-  // Calculate quality boost for confidence scoring
-  private calculateQualityBoost(startups: any[]): number {
-    if (startups.length === 0) return 0;
-    
-    const avgQuality = startups.reduce((sum, s) => sum + (s.qualityScore || 0), 0) / startups.length;
-    const avgEngagement = startups.reduce((sum, s) => sum + (s.engagementScore || 0), 0) / startups.length;
-    
-    return (avgQuality + avgEngagement) * 0.1; // Max 0.2 boost
-  }
-  
-  // Get expansion statistics for logging
-  private getExpansionStats(originalQuery: string): number {
-    const words = originalQuery.split(/\s+/).length;
-    return Math.max(0, 20 - words); // Approximate expansion
-  }
-
-  // Search analytics and performance monitoring
-  private async logSearchAnalytics(query: string, results: any[], searchMetadata: any, startTime: number): Promise<void> {
-    try {
-      const endTime = Date.now();
-      const searchDuration = endTime - startTime;
-      
-      const analytics = {
-        timestamp: new Date().toISOString(),
-        query: query,
-        queryLength: query.length,
-        resultsCount: results.length,
-        searchDuration: searchDuration,
-        avgConfidence: results.reduce((sum, r) => sum + (r.similarity || 0), 0) / results.length,
-        searchMetadata: searchMetadata,
-        performance: {
-          duration: searchDuration,
-          resultsPerSecond: results.length / (searchDuration / 1000),
-          avgResultScore: results.reduce((sum, r) => sum + (r.finalScore || 0), 0) / results.length
-        }
-      };
-      
-      // Log analytics (in production, this would be sent to analytics service)
-      console.log('📊 [SEARCH ANALYTICS] Search performance:', {
-        query: query.substring(0, 50),
-        duration: `${searchDuration}ms`,
-        results: results.length,
-        avgScore: analytics.avgConfidence.toFixed(3),
-        performance: analytics.performance
-      });
-      
-      // Store analytics for trend analysis (in production, use proper analytics service)
-      await this.storeSearchAnalytics(analytics);
-      
-    } catch (error) {
-      console.error('❌ [SEARCH ANALYTICS] Error logging search analytics:', error);
-    }
-  }
-  
-  // Store search analytics for trend analysis
-  private async storeSearchAnalytics(analytics: any): Promise<void> {
-    try {
-      // In production, this would store to a proper analytics database
-      // For now, we'll just log the analytics
-      console.log('📈 [SEARCH ANALYTICS] Storing analytics:', {
-        timestamp: analytics.timestamp,
-        query: analytics.query,
-        resultsCount: analytics.resultsCount,
-        duration: analytics.searchDuration
-      });
-      
-      // TODO: Implement proper analytics storage
-      // This could be stored in a database, sent to an analytics service, etc.
-      
-    } catch (error) {
-      console.error('❌ [SEARCH ANALYTICS] Error storing analytics:', error);
-    }
-  }
-  
-  // Get search performance metrics
-  async getSearchPerformanceMetrics(timeRange: string = '24h'): Promise<any> {
-    try {
-      // In production, this would query the analytics database
-      // For now, return mock metrics
-      const metrics = {
-        totalSearches: 0,
-        avgSearchDuration: 0,
-        avgResultsPerSearch: 0,
-        topQueries: [],
-        searchSuccessRate: 0,
-        performanceTrends: {
-          searchesOverTime: [],
-          avgDurationOverTime: [],
-          resultQualityOverTime: []
-        }
-      };
-      
-      console.log('📊 [SEARCH METRICS] Retrieved performance metrics:', metrics);
-      return metrics;
-      
-    } catch (error) {
-      console.error('❌ [SEARCH METRICS] Error retrieving metrics:', error);
-      return null;
-    }
-  }
-  
-  // Analyze search query patterns for optimization
-  private analyzeQueryPatterns(queries: string[]): any {
-    const patterns = {
-      avgQueryLength: queries.reduce((sum, q) => sum + q.length, 0) / queries.length,
-      commonTerms: this.extractCommonTerms(queries),
-      queryCategories: this.categorizeQueries(queries),
-      improvementSuggestions: this.generateImprovementSuggestions(queries)
-    };
-    
-    return patterns;
-  }
-  
-  // Extract common terms from queries
-  private extractCommonTerms(queries: string[]): string[] {
-    const termCounts: { [key: string]: number } = {};
-    
-    queries.forEach(query => {
-      const terms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
-      terms.forEach(term => {
-        termCounts[term] = (termCounts[term] || 0) + 1;
-      });
-    });
-    
-    return Object.entries(termCounts)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10)
-      .map(([term]) => term);
-  }
-  
-  // Categorize queries by type
-  private categorizeQueries(queries: string[]): any {
-    const categories = {
-      technology: 0,
-      business: 0,
-      industry: 0,
-      general: 0
-    };
-    
-    queries.forEach(query => {
-      const lowerQuery = query.toLowerCase();
-      if (lowerQuery.includes('ai') || lowerQuery.includes('tech') || lowerQuery.includes('software')) {
-        categories.technology++;
-      } else if (lowerQuery.includes('startup') || lowerQuery.includes('business') || lowerQuery.includes('company')) {
-        categories.business++;
-      } else if (lowerQuery.includes('fintech') || lowerQuery.includes('health') || lowerQuery.includes('education')) {
-        categories.industry++;
-      } else {
-        categories.general++;
-      }
-    });
-    
-    return categories;
-  }
-  
-  // Generate improvement suggestions based on query patterns
-  private generateImprovementSuggestions(queries: string[]): string[] {
-    const suggestions: string[] = [];
-    
-    // Analyze query length patterns
-    const avgLength = queries.reduce((sum, q) => sum + q.length, 0) / queries.length;
-    if (avgLength < 10) {
-      suggestions.push('Consider encouraging more specific queries for better results');
-    }
-    
-    // Analyze term diversity
-    const allTerms = queries.flatMap(q => q.toLowerCase().split(/\s+/));
-    const uniqueTerms = new Set(allTerms);
-    const diversity = uniqueTerms.size / allTerms.length;
-    
-    if (diversity < 0.3) {
-      suggestions.push('Query diversity is low - consider expanding search suggestions');
-    }
-    
-    return suggestions;
-  }
-
-  // Intelligent caching for embeddings and search results
-  private embeddingCache = new Map<string, { embedding: number[], timestamp: number }>();
-  private searchCache = new Map<string, { results: any[], timestamp: number }>();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_CACHE_SIZE = 1000;
-
-  // Get cached embedding or generate new one
-  private async getCachedEmbedding(text: string): Promise<number[]> {
-    const cacheKey = this.generateCacheKey(text);
-    const cached = this.embeddingCache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      console.log('💾 [CACHE HIT] Using cached embedding for:', text.substring(0, 50));
-      return cached.embedding;
-    }
-    
-    console.log('💾 [CACHE MISS] Generating new embedding for:', text.substring(0, 50));
-    const embedding = await this.generateEmbedding(text);
-    
-    // Store in cache with size limit
-    if (this.embeddingCache.size >= this.MAX_CACHE_SIZE) {
-      this.evictOldestCacheEntries('embedding');
-    }
-    
-    this.embeddingCache.set(cacheKey, {
-      embedding,
-      timestamp: Date.now()
-    });
-    
-    return embedding;
-  }
-  
-  // Get cached search results or perform new search
-  private async getCachedSearchResults(query: string, limit: number): Promise<any> {
-    const cacheKey = this.generateCacheKey(`${query}:${limit}`);
-    const cached = this.searchCache.get(cacheKey);
-    
-    if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
-      console.log('💾 [CACHE HIT] Using cached search results for:', query);
-      return cached.results;
-    }
-    
-    console.log('💾 [CACHE MISS] Performing new search for:', query);
-    const results = await this.semanticSearch(query, limit);
-    
-    // Store in cache with size limit
-    if (this.searchCache.size >= this.MAX_CACHE_SIZE) {
-      this.evictOldestCacheEntries('search');
-    }
-    
-    this.searchCache.set(cacheKey, {
-      results,
-      timestamp: Date.now()
-    });
-    
-    return results;
-  }
-  
-  // Generate cache key for text
-  private generateCacheKey(text: string): string {
-    // Simple hash function for cache key
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char = text.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash.toString();
-  }
-  
-  // Evict oldest cache entries when cache is full
-  private evictOldestCacheEntries(type: 'embedding' | 'search'): void {
-    if (type === 'embedding') {
-      const entries = Array.from(this.embeddingCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      const toRemove = Math.floor(entries.length * 0.2);
-      
-      for (let i = 0; i < toRemove; i++) {
-        this.embeddingCache.delete(entries[i][0]);
-      }
-      
-      console.log(`🧹 [CACHE CLEANUP] Evicted ${toRemove} old embedding entries`);
-    } else {
-      const entries = Array.from(this.searchCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      const toRemove = Math.floor(entries.length * 0.2);
-      
-      for (let i = 0; i < toRemove; i++) {
-        this.searchCache.delete(entries[i][0]);
-      }
-      
-      console.log(`🧹 [CACHE CLEANUP] Evicted ${toRemove} old search entries`);
-    }
-  }
-  
-  // Clear cache (useful for testing or manual cache management)
-  public clearCache(): void {
-    this.embeddingCache.clear();
-    this.searchCache.clear();
-    console.log('🧹 [CACHE CLEAR] All caches cleared');
-  }
-  
-  // Get cache statistics
-  public getCacheStats(): any {
-    return {
-      embeddingCache: {
-        size: this.embeddingCache.size,
-        maxSize: this.MAX_CACHE_SIZE,
-        utilization: (this.embeddingCache.size / this.MAX_CACHE_SIZE * 100).toFixed(1) + '%'
-      },
-      searchCache: {
-        size: this.searchCache.size,
-        maxSize: this.MAX_CACHE_SIZE,
-        utilization: (this.searchCache.size / this.MAX_CACHE_SIZE * 100).toFixed(1) + '%'
-      },
-      ttl: this.CACHE_TTL / 1000 + ' seconds'
-    };
   }
 
   /* COMMENTED OUT - Using only GROQ now
