@@ -236,7 +236,7 @@ export async function sendInterestedSubmissionEmail(data: InterestedSubmissionEm
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Foundrly" <${process.env.SMTP_USER}>`,
       to: data.startupOwnerEmail,
       subject: `🎉 New Interest in "${data.startupTitle}" - ${data.interestedUserName}`,
       html: emailHtml,

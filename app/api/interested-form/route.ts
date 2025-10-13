@@ -130,7 +130,7 @@ export async function POST(req: Request) {
 
     // Send email notification to startup owner (respect owner's email prefs)
     try {
-      const ownerId = startup?.author?._ref || startup?.author?._id || startup?.author?._refId;
+      const ownerId = startup?.author?._id;
       if (ownerId) {
         const ownerPrefs = await getUserEmailPreferences(ownerId);
         if (!ownerPrefs.enabled || ownerPrefs.types?.interested === false) {
