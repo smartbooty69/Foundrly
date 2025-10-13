@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { BadgePlus, MessageSquare, Trophy, Award, Activity } from "lucide-react";
+import { BadgePlus, MessageSquare, Trophy, Award } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const MobileBottomNav = () => {
@@ -15,12 +15,6 @@ const MobileBottomNav = () => {
         <>
             <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
                 <ul className="flex justify-between items-center px-4 py-2 text-xs text-gray-700">
-                    <li>
-                        <Link href="/activity" className="flex flex-col items-center p-2 rounded-md hover:text-blue-600 hover:bg-gray-100">
-                            <Activity className="size-6" />
-                            <span className="mt-1">Activity</span>
-                        </Link>
-                    </li>
                     <li>
                         <Link href="/startup/create" className="flex flex-col items-center p-2 rounded-md hover:text-blue-600 hover:bg-gray-100">
                             <BadgePlus className="size-6" />
