@@ -250,18 +250,18 @@ const AccountHistory = ({
   };
 
   return (
-    <div className="space-y-6 pr-20">
+    <div className="space-y-6 px-4 sm:pr-20">
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 bg-red-50 border-[5px] border-red-200 rounded-[22px] shadow-200 mb-6">
+        <div className="p-4 bg-red-50 border-[5px] border-red-200 rounded-[22px] shadow-200 mb-6 max-w-md mx-auto sm:max-w-none">
           <p className="text-red-800">{error}</p>
         </div>
       )}
 
       {/* Loading State */}
       {isLoading && historyData.length === 0 && (
-        <div className="text-center py-8">
+        <div className="text-center py-8 max-w-md mx-auto sm:max-w-none">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-gray-400" />
           <p className="text-gray-500">Loading account history...</p>
         </div>
@@ -269,7 +269,7 @@ const AccountHistory = ({
 
       {/* History List */}
       {!isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-md mx-auto sm:max-w-none">
           {sortedHistoryData.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500">

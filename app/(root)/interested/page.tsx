@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import InterestedSidebar from "@/components/InterestedSidebar";
 import InterestedMainContent from "@/components/InterestedMainContent";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
+import MobilePageHeader from "@/components/MobilePageHeader";
 
 export default function InterestedPage() {
   const { data: session } = useSession();
@@ -27,6 +28,9 @@ export default function InterestedPage() {
 
   return (
     <div className="h-[calc(100vh-4rem)] bg-white text-gray-900 overflow-hidden">
+      <div className="lg:hidden px-4">
+        <MobilePageHeader title="Interested" />
+      </div>
       <div className="flex h-full">
         <InterestedSidebar 
           activeSection={activeSection}
@@ -36,10 +40,12 @@ export default function InterestedPage() {
           <InterestedMainContent 
             activeSection={activeSection}
           />
-          <UserSidebarWrapper 
-            userId={session.user.id} 
-            isOwnProfile={true} 
-          />
+          <div className="hidden lg:block">
+            <UserSidebarWrapper 
+              userId={session.user.id} 
+              isOwnProfile={true} 
+            />
+          </div>
         </div>
       </div>
     </div>

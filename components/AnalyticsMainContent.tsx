@@ -231,12 +231,12 @@ export default function AnalyticsMainContent({ activeSection, initialStartupId }
             <div className="flex-1 min-h-0 flex flex-col space-y-6">
               {selectedStartupId ? (
                 <div className="flex-1 min-h-0 flex flex-col">
-                  <div className="flex-1 min-h-0 pr-20 pb-16 overflow-y-auto max-h-[calc(100vh-12rem)]">
+                  <div className="flex-1 min-h-0 px-4 sm:pr-20 pb-16 overflow-y-auto max-h-[calc(100vh-12rem)]">
                     <StartupAnalyticsDashboard startupId={selectedStartupId} />
                   </div>
                 </div>
               ) : (
-                <div>
+                <div className="px-4 sm:px-0">
                   <ActivityContentGrid 
                     activityType="startup-selection"
                     userId={session?.user?.id}

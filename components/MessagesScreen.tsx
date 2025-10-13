@@ -235,23 +235,25 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
 
     return (
         <div className="flex flex-col h-full w-full">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
-                <button className="bg-none border-none cursor-pointer p-1 flex items-center justify-center mr-2" onClick={onClose}><CloseIcon /></button>
-                <div className="flex items-center gap-2">
-                    <h1 className="text-lg font-bold m-0">Messages</h1>
-                    {session?.data?.user && isStreamChatLoaded && (() => {
-                        const totalUnread = messages.reduce((sum, msg) => sum + (msg.unreadCount || 0), 0);
-                        console.log('MessagesScreen header badge calculation:', totalUnread > 0 ? totalUnread : 'none', 'from messages:', messages.map(m => ({ name: m.name, unreadCount: m.unreadCount !== undefined ? m.unreadCount : 'undefined' })));
-                        // Only show badge if totalUnread is a positive number
-                        return totalUnread > 0 ? (
-                            <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                {totalUnread > 99 ? '99+' : totalUnread}
-                            </span>
-                        ) : null;
-                    })()}
+            {onClose && (
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
+                    <button className="bg-none border-none cursor-pointer p-1 flex items-center justify-center mr-2" onClick={onClose}><CloseIcon /></button>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-lg font-bold m-0">Messages</h1>
+                        {session?.data?.user && isStreamChatLoaded && (() => {
+                            const totalUnread = messages.reduce((sum, msg) => sum + (msg.unreadCount || 0), 0);
+                            console.log('MessagesScreen header badge calculation:', totalUnread > 0 ? totalUnread : 'none', 'from messages:', messages.map(m => ({ name: m.name, unreadCount: m.unreadCount !== undefined ? m.unreadCount : 'undefined' })));
+                            // Only show badge if totalUnread is a positive number
+                            return totalUnread > 0 ? (
+                                <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                    {totalUnread > 99 ? '99+' : totalUnread}
+                                </span>
+                            ) : null;
+                        })()}
+                    </div>
+                    <div className="w-8"></div>
                 </div>
-                <div className="w-8"></div>
-            </div>
+            )}
 
             <div className="flex-1 py-2 overflow-y-auto">
                 {isBanned && (

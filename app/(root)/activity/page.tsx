@@ -5,6 +5,9 @@ import { useSession } from 'next-auth/react';
 import ActivitySidebar from "@/components/ActivitySidebar";
 import ActivityMainContent from "@/components/ActivityMainContent";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
+import MobilePageHeader from "@/components/MobilePageHeader";
+import Link from 'next/link';
+import { RotateCcw, Calendar, Megaphone } from 'lucide-react';
 
 export default function ActivityPage() {
   const { data: session } = useSession();
@@ -31,17 +34,57 @@ export default function ActivityPage() {
 
   return (
     <div className="h-screen bg-white text-gray-900 overflow-hidden">
-      <div className="flex h-full">
+      {/* Mobile Navigation Screen */}
+      <div className="lg:hidden h-full px-4">
+        <MobilePageHeader title="Your activity" />
+        <div className="space-y-3">
+          <Link href="/activity/interactions" className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <RotateCcw className="h-5 w-5 text-gray-600" />
+              <div>
+                <p className="font-semibold">Interactions</p>
+                <p className="text-sm text-gray-600">Review likes, comments, and more</p>
+              </div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </Link>
+          <Link href="/activity/account-history" className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-5 w-5 text-gray-600" />
+              <div>
+                <p className="font-semibold">Account History</p>
+                <p className="text-sm text-gray-600">Changes you've made to your account</p>
+              </div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </Link>
+          <Link href="/activity/ad-activity" className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <Megaphone className="h-5 w-5 text-gray-600" />
+              <div>
+                <p className="font-semibold">Ad Activity</p>
+                <p className="text-sm text-gray-600">Ads you've interacted with</p>
+              </div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+          </Link>
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex h-full">
         <ActivitySidebar 
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
         />
         <div className="flex-1 flex">
           <ActivityMainContent activeSection={activeSection} />
-          <UserSidebarWrapper 
-            userId={session.user.id} 
-            isOwnProfile={true} 
-          />
+          <div className="hidden lg:block">
+            <UserSidebarWrapper 
+              userId={session.user.id} 
+              isOwnProfile={true} 
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -151,8 +151,10 @@ const Page = async ({ params }: { params: { id: string } }) => {
         </div>
       </section>
 
-      {/* User Sidebar - Only show for own profile */}
-      <UserSidebarWrapper userId={id} isOwnProfile={isOwnProfile} />
+      {/* User Sidebar - Only show for own profile; hide on mobile */}
+      <div className="hidden lg:block">
+        <UserSidebarWrapper userId={id} isOwnProfile={isOwnProfile} />
+      </div>
     </>
   );
 };

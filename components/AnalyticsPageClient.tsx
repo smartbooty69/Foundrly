@@ -15,9 +15,12 @@ export default function AnalyticsPageClient() {
 
   useEffect(() => {
     const startupId = searchParams?.get('startup');
+    const section = searchParams?.get('section');
     if (startupId) {
       setSelectedStartupId(startupId);
       setActiveSection('startup-analytics');
+    } else if (section === 'startup-analytics' || section === 'engagement-audience') {
+      setActiveSection(section);
     }
   }, [searchParams]);
 
@@ -49,10 +52,12 @@ export default function AnalyticsPageClient() {
             activeSection={activeSection}
             initialStartupId={selectedStartupId}
           />
-          <UserSidebarWrapper 
-            userId={session.user.id} 
-            isOwnProfile={true} 
-          />
+          <div className="hidden lg:block">
+            <UserSidebarWrapper 
+              userId={session.user.id} 
+              isOwnProfile={true} 
+            />
+          </div>
         </div>
       </div>
     </div>

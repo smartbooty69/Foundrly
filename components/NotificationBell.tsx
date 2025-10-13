@@ -48,6 +48,7 @@ export interface Notification {
 
 const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { 
     notifications, 
     unreadCount, 
@@ -82,6 +83,24 @@ const NotificationBell = () => {
     // This ensures the component re-renders when notifications state changes
     // This is important for when markAllAsRead is called from the notifications page
   }, [notifications, unreadCount]);
+
+  // Detect Tailwind sm breakpoint (mobile < 640px)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile('matches' in e ? e.matches : (e as MediaQueryList).matches);
+    };
+    // Initialize and subscribe
+    handler(mql);
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', handler as (e: MediaQueryListEvent) => void);
+      return () => mql.removeEventListener('change', handler as (e: MediaQueryListEvent) => void);
+    } else if (typeof (mql as any).addListener === 'function') {
+      (mql as any).addListener(handler);
+      return () => (mql as any).removeListener(handler);
+    }
+  }, []);
 
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
@@ -154,7 +173,13 @@ const NotificationBell = () => {
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isMobile) {
+            window.location.href = '/notifications';
+          } else {
+            setIsOpen(!isOpen);
+          }
+        }}
         className="relative flex items-center gap-2 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-gray-100"
       >
         <Bell className="size-6" />
@@ -166,7 +191,7 @@ const NotificationBell = () => {
         <span className="max-sm:hidden">Notifications</span>
       </button>
 
-      {isOpen && (
+      {isOpen && !isMobile && (
         <>
           {/* Backdrop */}
           <div 

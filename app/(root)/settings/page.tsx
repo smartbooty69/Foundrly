@@ -4,6 +4,7 @@ import { client } from "@/sanity/lib/client";
 import { AUTHOR_BY_ID_QUERY } from "@/sanity/lib/queries";
 import SettingsClient from "@/components/SettingsClient";
 import UserSidebarWrapper from "@/components/UserSidebarWrapper";
+import MobilePageHeader from "@/components/MobilePageHeader";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -24,12 +25,17 @@ export default async function SettingsPage() {
   return (
     <div className="flex min-h-screen">
       <div className="flex-1">
+        <div className="lg:hidden px-4">
+          <MobilePageHeader title="Settings" />
+        </div>
         <SettingsClient currentUser={currentUser} />
       </div>
-      <UserSidebarWrapper 
-        userId={session.user.id} 
-        isOwnProfile={true} 
-      />
+      <div className="hidden lg:block">
+        <UserSidebarWrapper 
+          userId={session.user.id} 
+          isOwnProfile={true} 
+        />
+      </div>
     </div>
   );
 }

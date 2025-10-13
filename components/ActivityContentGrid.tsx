@@ -490,8 +490,8 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
 
   if (loading) {
     return (
-      <div className="pr-20">
-        <ul className="card_grid-compact">
+      <div className="px-4 sm:pr-20">
+        <ul className="card_grid-compact max-w-md mx-auto sm:max-w-none sm:mx-0">
           {Array.from({ length: 6 }).map((_, index) => (
             <li key={index}>
               <div className="startup-card_skeleton animate-pulse"></div>
@@ -571,10 +571,10 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
   }
 
   return (
-    <div className="pr-20 pb-20">
+    <div className="px-4 sm:pr-20 pb-20">
       {/* Render comments for comments activity type */}
       {activityType === 'comments' && comments.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md mx-auto md:max-w-none">
           {comments.map((comment) => (
             <div key={comment._id} className="bg-white border-[5px] border-black rounded-[22px] p-4 shadow-200 hover:shadow-300 hover:border-primary transition-all duration-500">
               <div className="flex items-start gap-3">
@@ -694,7 +694,7 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
 
       {/* Render reported comments for reviews activity type */}
       {activityType === 'reviews' && comments.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-md mx-auto md:max-w-none">
           {comments.map((comment) => (
             <div key={comment._id} className="bg-white border-[5px] border-black rounded-[22px] p-4 shadow-200 hover:shadow-300 hover:border-primary transition-all duration-500">
               <div className="flex items-start gap-3">
@@ -750,7 +750,7 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
 
       {/* Render startups for other activity types */}
       {activityType !== 'comments' && startups.length > 0 && activityType !== 'reviews' && (
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-md mx-auto md:max-w-none">
           {startups.map((startup) => (
             <StartupCard 
               key={startup._id}
@@ -778,7 +778,7 @@ const ActivityContentGrid = ({ activityType, userId, filters, onlyOwnStartups, o
 
       {/* Render reported startups for reviews with status */}
       {activityType === 'reviews' && startups.length > 0 && (
-        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-md mx-auto md:max-w-none">
           {startups.map((startup) => (
             <li key={startup._id} className="flex flex-col gap-2">
               {startup.userReports?.[0]?.status && (

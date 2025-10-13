@@ -23,10 +23,11 @@ import { useSession, signOut } from 'next-auth/react';
 interface UserSidebarProps {
   userId: string;
   isOwnProfile: boolean;
+  mode?: 'sidebar' | 'page';
 }
 
-const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
-  const [isCollapsed, setIsCollapsed] = useState(true);
+const UserSidebar = ({ userId, isOwnProfile, mode = 'sidebar' }: UserSidebarProps) => {
+  const [isCollapsed, setIsCollapsed] = useState(mode === 'page' ? false : true);
   const { theme } = useTheme();
   const { data: session } = useSession();
 
@@ -114,38 +115,42 @@ const UserSidebar = ({ userId, isOwnProfile }: UserSidebarProps) => {
   return (
     <div 
       className={cn(
-        'sidebar-fixed transition-all duration-300 ease-in-out',
-        isCollapsed ? 'w-20' : 'w-80',
+        mode === 'sidebar' 
+          ? 'sidebar-fixed transition-all duration-300 ease-in-out'
+          : 'w-full max-w-xl mx-auto transition-all duration-300 ease-in-out',
+        mode === 'sidebar' && (isCollapsed ? 'w-20' : 'w-80'),
         theme === 'dark' 
           ? 'bg-gray-900 border-l border-gray-700' 
           : 'bg-white border-l border-gray-200'
       )}
     >
-      {/* Toggle Button */}
-      <button
-        onClick={toggleSidebar}
-        className={cn(
-          'absolute -left-3 top-28 rounded-full p-1 transition-colors',
-          theme === 'dark'
-            ? 'bg-gray-800 border border-gray-600 hover:bg-gray-700'
-            : 'bg-white border border-gray-200 hover:bg-gray-50'
-        )}
-      >
-        {isCollapsed ? (
-          <ChevronLeft className={cn(
-            'w-4 h-4',
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          )} />
-        ) : (
-          <ChevronRight className={cn(
-            'w-4 h-4',
-            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          )} />
-        )}
-      </button>
+      {/* Toggle Button (hidden in page mode) */}
+      {mode === 'sidebar' && (
+        <button
+          onClick={toggleSidebar}
+          className={cn(
+            'absolute -left-3 top-28 rounded-full p-1 transition-colors',
+            theme === 'dark'
+              ? 'bg-gray-800 border border-gray-600 hover:bg-gray-700'
+              : 'bg-white border border-gray-200 hover:bg-gray-50'
+          )}
+        >
+          {isCollapsed ? (
+            <ChevronLeft className={cn(
+              'w-4 h-4',
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            )} />
+          ) : (
+            <ChevronRight className={cn(
+              'w-4 h-4',
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            )} />
+          )}
+        </button>
+      )}
 
       {/* Sidebar Content */}
-      <div className="pt-20 p-4 h-full">
+      <div className={cn('p-4 h-full', mode === 'sidebar' ? 'pt-20' : 'pt-2')}> 
         <nav className={cn(
           isCollapsed ? 'space-y-2' : 'space-y-2'
         )}>
