@@ -74,7 +74,16 @@ export function useRealtimeNotifications() {
         const response = await fetch('/api/notifications/ws');
         if (response.ok) {
           const data = await response.json();
-          console.log('📊 Notification service status:', data);
+          // Only log when status changes to reduce noise
+          const statusKey = `notif_status_${session.user.id}`;
+          const prevStatus = typeof window !== 'undefined' ? window.sessionStorage.getItem(statusKey) : null;
+          const currentStatus = `${data.connectionCount}|${data.queuedCount}`;
+          if (prevStatus !== currentStatus) {
+            console.log('📊 Notification service status:', data);
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem(statusKey, currentStatus);
+            }
+          }
           
           // De-dupe using sessionStorage marker and local count
           const lastHandledKey = `lastHandledQueuedCount_${session.user.id}`;

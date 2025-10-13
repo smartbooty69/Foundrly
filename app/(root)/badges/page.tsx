@@ -3,6 +3,7 @@ import { client } from "@/sanity/lib/client";
 import { notFound } from "next/navigation";
 import MyBadges from "@/components/MyBadges";
 import AllBadges from "@/components/AllBadges";
+import Link from "next/link";
 
 interface PageProps {
   searchParams: { user?: string };
@@ -27,6 +28,29 @@ export default async function BadgesPage({ searchParams }: PageProps) {
           </div>
           
           <AllBadges />
+
+          {/* Call to Action */}
+          <div className="mt-12 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-black opacity-10"></div>
+            <div className="relative z-10 text-center">
+              <h3 className="text-3xl font-bold mb-4">Ready to Build Your Legacy?</h3>
+              <p className="text-xl text-blue-100 mb-6 max-w-2xl mx-auto">
+                Join the ranks of successful founders. Create, engage, and earn recognition in our growing community of innovators.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+                <Link href="/startup/create">
+                  <button className="bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 shadow-lg">
+                    🚀 Launch Your Startup
+                  </button>
+                </Link>
+                <Link href="/badges">
+                  <button className="border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white hover:text-blue-600 transition-all duration-200 transform hover:scale-105">
+                    🏆 View All Badges
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -82,6 +106,29 @@ export default async function BadgesPage({ searchParams }: PageProps) {
         </div>
         
         <MyBadges userId={userId} />
+
+        {/* Call to Action */}
+        <div className="mt-12 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+          <div className="absolute inset-0 bg-black opacity-10"></div>
+          <div className="relative z-10 text-center">
+            <h3 className="text-3xl font-bold mb-4">Ready to Build Your Legacy?</h3>
+            <p className="text-xl text-blue-100 mb-6 max-w-2xl mx-auto">
+              Join the ranks of successful founders. Create, engage, and earn recognition in our growing community of innovators.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+              <Link href="/startup/create">
+                <button className="bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 transform hover:scale-105 shadow-lg">
+                  🚀 Launch Your Startup
+                </button>
+              </Link>
+              <Link href="/badges">
+                <button className="border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white hover:text-blue-600 transition-all duration-200 transform hover:scale-105">
+                  🏆 View All Badges
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

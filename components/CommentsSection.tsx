@@ -447,7 +447,7 @@ export default function CommentsSection({
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: comment, startupId }),
+        body: JSON.stringify({ action: 'create', text: comment, startupId }),
       });
       
       if (!res.ok) {

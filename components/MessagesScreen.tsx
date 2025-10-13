@@ -5,7 +5,6 @@ import { Message, Suggested } from './types';
 import SuggestedUsers from './SuggestedUsers';
 import NewMessageScreen from './NewMessageScreen';
 import { ChatBanMessage } from './chat/BanMessage';
-import { useNotifications } from '@/hooks/useNotifications';
 
 // --- Icon Components (placeholders) ---
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
@@ -72,11 +71,11 @@ interface MessagesScreenProps {
 
 const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }) => {
     const { data: session } = useSession();
-    const { isStreamChatLoaded } = useNotifications();
     const [messages, setMessages] = useState<Message[]>([]);
     const [showNewMessage, setShowNewMessage] = useState(false);
     const [isBanned, setIsBanned] = useState(false);
     const [banDescription, setBanDescription] = useState("");
+    const [isStreamChatLoaded, setIsStreamChatLoaded] = useState(false);
     const userId = session?.user?.id;
 
     useEffect(() => {
@@ -110,6 +109,9 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
             const filters = { members: { $in: [userId] }, type: "messaging" };
             const sort = [{ last_message_at: -1 }];
             const userChannels = await chatClient.queryChannels(filters, sort, { watch: true, state: true, limit: 30 });
+
+            // Mark Stream Chat as loaded
+            setIsStreamChatLoaded(true);
 
             // Set up real-time listeners for unread count updates
             const updateUnreadCounts = () => {

@@ -141,7 +141,10 @@ export default function Leaderboard({
           // Group comments by author
           const commentsByAuthor = new Map();
           allComments.forEach((comment: any) => {
-            const authorId = comment.author._ref;
+            const authorId = comment.author?._ref;
+            if (!authorId) {
+              return;
+            }
             if (!commentsByAuthor.has(authorId)) {
               commentsByAuthor.set(authorId, []);
             }
@@ -168,7 +171,10 @@ export default function Leaderboard({
           const commentsByAuthor = new Map();
           
           allStartups.forEach((startup: any) => {
-            const authorId = startup.author._ref;
+            const authorId = startup.author?._ref;
+            if (!authorId) {
+              return;
+            }
             if (!startupsByAuthor.has(authorId)) {
               startupsByAuthor.set(authorId, []);
             }
@@ -176,7 +182,10 @@ export default function Leaderboard({
           });
           
           allComments.forEach((comment: any) => {
-            const authorId = comment.author._ref;
+            const authorId = comment.author?._ref;
+            if (!authorId) {
+              return;
+            }
             if (!commentsByAuthor.has(authorId)) {
               commentsByAuthor.set(authorId, []);
             }
@@ -212,7 +221,10 @@ export default function Leaderboard({
           const commentsByStartup = new Map();
           
           allStartups.forEach((startup: any) => {
-            const authorId = startup.author._ref;
+            const authorId = startup.author?._ref;
+            if (!authorId) {
+              return;
+            }
             if (!startupsByAuthor.has(authorId)) {
               startupsByAuthor.set(authorId, []);
             }
@@ -220,7 +232,10 @@ export default function Leaderboard({
           });
           
           allComments.forEach((comment: any) => {
-            const startupId = comment.startup._ref;
+            const startupId = comment.startup?._ref;
+            if (!startupId) {
+              return;
+            }
             if (!commentsByStartup.has(startupId)) {
               commentsByStartup.set(startupId, []);
             }
@@ -254,7 +269,10 @@ export default function Leaderboard({
           // Group startups by author
           const startupsByAuthor = new Map();
           allStartups.forEach((startup: any) => {
-            const authorId = startup.author._ref;
+            const authorId = startup.author?._ref;
+            if (!authorId) {
+              return;
+            }
             if (!startupsByAuthor.has(authorId)) {
               startupsByAuthor.set(authorId, []);
             }
@@ -397,7 +415,7 @@ export default function Leaderboard({
           entries.map((entry, index) => (
             <Link
               key={entry._id}
-              href={`/user/${entry.username}`}
+              href={`/user/${entry._id}`}
               className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-all duration-200 cursor-pointer group"
             >
               <div className="flex items-center justify-center w-8 h-8 text-lg font-bold text-gray-600 group-hover:text-gray-800">

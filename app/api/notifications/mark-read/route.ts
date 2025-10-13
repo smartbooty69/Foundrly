@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { writeClient } from '@/sanity/lib/write-client';
+import { client } from '@/sanity/lib/client';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -12,20 +13,32 @@ export async function POST(req: Request) {
     const { notificationId, markAllAsRead } = await req.json();
 
     if (markAllAsRead) {
-      // Mark all notifications as read for the current user
-      const result = await writeClient
-        .patch()
-        .setIfMissing({})
-        .match({ recipient: { _ref: session.user.id }, isRead: false })
-        .set({
+      // First, get all unread notification IDs for the current user
+      const unreadNotificationIds = await client.fetch(
+        `*[_type == "notification" && recipient._ref == $userId && isRead == false]._id`,
+        { userId: session.user.id }
+      );
+
+      if (unreadNotificationIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: 'No unread notifications to mark as read'
+        });
+      }
+
+      // Mark each notification as read
+      const patches = unreadNotificationIds.map((id: string) =>
+        writeClient.patch(id).set({
           isRead: true,
-          readAt: new Date().toISOString(),
+          readAt: new Date().toISOString()
         })
-        .commit();
+      );
+
+      await Promise.all(patches.map(patch => patch.commit()));
 
       return NextResponse.json({
         success: true,
-        message: 'All notifications marked as read'
+        message: `Marked ${unreadNotificationIds.length} notifications as read`
       });
     } else if (notificationId) {
       // Mark specific notification as read

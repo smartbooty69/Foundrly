@@ -83,7 +83,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { text, startupId, parentId, action, commentId, userId } = await req.json();
+    const body = await req.json();
+    const text: string | undefined = body.text;
+    const startupId: string | undefined = body.startupId;
+    const parentId: string | undefined = body.parentId;
+    const action: 'reply' | 'like' | 'dislike' | 'create' | undefined = body.action ?? 'create';
+    const commentId: string | undefined = body.commentId;
+    const bodyUserId: string | undefined = body.userId;
     if (action === 'reply') {
       // Create reply comment
       if (!text || !startupId || !parentId) {
@@ -174,7 +180,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, reply });
     } else if (action === 'like' || action === 'dislike') {
       // Like or dislike a comment
-      if (!commentId || !userId) {
+      if (!commentId || !bodyUserId) {
         return NextResponse.json({ success: false, message: 'Missing commentId or userId' }, { status: 400 });
       }
       const comment = await client.fetch(`*[_type == "comment" && _id == $id][0]{likedBy, dislikedBy, likes, dislikes}`, { id: commentId });
@@ -182,25 +188,25 @@ export async function POST(req: Request) {
       let dislikedBy = comment.dislikedBy ?? [];
       let likes = comment.likes ?? 0;
       let dislikes = comment.dislikes ?? 0;
-      const userHasLiked = likedBy.includes(userId);
-      const userHasDisliked = dislikedBy.includes(userId);
+      const userHasLiked = likedBy.includes(bodyUserId);
+      const userHasDisliked = dislikedBy.includes(bodyUserId);
       if (action === 'like') {
         if (userHasLiked) {
-          likedBy = likedBy.filter((id: any) => id !== userId);
+          likedBy = likedBy.filter((id: any) => id !== bodyUserId);
         } else if (userHasDisliked) {
-          dislikedBy = dislikedBy.filter((id: any) => id !== userId);
-          likedBy.push(userId);
+          dislikedBy = dislikedBy.filter((id: any) => id !== bodyUserId);
+          likedBy.push(bodyUserId);
         } else {
-          likedBy.push(userId);
+          likedBy.push(bodyUserId);
         }
       } else if (action === 'dislike') {
         if (userHasDisliked) {
-          dislikedBy = dislikedBy.filter((id: any) => id !== userId);
+          dislikedBy = dislikedBy.filter((id: any) => id !== bodyUserId);
         } else if (userHasLiked) {
-          likedBy = likedBy.filter((id: any) => id !== userId);
-          dislikedBy.push(userId);
+          likedBy = likedBy.filter((id: any) => id !== bodyUserId);
+          dislikedBy.push(bodyUserId);
         } else {
-          dislikedBy.push(userId);
+          dislikedBy.push(bodyUserId);
         }
       }
       likedBy = Array.from(new Set(likedBy));
@@ -241,7 +247,7 @@ export async function POST(req: Request) {
                 startupTitle: comment.startup.title,
                 commentId: commentId,
                 commentText: comment.text,
-                likerId: userId,
+                likerId: bodyUserId,
                 likerName: session.user.name || session.user.username || 'Unknown User',
                 likerImage: session.user.image
               }
@@ -338,7 +344,7 @@ export async function POST(req: Request) {
         await writeClient.create({
           _type: 'startupCommentEvent',
           startupId: startupId,
-          userId,
+          userId: session.user.id,
           action: 'comment',
           timestamp: new Date().toISOString(),
         });
