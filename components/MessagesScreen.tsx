@@ -104,7 +104,14 @@ const MessagesScreen: React.FC<MessagesScreenProps> = ({ onSelectChat, onClose }
             const { token } = await res.json();
 
             chatClient = StreamChat.getInstance(apiKey);
-            await chatClient.connectUser({ id: userId }, token);
+            await chatClient.connectUser(
+                {
+                    id: userId,
+                    name: session?.user?.name,
+                    image: (session?.user as any)?.image || undefined,
+                },
+                token
+            );
 
             const filters = { members: { $in: [userId] }, type: "messaging" };
             const sort = [{ last_message_at: -1 }];

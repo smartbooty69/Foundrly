@@ -39,6 +39,26 @@ export async function POST(req: NextRequest) {
       timeout: 10000 // Increase timeout to 10 seconds
     });
 
+    // Upsert all members to ensure names and images are present for new users
+    try {
+      const membersFromSanity = await client.fetch(
+        `*[_type == "author" && _id in $ids]{ _id, name, image }`,
+        { ids: memberIds }
+      );
+      const idToProfile = Object.fromEntries(
+        (membersFromSanity || []).map((u: any) => [u._id, u])
+      );
+      await serverClient.upsertUsers(
+        memberIds.map((id: string) => ({
+          id,
+          name: idToProfile[id]?.name,
+          image: idToProfile[id]?.image,
+        }))
+      );
+    } catch (e) {
+      console.error('Failed to upsert Stream users for channel creation', e);
+    }
+
     // Create a unique channel ID without colons (Stream Chat restriction)
     const channelId = `messaging-${memberIds.sort().join('-')}`;
     console.log('Generated channel ID:', channelId);

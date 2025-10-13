@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   
   // Check if the user is banned
   const user = await client.fetch(
-    `*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned }`,
+    `*[_type == "author" && _id == $userId][0]{ _id, bannedUntil, isBanned, name, image }`,
     { userId }
   );
 
@@ -27,6 +27,17 @@ export async function POST(req: NextRequest) {
   }
 
   const serverClient = StreamChat.getInstance(apiKey, apiSecret);
+  // Ensure the user exists in Stream with display info so clients see names, not IDs
+  try {
+    await serverClient.upsertUser({
+      id: userId,
+      name: user?.name,
+      image: user?.image,
+    });
+  } catch (e) {
+    // Non-fatal: token can still be issued; log for visibility
+    console.error('Failed to upsert Stream user on token request', e);
+  }
   const token = serverClient.createToken(userId);
   return NextResponse.json({ token });
 } 

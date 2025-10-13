@@ -100,7 +100,15 @@ const ChatView: React.FC<ChatViewProps> = ({ chatId, onGoBack, currentUserId }) 
       
       const { token } = await res.json();
       const newChatClient = StreamChat.getInstance(apiKey);
-      await newChatClient.connectUser({ id: userId }, token);
+      await newChatClient.connectUser(
+        {
+          id: userId,
+          // include name and image to ensure UI shows display name instead of ID
+          name: session?.user?.name,
+          image: (session?.user as any)?.image || undefined,
+        },
+        token
+      );
       setChatClient(newChatClient);
 
       channelInstance = newChatClient.channel("messaging", chatId);
